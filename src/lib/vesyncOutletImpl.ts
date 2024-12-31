@@ -5,6 +5,7 @@
 import { VeSyncOutlet } from './vesyncOutlet';
 import { VeSync } from './vesync';
 import { Helpers } from './helpers';
+import { logger } from './logger';
 
 /**
  * VeSync 7A Outlet
@@ -18,6 +19,7 @@ export class VeSyncOutlet7A extends VeSyncOutlet {
      * Turn outlet on
      */
     async turnOn(): Promise<boolean> {
+        logger.debug(`[${this.deviceName}] Turning outlet on`);
         const url = `/v1/wifi-switch-1.3/wifi-switch-1.3-${this.cid}/status/on`;
         const [response] = await Helpers.callApi(
             url,
@@ -28,8 +30,10 @@ export class VeSyncOutlet7A extends VeSyncOutlet {
 
         if (response?.code === 0) {
             this.deviceStatus = 'on';
+            logger.debug(`[${this.deviceName}] Successfully turned outlet on`);
             return true;
         }
+        logger.error(`[${this.deviceName}] Failed to turn outlet on: ${JSON.stringify(response)}`);
         return false;
     }
 
@@ -37,6 +41,7 @@ export class VeSyncOutlet7A extends VeSyncOutlet {
      * Turn outlet off
      */
     async turnOff(): Promise<boolean> {
+        logger.debug(`[${this.deviceName}] Turning outlet off`);
         const url = `/v1/wifi-switch-1.3/wifi-switch-1.3-${this.cid}/status/off`;
         const [response] = await Helpers.callApi(
             url,
@@ -47,8 +52,10 @@ export class VeSyncOutlet7A extends VeSyncOutlet {
 
         if (response?.code === 0) {
             this.deviceStatus = 'off';
+            logger.debug(`[${this.deviceName}] Successfully turned outlet off`);
             return true;
         }
+        logger.error(`[${this.deviceName}] Failed to turn outlet off: ${JSON.stringify(response)}`);
         return false;
     }
 }
@@ -65,6 +72,7 @@ export class VeSyncOutlet10A extends VeSyncOutlet {
      * Turn outlet on
      */
     async turnOn(): Promise<boolean> {
+        logger.debug(`[${this.deviceName}] Turning outlet on`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             uuid: this.uuid,
@@ -80,8 +88,10 @@ export class VeSyncOutlet10A extends VeSyncOutlet {
 
         if (response?.code === 0) {
             this.deviceStatus = 'on';
+            logger.debug(`[${this.deviceName}] Successfully turned outlet on`);
             return true;
         }
+        logger.error(`[${this.deviceName}] Failed to turn outlet on: ${JSON.stringify(response)}`);
         return false;
     }
 
@@ -89,6 +99,7 @@ export class VeSyncOutlet10A extends VeSyncOutlet {
      * Turn outlet off
      */
     async turnOff(): Promise<boolean> {
+        logger.debug(`[${this.deviceName}] Turning outlet off`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             uuid: this.uuid,
@@ -104,8 +115,10 @@ export class VeSyncOutlet10A extends VeSyncOutlet {
 
         if (response?.code === 0) {
             this.deviceStatus = 'off';
+            logger.debug(`[${this.deviceName}] Successfully turned outlet off`);
             return true;
         }
+        logger.error(`[${this.deviceName}] Failed to turn outlet off: ${JSON.stringify(response)}`);
         return false;
     }
 }
@@ -122,6 +135,7 @@ export class VeSyncOutlet15A extends VeSyncOutlet {
      * Turn outlet on
      */
     async turnOn(): Promise<boolean> {
+        logger.debug(`[${this.deviceName}] Turning outlet on`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             uuid: this.uuid,
@@ -137,8 +151,10 @@ export class VeSyncOutlet15A extends VeSyncOutlet {
 
         if (response?.code === 0) {
             this.deviceStatus = 'on';
+            logger.debug(`[${this.deviceName}] Successfully turned outlet on`);
             return true;
         }
+        logger.error(`[${this.deviceName}] Failed to turn outlet on: ${JSON.stringify(response)}`);
         return false;
     }
 
@@ -146,6 +162,7 @@ export class VeSyncOutlet15A extends VeSyncOutlet {
      * Turn outlet off
      */
     async turnOff(): Promise<boolean> {
+        logger.debug(`[${this.deviceName}] Turning outlet off`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             uuid: this.uuid,
@@ -161,8 +178,10 @@ export class VeSyncOutlet15A extends VeSyncOutlet {
 
         if (response?.code === 0) {
             this.deviceStatus = 'off';
+            logger.debug(`[${this.deviceName}] Successfully turned outlet off`);
             return true;
         }
+        logger.error(`[${this.deviceName}] Failed to turn outlet off: ${JSON.stringify(response)}`);
         return false;
     }
 
@@ -170,6 +189,12 @@ export class VeSyncOutlet15A extends VeSyncOutlet {
      * Turn on nightlight
      */
     async turnOnNightlight(): Promise<boolean> {
+        if (!this.hasNightlight()) {
+            logger.error(`[${this.deviceName}] Nightlight feature not supported`);
+            return false;
+        }
+
+        logger.debug(`[${this.deviceName}] Turning nightlight on`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             uuid: this.uuid,
@@ -185,8 +210,10 @@ export class VeSyncOutlet15A extends VeSyncOutlet {
 
         if (response?.code === 0) {
             this.details.nightLightStatus = 'on';
+            logger.debug(`[${this.deviceName}] Successfully turned nightlight on`);
             return true;
         }
+        logger.error(`[${this.deviceName}] Failed to turn nightlight on: ${JSON.stringify(response)}`);
         return false;
     }
 
@@ -194,6 +221,12 @@ export class VeSyncOutlet15A extends VeSyncOutlet {
      * Turn off nightlight
      */
     async turnOffNightlight(): Promise<boolean> {
+        if (!this.hasNightlight()) {
+            logger.error(`[${this.deviceName}] Nightlight feature not supported`);
+            return false;
+        }
+
+        logger.debug(`[${this.deviceName}] Turning nightlight off`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             uuid: this.uuid,
@@ -209,8 +242,10 @@ export class VeSyncOutlet15A extends VeSyncOutlet {
 
         if (response?.code === 0) {
             this.details.nightLightStatus = 'off';
+            logger.debug(`[${this.deviceName}] Successfully turned nightlight off`);
             return true;
         }
+        logger.error(`[${this.deviceName}] Failed to turn nightlight off: ${JSON.stringify(response)}`);
         return false;
     }
 }
@@ -227,6 +262,7 @@ export class VeSyncOutdoorPlug extends VeSyncOutlet {
      * Turn outlet on
      */
     async turnOn(): Promise<boolean> {
+        logger.debug(`[${this.deviceName}] Turning outlet on`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             uuid: this.uuid,
@@ -243,8 +279,10 @@ export class VeSyncOutdoorPlug extends VeSyncOutlet {
 
         if (response?.code === 0) {
             this.deviceStatus = 'on';
+            logger.debug(`[${this.deviceName}] Successfully turned outlet on`);
             return true;
         }
+        logger.error(`[${this.deviceName}] Failed to turn outlet on: ${JSON.stringify(response)}`);
         return false;
     }
 
@@ -252,6 +290,7 @@ export class VeSyncOutdoorPlug extends VeSyncOutlet {
      * Turn outlet off
      */
     async turnOff(): Promise<boolean> {
+        logger.debug(`[${this.deviceName}] Turning outlet off`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             uuid: this.uuid,
@@ -268,8 +307,10 @@ export class VeSyncOutdoorPlug extends VeSyncOutlet {
 
         if (response?.code === 0) {
             this.deviceStatus = 'off';
+            logger.debug(`[${this.deviceName}] Successfully turned outlet off`);
             return true;
         }
+        logger.error(`[${this.deviceName}] Failed to turn outlet off: ${JSON.stringify(response)}`);
         return false;
     }
 }
