@@ -3,6 +3,7 @@
  */
 
 import { VeSync } from './vesync';
+import { logger } from './logger';
 
 export abstract class VeSyncBaseDevice {
     protected manager: VeSync;
@@ -37,11 +38,11 @@ export abstract class VeSyncBaseDevice {
      * Return formatted device info to stdout
      */
     display(): void {
-        console.log(`Device Name: ${this.deviceName}`);
-        console.log(`Status: ${this.deviceStatus}`);
-        console.log(`Device Type: ${this.deviceType}`);
-        console.log(`Connection: ${this.connectionStatus}`);
-        console.log(`Version: ${this.config.current_firmware_version || 'Unknown'}`);
+        logger.info(`Device Name: ${this.deviceName}`);
+        logger.info(`Status: ${this.deviceStatus}`);
+        logger.info(`Device Type: ${this.deviceType}`);
+        logger.info(`Connection: ${this.connectionStatus}`);
+        logger.info(`Version: ${this.config.current_firmware_version || 'Unknown'}`);
     }
 
     /**
@@ -90,13 +91,13 @@ export abstract class VeSyncBaseDevice {
      */
     protected logError(method: string, error: any): void {
         const errorMsg = error?.message || error;
-        console.error(`[${this.deviceName}] ${method}: ${errorMsg}`);
+        logger.error(`[${this.deviceName}] ${method}: ${errorMsg}`);
         
         // Log additional error details if available
         if (error?.response?.data) {
             const responseData = error.response.data;
             const msg = responseData.msg || responseData.message || JSON.stringify(responseData);
-            console.error(`Response: ${msg}`);
+            logger.error(`Response: ${msg}`);
         }
     }
 

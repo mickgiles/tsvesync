@@ -9,8 +9,7 @@ import { outletModules } from './vesyncOutletImpl';
 import { switchModules } from './vesyncSwitchImpl';
 import { bulbModules } from './vesyncBulbImpl';
 import { VeSyncBulb } from './vesyncBulb';
-import { VeSyncOutlet } from './vesyncOutlet';
-import { VeSyncSwitch } from './vesyncSwitch';
+import { logger } from './logger';
 
 const DEFAULT_ENERGY_UPDATE_INTERVAL = 21600;
 
@@ -46,7 +45,7 @@ function objectFactory(details: Record<string, any>, manager: VeSync): [string, 
         if (deviceType in modules) {
             DeviceClass = modules[deviceType];
             category = cat;
-            console.debug(`Found exact match for ${deviceType} in ${cat} modules`);
+            logger.debug(`Found exact match for ${deviceType} in ${cat} modules`);
             break;
         }
     }
@@ -83,7 +82,7 @@ function objectFactory(details: Record<string, any>, manager: VeSync): [string, 
         for (const [prefix, cat] of Object.entries(prefixMap)) {
             if (deviceType.startsWith(prefix)) {
                 category = cat;
-                console.debug(`Device type ${deviceType} matched prefix ${prefix} -> category ${cat}`);
+                logger.debug(`Device type ${deviceType} matched prefix ${prefix} -> category ${cat}`);
                 
                 // Try to find a base class in this category's modules
                 const modules = allModules[cat];
@@ -91,7 +90,7 @@ function objectFactory(details: Record<string, any>, manager: VeSync): [string, 
                     const baseType = moduleType.split('-')[0]; // e.g., ESL100 from ESL100-USA
                     if (deviceType.startsWith(baseType)) {
                         DeviceClass = ModuleClass;
-                        console.debug(`Found base type match: ${deviceType} -> ${baseType}`);
+                        logger.debug(`Found base type match: ${deviceType} -> ${baseType}`);
                         break;
                     }
                 }
@@ -107,11 +106,11 @@ function objectFactory(details: Record<string, any>, manager: VeSync): [string, 
             const device = new DeviceClass(details, manager);
             return [category, device];
         } catch (error) {
-            console.error(`Error creating device instance for ${deviceType}:`, error);
+            logger.error(`Error creating device instance for ${deviceType}:`, error);
             return [category, null];
         }
     } else {
-        console.warn(`No device class found for type: ${deviceType}`);
+        logger.warn(`No device class found for type: ${deviceType}`);
         return [category, null];
     }
 }
@@ -187,13 +186,13 @@ export class VeSync {
             const regTest = /[^a-zA-Z/_]/;
             if (regTest.test(timeZone)) {
                 this.timeZone = DEFAULT_TZ;
-                console.debug('Invalid characters in time zone - ', timeZone);
+                logger.debug('Invalid characters in time zone - ', timeZone);
             } else {
                 this.timeZone = timeZone;
             }
         } else {
             this.timeZone = DEFAULT_TZ;
-            console.debug('Time zone is not a string');
+            logger.debug('Time zone is not a string');
         }
 
         if (debug) {
@@ -251,7 +250,7 @@ export class VeSync {
                     return true;
                 }
             }
-            console.debug(`Device removed - ${device.deviceName} - ${device.deviceType}`);
+            logger.debug(`Device removed - ${device.deviceName} - ${device.deviceType}`);
             return false;
         }
         return true;
@@ -282,7 +281,7 @@ export class VeSync {
             this._devList[key] = deviceList.filter(device => VeSync.removeDevTest(device, devices));
             const after = this._devList[key].length;
             if (before !== after) {
-                console.debug(`${before - after} ${key} removed`);
+                logger.debug(`${before - after} ${key} removed`);
             }
         }
         return true;
@@ -301,7 +300,7 @@ export class VeSync {
                     dev.cid = dev.uuid;
                 } else {
                     devRem.push(index);
-                    console.warn(`Device with no ID - ${dev.deviceName || ''}`);
+                    logger.warn(`Device with no ID - ${dev.deviceName || ''}`);
                 }
             }
         });
@@ -326,13 +325,13 @@ export class VeSync {
         }
 
         if (!devices || devices.length === 0) {
-            console.warn('No devices found in api return');
+            logger.warn('No devices found in api return');
             return false;
         }
 
         // Initialize new device list or remove old devices
         if (numDevices === 0) {
-            console.debug('New device list initialized');
+            logger.debug('New device list initialized');
         } else {
             this.removeOldDevices(devices);
         }
@@ -347,7 +346,7 @@ export class VeSync {
         for (const dev of newDevices) {
             // Verify required device properties
             if (!requiredKeys.every(key => key in dev)) {
-                console.debug(`Error adding device - missing required properties: ${dev.deviceName || 'Unknown'}`);
+                logger.debug(`Error adding device - missing required properties: ${dev.deviceName || 'Unknown'}`);
                 continue;
             }
 
@@ -359,12 +358,12 @@ export class VeSync {
                 // Add device to appropriate category if valid
                 if (deviceObj && category in this._devList) {
                     this._devList[category].push(deviceObj);
-                    console.debug(`Added ${devType} device to ${category} category`);
+                    logger.debug(`Added ${devType} device to ${category} category`);
                 } else if (category === 'unknown') {
-                    console.debug(`Unknown device type: ${devType}`);
+                    logger.debug(`Unknown device type: ${devType}`);
                 }
             } catch (err) {
-                console.error(`Error creating device ${devType}:`, err);
+                logger.error(`Error creating device ${devType}:`, err);
                 continue;
             }
         }
@@ -377,7 +376,7 @@ export class VeSync {
      */
     async getDevices(): Promise<boolean> {
         if (!this.enabled) {
-            console.error('Not logged in to VeSync');
+            logger.error('Not logged in to VeSync');
             return false;
         }
 
@@ -400,42 +399,42 @@ export class VeSync {
                 this.devices = Object.values(this._devList).flat();
 
                 // Log device discovery results
-                console.log('\n=== Device Discovery Summary ===');
-                console.log(`Total devices processed: ${deviceList.length}`);
+                logger.debug('\n=== Device Discovery Summary ===');
+                logger.debug(`Total devices processed: ${deviceList.length}`);
                 
                 // Log device types found
                 const deviceTypes = deviceList.map((d: Record<string, any>) => d.deviceType);
-                console.log('\nDevice types found:', deviceTypes);
+                logger.debug('\nDevice types found:', deviceTypes);
                 
                 // Log devices by category with details
-                console.log('\nDevices by Category:');
-                console.log('---------------------');
+                logger.debug('\nDevices by Category:');
+                logger.debug('---------------------');
                 for (const [category, devices] of Object.entries(this._devList)) {
                     if (devices.length > 0) {
-                        console.log(`\n${category.toUpperCase()} (${devices.length} devices):`);
+                        logger.debug(`\n${category.toUpperCase()} (${devices.length} devices):`);
                         devices.forEach((d: VeSyncBaseDevice) => {
-                            console.log(`  • ${d.deviceName}`);
-                            console.log(`    Type: ${d.deviceType}`);
-                            console.log(`    Status: ${d.deviceStatus}`);
-                            console.log(`    ID: ${d.cid}`);
+                            logger.debug(`  • ${d.deviceName}`);
+                            logger.debug(`    Type: ${d.deviceType}`);
+                            logger.debug(`    Status: ${d.deviceStatus}`);
+                            logger.debug(`    ID: ${d.cid}`);
                         });
                     }
                 }
 
                 // Log summary statistics
-                console.log('\nSummary Statistics:');
-                console.log('-------------------');
-                console.log(`Total Devices: ${this.devices?.length || 0}`);
+                logger.debug('\nSummary Statistics:');
+                logger.debug('-------------------');
+                logger.debug(`Total Devices: ${this.devices?.length || 0}`);
                 for (const [category, devices] of Object.entries(this._devList)) {
-                    console.log(`${category}: ${devices.length} devices`);
+                    logger.debug(`${category}: ${devices.length} devices`);
                 }
 
-                console.log('\n=== End of Device Discovery ===\n');
+                logger.debug('\n=== End of Device Discovery ===\n');
             } else {
-                console.error('No devices found in response');
+                logger.error('No devices found in response');
             }
         } catch (error) {
-            console.error('Unable to get device list:', error);
+            logger.error('Unable to get device list:', error);
         }
 
         this._inProcess = false;
@@ -447,7 +446,7 @@ export class VeSync {
      */
     async login(): Promise<boolean> {
         const body = Helpers.reqBody(this, 'login');
-        console.log('Login request:', {
+        logger.debug('Login request:', {
             url: `${process.env.VESYNC_API_URL}/cloud/v1/user/login`,
             body
         });
@@ -459,7 +458,7 @@ export class VeSync {
                 body
             );
 
-            console.log('Login response:', { status, response });
+            logger.debug('Login response:', { status, response });
 
             if (response?.result?.token) {
                 this.token = response.result.token;
@@ -469,10 +468,10 @@ export class VeSync {
                 return true;
             }
 
-            console.error('Unable to login with supplied credentials');
+            logger.error('Unable to login with supplied credentials');
             return false;
         } catch (error) {
-            console.error('Login error:', error);
+            logger.error('Login error:', error);
             return false;
         }
     }
@@ -493,19 +492,19 @@ export class VeSync {
     async update(): Promise<void> {
         if (this.deviceTimeCheck()) {
             if (!this.enabled) {
-                console.error('Not logged in to VeSync');
+                logger.error('Not logged in to VeSync');
                 return;
             }
 
             await this.getDevices();
 
-            console.debug('Start updating the device details one by one');
+            logger.debug('Start updating the device details one by one');
             for (const deviceList of Object.values(this._devList)) {
                 for (const device of deviceList) {
                     try {
                         await device.getDetails();
                     } catch (error) {
-                        console.error(`Error updating ${device.deviceName}:`, error);
+                        logger.error(`Error updating ${device.deviceName}:`, error);
                     }
                 }
             }

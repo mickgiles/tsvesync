@@ -5,6 +5,7 @@
 import { VeSyncBaseDevice } from './vesyncBaseDevice';
 import { VeSync } from './vesync';
 import { Helpers } from './helpers';
+import { logger } from './logger';
 
 type DeviceConstructor = new (config: Record<string, any>, manager: VeSync) => VeSyncBaseDevice;
 
@@ -68,7 +69,7 @@ export abstract class VeSyncSwitch extends VeSyncBaseDevice {
         ];
 
         for (const [key, value] of info) {
-            console.log(`${key.toString().padEnd(30, '.')} ${value}`);
+            logger.info(`${key.toString().padEnd(30, '.')} ${value}`);
         }
     }
 
@@ -124,7 +125,7 @@ export class VeSyncWallSwitch extends VeSyncSwitch {
             this.details.active_time = result.activeTime ?? 0;
             this.connectionStatus = result.connectionStatus ?? this.connectionStatus;
         } else {
-            console.debug(`Error getting ${this.deviceName} details`);
+            logger.debug(`Error getting ${this.deviceName} details`);
         }
     }
 
@@ -146,7 +147,7 @@ export class VeSyncWallSwitch extends VeSyncSwitch {
         if (response?.code === 0) {
             this.config = Helpers.buildConfigDict(response);
         } else {
-            console.debug(`Unable to get ${this.deviceName} config info`);
+            logger.debug(`Unable to get ${this.deviceName} config info`);
         }
     }
 
@@ -169,7 +170,7 @@ export class VeSyncWallSwitch extends VeSyncSwitch {
             this.deviceStatus = 'off';
             return true;
         }
-        console.debug(`Error turning ${this.deviceName} off`);
+        logger.debug(`Error turning ${this.deviceName} off`);
         return false;
     }
 
@@ -192,7 +193,7 @@ export class VeSyncWallSwitch extends VeSyncSwitch {
             this.deviceStatus = 'on';
             return true;
         }
-        console.debug(`Error turning ${this.deviceName} on`);
+        logger.debug(`Error turning ${this.deviceName} on`);
         return false;
     }
 }
@@ -240,7 +241,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
                 };
             }
         } else {
-            console.debug(`Error getting ${this.deviceName} details`);
+            logger.debug(`Error getting ${this.deviceName} details`);
         }
     }
 
@@ -262,7 +263,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
         if (response?.code === 0) {
             this.config = Helpers.buildConfigDict(response);
         } else {
-            console.debug(`Unable to get ${this.deviceName} config info`);
+            logger.debug(`Unable to get ${this.deviceName} config info`);
         }
     }
 
@@ -285,7 +286,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
             this.deviceStatus = 'off';
             return true;
         }
-        console.debug(`Error turning ${this.deviceName} off`);
+        logger.debug(`Error turning ${this.deviceName} off`);
         return false;
     }
 
@@ -308,7 +309,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
             this.deviceStatus = 'on';
             return true;
         }
-        console.debug(`Error turning ${this.deviceName} on`);
+        logger.debug(`Error turning ${this.deviceName} on`);
         return false;
     }
 
@@ -360,7 +361,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
         ];
 
         for (const [key, value, unit = ''] of info) {
-            console.log(`${key.toString().padEnd(30, '.')} ${value}${unit}`);
+            logger.info(`${key.toString().padEnd(30, '.')} ${value}${unit}`);
         }
     }
 
@@ -398,7 +399,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
             this._brightness = brightness;
             return true;
         }
-        console.debug(`Error setting ${this.deviceName} brightness`);
+        logger.debug(`Error setting ${this.deviceName} brightness`);
         return false;
     }
 
@@ -408,7 +409,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
      */
     async indicatorLightToggle(status: string): Promise<boolean> {
         if (status !== 'on' && status !== 'off') {
-            console.debug('Invalid status passed to indicator light toggle');
+            logger.debug('Invalid status passed to indicator light toggle');
             return false;
         }
 
@@ -427,7 +428,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
             this._indicatorLight = status;
             return true;
         }
-        console.debug(`Error toggling ${this.deviceName} indicator light`);
+        logger.debug(`Error toggling ${this.deviceName} indicator light`);
         return false;
     }
 
@@ -455,7 +456,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
             this._rgbStatus = 'on';
             return true;
         }
-        console.debug(`Error setting ${this.deviceName} RGB color`);
+        logger.debug(`Error setting ${this.deviceName} RGB color`);
         return false;
     }
 
@@ -465,7 +466,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
      */
     async switchToggle(status: string): Promise<boolean> {
         if (status !== 'on' && status !== 'off') {
-            console.debug('Invalid status passed to switch toggle');
+            logger.debug('Invalid status passed to switch toggle');
             return false;
         }
 
@@ -481,7 +482,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
      */
     async rgbColorStatus(status: string, red?: number, green?: number, blue?: number): Promise<boolean> {
         if (status !== 'on' && status !== 'off') {
-            console.debug('Invalid status passed to RGB color status');
+            logger.debug('Invalid status passed to RGB color status');
             return false;
         }
 
@@ -505,7 +506,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
             this._rgbStatus = status;
             return true;
         }
-        console.debug(`Error setting ${this.deviceName} RGB status`);
+        logger.debug(`Error setting ${this.deviceName} RGB status`);
         return false;
     }
 

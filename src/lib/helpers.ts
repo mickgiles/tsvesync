@@ -5,6 +5,7 @@
 import axios from 'axios';
 import crypto from 'crypto';
 import { VeSync } from './vesync';
+import { logger } from './logger';
 
 // API configuration
 let _apiBaseUrl = 'https://smartapi.vesync.com';
@@ -216,7 +217,7 @@ export class Helpers {
             if (error.response) {
                 return [error.response.data, error.response.status];
             }
-            console.error('API call failed:', error.message);
+            logger.error('API call failed:', error.message);
             return [null, 0];
         }
     }
@@ -238,7 +239,7 @@ export class Helpers {
             const decoded = Buffer.from(value, 'hex');
             return decoded.readFloatBE(0).toString();
         } catch (error) {
-            console.debug('Error decoding hex value:', error);
+            logger.debug('Error decoding hex value:', error);
             return '0';
         }
     }

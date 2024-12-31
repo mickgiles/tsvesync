@@ -4,9 +4,7 @@
 
 import { VeSyncBaseDevice } from './vesyncBaseDevice';
 import { VeSync } from './vesync';
-import { Helpers } from './helpers';
-
-type DeviceConstructor = new (config: Record<string, any>, manager: VeSync) => VeSyncBaseDevice;
+import { logger } from './logger';
 
 interface FanConfig {
     [key: string]: {
@@ -396,7 +394,7 @@ export abstract class VeSyncFan extends VeSyncBaseDevice {
         }
 
         for (const [key, value, unit = ''] of info) {
-            console.log(`${key.toString().padEnd(30, '.')} ${value}${unit}`);
+            logger.debug(`${key.toString().padEnd(30, '.')} ${value}${unit}`);
         }
     }
 
