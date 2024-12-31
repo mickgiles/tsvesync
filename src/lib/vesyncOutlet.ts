@@ -138,6 +138,20 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
     }
 
     /**
+     * Get API prefix based on device type
+     */
+    private getApiPrefix(): string {
+        if (this.deviceType === 'wifi-switch-1.3') {
+            return `v1/device/${this.deviceType}-${this.cid}`;
+        } else if (this.deviceType.startsWith('ESW15') || this.deviceType.startsWith('ESO15')) {
+            return '15a/v1/device';
+        } else if (this.deviceType.startsWith('ESW03') || this.deviceType.startsWith('ESW01')) {
+            return '10a/v1/device';
+        }
+        return 'v1/device';
+    }
+
+    /**
      * Get weekly energy data
      */
     async getWeeklyEnergy(): Promise<void> {
@@ -147,11 +161,16 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
         }
 
         logger.debug(`[${this.deviceName}] Getting weekly energy data`);
-        const url = `/v1/${this.deviceType}/${this.deviceType}-${this.cid}/energy/week`;
+        const isLegacyDevice = this.deviceType === 'wifi-switch-1.3';
+        const body = isLegacyDevice ? null : {
+            ...Helpers.reqBody(this.manager, 'energyweek'),
+            uuid: this.uuid
+        };
+
         const [response] = await Helpers.callApi(
-            url,
-            'get',
-            null,
+            isLegacyDevice ? `/${this.getApiPrefix()}/energy/week` : `/${this.getApiPrefix()}/energyweek`,
+            isLegacyDevice ? 'get' : 'post',
+            body,
             Helpers.reqHeaders(this.manager)
         );
 
@@ -173,11 +192,16 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
         }
 
         logger.debug(`[${this.deviceName}] Getting monthly energy data`);
-        const url = `/v1/${this.deviceType}/${this.deviceType}-${this.cid}/energy/month`;
+        const isLegacyDevice = this.deviceType === 'wifi-switch-1.3';
+        const body = isLegacyDevice ? null : {
+            ...Helpers.reqBody(this.manager, 'energymonth'),
+            uuid: this.uuid
+        };
+
         const [response] = await Helpers.callApi(
-            url,
-            'get',
-            null,
+            isLegacyDevice ? `/${this.getApiPrefix()}/energy/month` : `/${this.getApiPrefix()}/energymonth`,
+            isLegacyDevice ? 'get' : 'post',
+            body,
             Helpers.reqHeaders(this.manager)
         );
 
@@ -199,11 +223,16 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
         }
 
         logger.debug(`[${this.deviceName}] Getting yearly energy data`);
-        const url = `/v1/${this.deviceType}/${this.deviceType}-${this.cid}/energy/year`;
+        const isLegacyDevice = this.deviceType === 'wifi-switch-1.3';
+        const body = isLegacyDevice ? null : {
+            ...Helpers.reqBody(this.manager, 'energyyear'),
+            uuid: this.uuid
+        };
+
         const [response] = await Helpers.callApi(
-            url,
-            'get',
-            null,
+            isLegacyDevice ? `/${this.getApiPrefix()}/energy/year` : `/${this.getApiPrefix()}/energyyear`,
+            isLegacyDevice ? 'get' : 'post',
+            body,
             Helpers.reqHeaders(this.manager)
         );
 

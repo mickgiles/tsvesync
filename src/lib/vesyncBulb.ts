@@ -5,22 +5,35 @@
 import { VeSyncBaseDevice } from './vesyncBaseDevice';
 import { VeSync } from './vesync';
 import { Helpers } from './helpers';
+import { logger } from './logger';
 
-// Feature dictionary for bulb types
-const featureDict: Record<string, { features: string[], colorModel: string }> = {
+interface BulbConfig {
+    [key: string]: {
+        module: string;
+        features: string[];
+        colorModel: string;
+    };
+}
+
+// Bulb configuration
+export const bulbConfig: BulbConfig = {
     'ESL100': {
+        module: 'VeSyncBulbESL100',
         features: ['dimmable'],
         colorModel: 'none'
     },
     'ESL100CW': {
+        module: 'VeSyncBulbESL100CW',
         features: ['dimmable', 'color_temp'],
         colorModel: 'none'
     },
     'XYD0001': {
+        module: 'VeSyncBulbXYD0001',
         features: ['dimmable', 'color_temp', 'rgb_shift'],
         colorModel: 'hsv'
     },
     'ESL100MC': {
+        module: 'VeSyncBulbESL100MC',
         features: ['dimmable', 'rgb_shift'],
         colorModel: 'rgb'
     }
@@ -47,7 +60,7 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
         this.colorHue = 0;
         this.colorSaturation = 0;
         this.colorMode = '';
-        this.features = featureDict[this.deviceType]?.features || [];
+        this.features = bulbConfig[this.deviceType]?.features || [];
         this.rgbValues = {
             red: 0,
             green: 0,
@@ -59,27 +72,43 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
      * Get bulb details
      */
     async getDetails(): Promise<void> {
-        const body = {
-            ...Helpers.reqBody(this.manager, 'devicedetail'),
-            uuid: this.cid,
-            method: 'devicedetail'
+        logger.debug(`[${this.deviceName}] Getting bulb details`);
+        
+        const isV2Device = this.deviceType === 'XYD0001';
+        const endpoint = isV2Device ? '/cloud/v2/deviceManaged/bypassV2' : '/cloud/v1/deviceManaged/bypass';
+        const body = isV2Device ? {
+            ...Helpers.reqBody(this.manager, 'bypassV2'),
+            cid: this.cid,
+            configModule: this.configModule,
+            payload: {
+                data: {},
+                method: 'getLightStatusV2',
+                source: 'APP'
+            }
+        } : {
+            ...Helpers.reqBody(this.manager, 'bypass'),
+            cid: this.cid,
+            configModule: this.configModule,
+            jsonCmd: {
+                getLightStatus: 'get'
+            }
         };
 
         const [response] = await Helpers.callApi(
-            '/SmartBulb/v1/device/devicedetail',
+            endpoint,
             'post',
             body,
             Helpers.reqHeaders(this.manager)
         );
 
         if (response?.code === 0 && response?.result) {
-            this.deviceStatus = response.result.deviceStatus || this.deviceStatus;
+            this.deviceStatus = response.result.enabled ? 'on' : 'off';
             this.brightness = response.result.brightness || this.brightness;
             if (this.features.includes('color_temp')) {
                 this.colorTemp = response.result.colorTemp || this.colorTemp;
             }
             if (this.features.includes('rgb_shift')) {
-                if (featureDict[this.deviceType].colorModel === 'rgb') {
+                if (bulbConfig[this.deviceType].colorModel === 'rgb') {
                     this.rgbValues = {
                         red: response.result.red || this.rgbValues.red,
                         green: response.result.green || this.rgbValues.green,
@@ -91,6 +120,9 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
                     this.colorValue = response.result.value || this.colorValue;
                 }
             }
+            logger.debug(`[${this.deviceName}] Successfully retrieved bulb details`);
+        } else {
+            logger.error(`[${this.deviceName}] Failed to get bulb details: ${JSON.stringify(response)}`);
         }
     }
 
@@ -98,30 +130,55 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
      * Update bulb status
      */
     async update(): Promise<void> {
+        logger.debug(`[${this.deviceName}] Updating bulb information`);
         await this.getDetails();
+        logger.debug(`[${this.deviceName}] Successfully updated bulb information`);
     }
 
     /**
      * Turn bulb on
      */
     async turnOn(): Promise<boolean> {
-        const body = {
-            ...Helpers.reqBody(this.manager, 'devicestatus'),
-            uuid: this.cid,
-            status: 'on'
+        logger.debug(`[${this.deviceName}] Turning bulb on`);
+
+        const isV2Device = this.deviceType === 'XYD0001';
+        const endpoint = isV2Device ? '/cloud/v2/deviceManaged/bypassV2' : '/cloud/v1/deviceManaged/bypass';
+        const body = isV2Device ? {
+            ...Helpers.reqBody(this.manager, 'bypassV2'),
+            cid: this.cid,
+            configModule: this.configModule,
+            payload: {
+                data: {
+                    enabled: true,
+                    id: 0
+                },
+                method: 'setSwitch',
+                source: 'APP'
+            }
+        } : {
+            ...Helpers.reqBody(this.manager, 'bypass'),
+            cid: this.cid,
+            configModule: this.configModule,
+            jsonCmd: {
+                light: {
+                    action: 'on'
+                }
+            }
         };
 
         const [response] = await Helpers.callApi(
-            '/SmartBulb/v1/device/devicestatus',
-            'put',
+            endpoint,
+            'post',
             body,
             Helpers.reqHeaders(this.manager)
         );
 
         if (response?.code === 0) {
             this.deviceStatus = 'on';
+            logger.debug(`[${this.deviceName}] Successfully turned bulb on`);
             return true;
         }
+        logger.error(`[${this.deviceName}] Failed to turn bulb on: ${JSON.stringify(response)}`);
         return false;
     }
 
@@ -129,23 +186,46 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
      * Turn bulb off
      */
     async turnOff(): Promise<boolean> {
-        const body = {
-            ...Helpers.reqBody(this.manager, 'devicestatus'),
-            uuid: this.cid,
-            status: 'off'
+        logger.debug(`[${this.deviceName}] Turning bulb off`);
+
+        const isV2Device = this.deviceType === 'XYD0001';
+        const endpoint = isV2Device ? '/cloud/v2/deviceManaged/bypassV2' : '/cloud/v1/deviceManaged/bypass';
+        const body = isV2Device ? {
+            ...Helpers.reqBody(this.manager, 'bypassV2'),
+            cid: this.cid,
+            configModule: this.configModule,
+            payload: {
+                data: {
+                    enabled: false,
+                    id: 0
+                },
+                method: 'setSwitch',
+                source: 'APP'
+            }
+        } : {
+            ...Helpers.reqBody(this.manager, 'bypass'),
+            cid: this.cid,
+            configModule: this.configModule,
+            jsonCmd: {
+                light: {
+                    action: 'off'
+                }
+            }
         };
 
         const [response] = await Helpers.callApi(
-            '/SmartBulb/v1/device/devicestatus',
-            'put',
+            endpoint,
+            'post',
             body,
             Helpers.reqHeaders(this.manager)
         );
 
         if (response?.code === 0) {
             this.deviceStatus = 'off';
+            logger.debug(`[${this.deviceName}] Successfully turned bulb off`);
             return true;
         }
+        logger.error(`[${this.deviceName}] Failed to turn bulb off: ${JSON.stringify(response)}`);
         return false;
     }
 
@@ -154,27 +234,55 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
      */
     async setBrightness(brightness: number): Promise<boolean> {
         if (!this.features.includes('dimmable')) {
+            logger.error(`[${this.deviceName}] Dimming not supported`);
             return false;
         }
 
-        const body = {
-            ...Helpers.reqBody(this.manager, 'devicestatus'),
-            uuid: this.cid,
-            status: 'on',
-            brightNess: brightness.toString()
+        logger.debug(`[${this.deviceName}] Setting brightness to ${brightness}`);
+
+        const isV2Device = this.deviceType === 'XYD0001';
+        const endpoint = isV2Device ? '/cloud/v2/deviceManaged/bypassV2' : '/cloud/v1/deviceManaged/bypass';
+        const body = isV2Device ? {
+            ...Helpers.reqBody(this.manager, 'bypassV2'),
+            cid: this.cid,
+            configModule: this.configModule,
+            payload: {
+                data: {
+                    brightness: brightness,
+                    colorMode: '',
+                    colorTemp: '',
+                    force: 0,
+                    hue: '',
+                    saturation: '',
+                    value: ''
+                },
+                method: 'setLightStatusV2',
+                source: 'APP'
+            }
+        } : {
+            ...Helpers.reqBody(this.manager, 'bypass'),
+            cid: this.cid,
+            configModule: this.configModule,
+            jsonCmd: {
+                light: {
+                    brightness: brightness
+                }
+            }
         };
 
         const [response] = await Helpers.callApi(
-            '/SmartBulb/v1/device/updateBrightness',
-            'put',
+            endpoint,
+            'post',
             body,
             Helpers.reqHeaders(this.manager)
         );
 
         if (response?.code === 0) {
             this.brightness = brightness;
+            logger.debug(`[${this.deviceName}] Successfully set brightness to ${brightness}`);
             return true;
         }
+        logger.error(`[${this.deviceName}] Failed to set brightness: ${JSON.stringify(response)}`);
         return false;
     }
 
@@ -239,7 +347,7 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
      * Get RGB values
      */
     getRGBValues(): { red: number, green: number, blue: number } {
-        if (!this.features.includes('rgb_shift') || featureDict[this.deviceType].colorModel !== 'rgb') {
+        if (!this.features.includes('rgb_shift') || bulbConfig[this.deviceType].colorModel !== 'rgb') {
             return { red: 0, green: 0, blue: 0 };
         }
         return this.rgbValues;
