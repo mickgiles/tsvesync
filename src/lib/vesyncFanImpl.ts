@@ -340,6 +340,41 @@ export class VeSyncAirBypass extends VeSyncFan {
 
         return this.checkResponse([response, status], 'automaticStopOff');
     }
+
+    /**
+     * Set auto mode
+     */
+    async autoMode(): Promise<boolean> {
+        return await this.setMode('auto');
+    }
+
+    /**
+     * Set manual mode
+     */
+    async manualMode(): Promise<boolean> {
+        return await this.setMode('manual');
+    }
+
+    /**
+     * Set sleep mode
+     */
+    async sleepMode(): Promise<boolean> {
+        return await this.setMode('sleep');
+    }
+
+    /**
+     * Turn off display
+     */
+    async turnOffDisplay(): Promise<boolean> {
+        return await this.setDisplay(false);
+    }
+
+    /**
+     * Turn on display
+     */
+    async turnOnDisplay(): Promise<boolean> {
+        return await this.setDisplay(true);
+    }
 }
 
 /**
@@ -693,6 +728,34 @@ export class VeSyncHumidifier extends VeSyncFan {
         );
 
         return this.checkResponse([response, status], 'automaticStopOff');
+    }
+
+    /**
+     * Set auto mode
+     */
+    async setAutoMode(): Promise<boolean> {
+        return await this.setMode('auto');
+    }
+
+    /**
+     * Set manual mode
+     */
+    async setManualMode(): Promise<boolean> {
+        return await this.setMode('manual');
+    }
+
+    /**
+     * Turn off display
+     */
+    async turnOffDisplay(): Promise<boolean> {
+        return await this.setDisplay(false);
+    }
+
+    /**
+     * Turn on display
+     */
+    async turnOnDisplay(): Promise<boolean> {
+        return await this.setDisplay(true);
     }
 }
 
