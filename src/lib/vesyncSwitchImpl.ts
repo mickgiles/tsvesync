@@ -5,6 +5,7 @@
 import { VeSyncSwitch } from './vesyncSwitch';
 import { VeSync } from './vesync';
 import { Helpers } from './helpers';
+import { logger } from './logger';
 
 /**
  * Basic Wall Switch Implementation (ESWL01, ESWL03)
@@ -12,12 +13,14 @@ import { Helpers } from './helpers';
 export class VeSyncWallSwitch extends VeSyncSwitch {
     constructor(details: Record<string, any>, manager: VeSync) {
         super(details, manager);
+        logger.debug(`Initialized VeSyncWallSwitch device: ${this.deviceName}`);
     }
 
     /**
      * Get wall switch details
      */
     async getDetails(): Promise<void> {
+        logger.debug(`Getting details for device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicedetail'),
             uuid: this.cid,
@@ -36,6 +39,9 @@ export class VeSyncWallSwitch extends VeSyncSwitch {
             this.deviceStatus = result.deviceStatus || this.deviceStatus;
             this.details.active_time = result.activeTime || 0;
             this.connectionStatus = result.connectionStatus || this.connectionStatus;
+            logger.debug(`Successfully got details for device: ${this.deviceName}`);
+        } else {
+            logger.error(`Failed to get details for device: ${this.deviceName}`);
         }
     }
 
@@ -43,6 +49,7 @@ export class VeSyncWallSwitch extends VeSyncSwitch {
      * Get switch device configuration info
      */
     async getConfig(): Promise<void> {
+        logger.debug(`Getting configuration for device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicedetail'),
             method: 'configurations',
@@ -58,6 +65,9 @@ export class VeSyncWallSwitch extends VeSyncSwitch {
 
         if (response?.code === 0) {
             this.config = Helpers.buildConfigDict(response);
+            logger.debug(`Successfully got configuration for device: ${this.deviceName}`);
+        } else {
+            logger.error(`Failed to get configuration for device: ${this.deviceName}`);
         }
     }
 
@@ -65,6 +75,7 @@ export class VeSyncWallSwitch extends VeSyncSwitch {
      * Turn off wall switch
      */
     async turnOff(): Promise<boolean> {
+        logger.debug(`Turning off device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             status: 'off',
@@ -80,8 +91,10 @@ export class VeSyncWallSwitch extends VeSyncSwitch {
 
         if (response?.code === 0) {
             this.deviceStatus = 'off';
+            logger.debug(`Successfully turned off device: ${this.deviceName}`);
             return true;
         }
+        logger.error(`Failed to turn off device: ${this.deviceName}`);
         return false;
     }
 
@@ -89,6 +102,7 @@ export class VeSyncWallSwitch extends VeSyncSwitch {
      * Turn on wall switch
      */
     async turnOn(): Promise<boolean> {
+        logger.debug(`Turning on device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             status: 'on',
@@ -104,8 +118,10 @@ export class VeSyncWallSwitch extends VeSyncSwitch {
 
         if (response?.code === 0) {
             this.deviceStatus = 'on';
+            logger.debug(`Successfully turned on device: ${this.deviceName}`);
             return true;
         }
+        logger.error(`Failed to turn on device: ${this.deviceName}`);
         return false;
     }
 }
@@ -121,12 +137,14 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
 
     constructor(details: Record<string, any>, manager: VeSync) {
         super(details, manager);
+        logger.debug(`Initialized VeSyncDimmerSwitch device: ${this.deviceName}`);
     }
 
     /**
      * Get dimmer switch details
      */
     async getDetails(): Promise<void> {
+        logger.debug(`Getting details for device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicedetail'),
             uuid: this.cid,
@@ -155,6 +173,9 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
                     blue: result.rgbValue.blue || 0
                 };
             }
+            logger.debug(`Successfully got details for device: ${this.deviceName}`);
+        } else {
+            logger.error(`Failed to get details for device: ${this.deviceName}`);
         }
     }
 
@@ -162,6 +183,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
      * Get dimmer switch configuration info
      */
     async getConfig(): Promise<void> {
+        logger.debug(`Getting configuration for device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicedetail'),
             method: 'configurations',
@@ -177,6 +199,9 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
 
         if (response?.code === 0) {
             this.config = Helpers.buildConfigDict(response);
+            logger.debug(`Successfully got configuration for device: ${this.deviceName}`);
+        } else {
+            logger.error(`Failed to get configuration for device: ${this.deviceName}`);
         }
     }
 
@@ -184,6 +209,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
      * Turn off dimmer switch
      */
     async turnOff(): Promise<boolean> {
+        logger.debug(`Turning off device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             status: 'off',
@@ -199,8 +225,10 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
 
         if (response?.code === 0) {
             this.deviceStatus = 'off';
+            logger.debug(`Successfully turned off device: ${this.deviceName}`);
             return true;
         }
+        logger.error(`Failed to turn off device: ${this.deviceName}`);
         return false;
     }
 
@@ -208,6 +236,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
      * Turn on dimmer switch
      */
     async turnOn(): Promise<boolean> {
+        logger.debug(`Turning on device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             status: 'on',
@@ -223,8 +252,10 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
 
         if (response?.code === 0) {
             this.deviceStatus = 'on';
+            logger.debug(`Successfully turned on device: ${this.deviceName}`);
             return true;
         }
+        logger.error(`Failed to turn on device: ${this.deviceName}`);
         return false;
     }
 
@@ -233,9 +264,11 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
      */
     async setBrightness(brightness: number): Promise<boolean> {
         if (!this.isDimmable()) {
+            logger.error(`Device ${this.deviceName} does not support dimming`);
             return false;
         }
 
+        logger.debug(`Setting brightness to ${brightness} for device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             brightness: brightness.toString(),
@@ -251,8 +284,10 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
 
         if (response?.code === 0) {
             this._brightness = brightness;
+            logger.debug(`Successfully set brightness to ${brightness} for device: ${this.deviceName}`);
             return true;
         }
+        logger.error(`Failed to set brightness to ${brightness} for device: ${this.deviceName}`);
         return false;
     }
 
@@ -260,6 +295,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
      * Set RGB indicator color
      */
     async rgbColorSet(red: number, green: number, blue: number): Promise<boolean> {
+        logger.debug(`Setting RGB color to (${red}, ${green}, ${blue}) for device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             rgbValue: {
@@ -281,39 +317,18 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
         if (response?.code === 0) {
             this._rgbValue = { red, green, blue };
             this._rgbStatus = 'on';
+            logger.debug(`Successfully set RGB color for device: ${this.deviceName}`);
             return true;
         }
+        logger.error(`Failed to set RGB color for device: ${this.deviceName}`);
         return false;
     }
 
     /**
      * Turn on RGB indicator
      */
-    async rgbColorOn(): Promise<boolean> {
-        const body = {
-            ...Helpers.reqBody(this.manager, 'devicestatus'),
-            status: 'on',
-            uuid: this.cid
-        };
-
-        const [response] = await Helpers.callApi(
-            '/dimmer/v1/device/devicergbstatus',
-            'put',
-            body,
-            Helpers.reqHeaders(this.manager)
-        );
-
-        if (response?.code === 0) {
-            this._rgbStatus = 'on';
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Turn off RGB indicator
-     */
     async rgbColorOff(): Promise<boolean> {
+        logger.debug(`Turning off RGB color for device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             status: 'off',
@@ -329,19 +344,49 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
 
         if (response?.code === 0) {
             this._rgbStatus = 'off';
+            logger.debug(`Successfully turned off RGB color for device: ${this.deviceName}`);
             return true;
         }
+        logger.error(`Failed to turn off RGB color for device: ${this.deviceName}`);
         return false;
     }
 
     /**
-     * Turn on indicator light
+     * Turn RGB Color On
      */
-    async indicatorLightOn(): Promise<boolean> {
+    async rgbColorOn(): Promise<boolean> {
+        logger.debug(`Turning on RGB color for device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
-            status: 'on',
-            uuid: this.cid
+            uuid: this.cid,
+            status: 'on'
+        };
+
+        const [response] = await Helpers.callApi(
+            '/dimmer/v1/device/devicergbstatus',
+            'put',
+            body,
+            Helpers.reqHeaders(this.manager)
+        );
+
+        if (response?.code === 0) {
+            this._rgbStatus = 'on';
+            logger.debug(`Successfully turned on RGB color for device: ${this.deviceName}`);
+            return true;
+        }
+        logger.error(`Failed to turn on RGB color for device: ${this.deviceName}`);
+        return false;
+    }
+
+    /**
+     * Turn indicator light on
+     */
+    async indicatorLightOn(): Promise<boolean> {
+        logger.debug(`Turning on indicator light for device: ${this.deviceName}`);
+        const body = {
+            ...Helpers.reqBody(this.manager, 'devicestatus'),
+            uuid: this.cid,
+            status: 'on'
         };
 
         const [response] = await Helpers.callApi(
@@ -353,19 +398,22 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
 
         if (response?.code === 0) {
             this._indicatorLight = 'on';
+            logger.debug(`Successfully turned on indicator light for device: ${this.deviceName}`);
             return true;
         }
+        logger.error(`Failed to turn on indicator light for device: ${this.deviceName}`);
         return false;
     }
 
     /**
-     * Turn off indicator light
+     * Turn indicator light off
      */
     async indicatorLightOff(): Promise<boolean> {
+        logger.debug(`Turning off indicator light for device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
-            status: 'off',
-            uuid: this.cid
+            uuid: this.cid,
+            status: 'off'
         };
 
         const [response] = await Helpers.callApi(
@@ -377,8 +425,10 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
 
         if (response?.code === 0) {
             this._indicatorLight = 'off';
+            logger.debug(`Successfully turned off indicator light for device: ${this.deviceName}`);
             return true;
         }
+        logger.error(`Failed to turn off indicator light for device: ${this.deviceName}`);
         return false;
     }
 
@@ -400,8 +450,8 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
     }
 }
 
-// Export the switch modules dictionary
-export const switchModules: Record<string, any> = {
+// Export switch modules dictionary
+export const switchModules: Record<string, new (details: Record<string, any>, manager: VeSync) => VeSyncSwitch> = {
     'ESWL01': VeSyncWallSwitch,
     'ESWL03': VeSyncWallSwitch,
     'ESWD16': VeSyncDimmerSwitch
