@@ -5,6 +5,7 @@
 import { VeSyncFan } from './vesyncFan';
 import { VeSync } from './vesync';
 import { Helpers } from './helpers';
+import { logger } from './logger';
 
 /**
  * VeSync Air Purifier with Bypass
@@ -17,12 +18,14 @@ export class VeSyncAirBypass extends VeSyncFan {
 
     constructor(details: Record<string, any>, manager: VeSync) {
         super(details, manager);
+        logger.debug(`Initialized VeSyncAirBypass device: ${this.deviceName}`);
     }
 
     /**
      * Get device details
      */
     async getDetails(): Promise<void> {
+        logger.debug(`Getting details for device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -59,7 +62,10 @@ export class VeSyncAirBypass extends VeSyncFan {
                 if (result.configuration) {
                     this.config = result.configuration;
                 }
+                logger.debug(`Successfully got details for device: ${this.deviceName}`);
             }
+        } else {
+            logger.error(`Failed to get details for device: ${this.deviceName}`);
         }
     }
 
@@ -67,6 +73,7 @@ export class VeSyncAirBypass extends VeSyncFan {
      * Turn device on
      */
     async turnOn(): Promise<boolean> {
+        logger.debug(`Turning on device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -86,13 +93,18 @@ export class VeSyncAirBypass extends VeSyncFan {
             Helpers.reqHeaderBypass()
         );
 
-        return this.checkResponse([response, status], 'turnOn');
+        const success = this.checkResponse([response, status], 'turnOn');
+        if (!success) {
+            logger.error(`Failed to turn on device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
      * Turn device off
      */
     async turnOff(): Promise<boolean> {
+        logger.debug(`Turning off device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -112,7 +124,11 @@ export class VeSyncAirBypass extends VeSyncFan {
             Helpers.reqHeaderBypass()
         );
 
-        return this.checkResponse([response, status], 'turnOff');
+        const success = this.checkResponse([response, status], 'turnOff');
+        if (!success) {
+            logger.error(`Failed to turn off device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
@@ -120,9 +136,12 @@ export class VeSyncAirBypass extends VeSyncFan {
      */
     async changeFanSpeed(speed: number): Promise<boolean> {
         if (!this.speeds.includes(speed)) {
-            throw new Error(`Invalid speed: ${speed}. Must be one of: ${this.speeds.join(', ')}`);
+            const error = `Invalid speed: ${speed}. Must be one of: ${this.speeds.join(', ')}`;
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
         }
 
+        logger.debug(`Changing fan speed to ${speed} for device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -144,7 +163,11 @@ export class VeSyncAirBypass extends VeSyncFan {
             Helpers.reqHeaderBypass()
         );
 
-        return this.checkResponse([response, status], 'changeFanSpeed');
+        const success = this.checkResponse([response, status], 'changeFanSpeed');
+        if (!success) {
+            logger.error(`Failed to change fan speed to ${speed} for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
@@ -152,9 +175,12 @@ export class VeSyncAirBypass extends VeSyncFan {
      */
     async setMode(mode: string): Promise<boolean> {
         if (!this.modes.includes(mode as any)) {
-            throw new Error(`Invalid mode: ${mode}. Must be one of: ${this.modes.join(', ')}`);
+            const error = `Invalid mode: ${mode}. Must be one of: ${this.modes.join(', ')}`;
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
         }
 
+        logger.debug(`Setting mode to ${mode} for device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -173,7 +199,11 @@ export class VeSyncAirBypass extends VeSyncFan {
             Helpers.reqHeaderBypass()
         );
 
-        return this.checkResponse([response, status], 'setMode');
+        const success = this.checkResponse([response, status], 'setMode');
+        if (!success) {
+            logger.error(`Failed to set mode to ${mode} for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
@@ -181,9 +211,12 @@ export class VeSyncAirBypass extends VeSyncFan {
      */
     async setDisplay(enabled: boolean): Promise<boolean> {
         if (!this.hasFeature('display')) {
-            throw new Error('Display control not supported');
+            const error = 'Display control not supported';
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
         }
 
+        logger.debug(`Setting display to ${enabled ? 'on' : 'off'} for device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -202,7 +235,11 @@ export class VeSyncAirBypass extends VeSyncFan {
             Helpers.reqHeaderBypass()
         );
 
-        return this.checkResponse([response, status], 'setDisplay');
+        const success = this.checkResponse([response, status], 'setDisplay');
+        if (!success) {
+            logger.error(`Failed to set display to ${enabled ? 'on' : 'off'} for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
@@ -210,9 +247,12 @@ export class VeSyncAirBypass extends VeSyncFan {
      */
     async setChildLock(enabled: boolean): Promise<boolean> {
         if (!this.hasFeature('child_lock')) {
-            throw new Error('Child lock not supported');
+            const error = 'Child lock not supported';
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
         }
 
+        logger.debug(`Setting child lock to ${enabled ? 'on' : 'off'} for device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -231,7 +271,11 @@ export class VeSyncAirBypass extends VeSyncFan {
             Helpers.reqHeaderBypass()
         );
 
-        return this.checkResponse([response, status], 'setChildLock');
+        const success = this.checkResponse([response, status], 'setChildLock');
+        if (!success) {
+            logger.error(`Failed to set child lock to ${enabled ? 'on' : 'off'} for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
@@ -239,9 +283,12 @@ export class VeSyncAirBypass extends VeSyncFan {
      */
     async setTimer(hours: number): Promise<boolean> {
         if (!this.hasFeature('timer')) {
-            throw new Error('Timer not supported');
+            const error = 'Timer not supported';
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
         }
 
+        logger.debug(`Setting timer to ${hours} hours for device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -261,7 +308,11 @@ export class VeSyncAirBypass extends VeSyncFan {
             Helpers.reqHeaderBypass()
         );
 
-        return this.checkResponse([response, status], 'setTimer');
+        const success = this.checkResponse([response, status], 'setTimer');
+        if (!success) {
+            logger.error(`Failed to set timer to ${hours} hours for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
@@ -269,9 +320,12 @@ export class VeSyncAirBypass extends VeSyncFan {
      */
     async clearTimer(): Promise<boolean> {
         if (!this.hasFeature('timer')) {
-            throw new Error('Timer not supported');
+            const error = 'Timer not supported';
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
         }
 
+        logger.debug(`Clearing timer for device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -288,13 +342,18 @@ export class VeSyncAirBypass extends VeSyncFan {
             Helpers.reqHeaderBypass()
         );
 
-        return this.checkResponse([response, status], 'clearTimer');
+        const success = this.checkResponse([response, status], 'clearTimer');
+        if (!success) {
+            logger.error(`Failed to clear timer for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
      * Turn automatic stop on
      */
     async automaticStopOn(): Promise<boolean> {
+        logger.debug(`Setting automatic stop on for device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -313,13 +372,18 @@ export class VeSyncAirBypass extends VeSyncFan {
             Helpers.reqHeaderBypass()
         );
 
-        return this.checkResponse([response, status], 'automaticStopOn');
+        const success = this.checkResponse([response, status], 'automaticStopOn');
+        if (!success) {
+            logger.error(`Failed to set automatic stop on for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
      * Turn automatic stop off
      */
     async automaticStopOff(): Promise<boolean> {
+        logger.debug(`Setting automatic stop off for device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -338,42 +402,71 @@ export class VeSyncAirBypass extends VeSyncFan {
             Helpers.reqHeaderBypass()
         );
 
-        return this.checkResponse([response, status], 'automaticStopOff');
+        const success = this.checkResponse([response, status], 'automaticStopOff');
+        if (!success) {
+            logger.error(`Failed to set automatic stop off for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
      * Set auto mode
      */
     async autoMode(): Promise<boolean> {
-        return await this.setMode('auto');
+        logger.debug(`Setting auto mode for device: ${this.deviceName}`);
+        const success = await this.setMode('auto');
+        if (!success) {
+            logger.error(`Failed to set auto mode for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
      * Set manual mode
      */
     async manualMode(): Promise<boolean> {
-        return await this.setMode('manual');
+        logger.debug(`Setting manual mode for device: ${this.deviceName}`);
+        const success = await this.setMode('manual');
+        if (!success) {
+            logger.error(`Failed to set manual mode for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
      * Set sleep mode
      */
     async sleepMode(): Promise<boolean> {
-        return await this.setMode('sleep');
+        logger.debug(`Setting sleep mode for device: ${this.deviceName}`);
+        const success = await this.setMode('sleep');
+        if (!success) {
+            logger.error(`Failed to set sleep mode for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
      * Turn off display
      */
     async turnOffDisplay(): Promise<boolean> {
-        return await this.setDisplay(false);
+        logger.debug(`Turning off display for device: ${this.deviceName}`);
+        const success = await this.setDisplay(false);
+        if (!success) {
+            logger.error(`Failed to turn off display for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
      * Turn on display
      */
     async turnOnDisplay(): Promise<boolean> {
-        return await this.setDisplay(true);
+        logger.debug(`Turning on display for device: ${this.deviceName}`);
+        const success = await this.setDisplay(true);
+        if (!success) {
+            logger.error(`Failed to turn on display for device: ${this.deviceName}`);
+        }
+        return success;
     }
 }
 
@@ -389,12 +482,14 @@ export class VeSyncHumidifier extends VeSyncFan {
 
     constructor(details: Record<string, any>, manager: VeSync) {
         super(details, manager);
+        logger.debug(`Initialized VeSyncHumidifier device: ${this.deviceName}`);
     }
 
     /**
      * Get device details
      */
     async getDetails(): Promise<void> {
+        logger.debug(`Getting details for device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -411,8 +506,12 @@ export class VeSyncHumidifier extends VeSyncFan {
             Helpers.reqHeaderBypass()
         );
 
-        if (this.checkResponse([response, status], 'getDetails')) {
+        const success = this.checkResponse([response, status], 'getDetails');
+        if (success) {
             this.details = response.result.result;
+            logger.debug(`Successfully got details for device: ${this.deviceName}`);
+        } else {
+            logger.error(`Failed to get details for device: ${this.deviceName}`);
         }
     }
 
@@ -420,6 +519,7 @@ export class VeSyncHumidifier extends VeSyncFan {
      * Turn device on
      */
     async turnOn(): Promise<boolean> {
+        logger.debug(`Turning on device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -439,13 +539,18 @@ export class VeSyncHumidifier extends VeSyncFan {
             Helpers.reqHeaderBypass()
         );
 
-        return this.checkResponse([response, status], 'turnOn');
+        const success = this.checkResponse([response, status], 'turnOn');
+        if (!success) {
+            logger.error(`Failed to turn on device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
      * Turn device off
      */
     async turnOff(): Promise<boolean> {
+        logger.debug(`Turning off device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -465,7 +570,11 @@ export class VeSyncHumidifier extends VeSyncFan {
             Helpers.reqHeaderBypass()
         );
 
-        return this.checkResponse([response, status], 'turnOff');
+        const success = this.checkResponse([response, status], 'turnOff');
+        if (!success) {
+            logger.error(`Failed to turn off device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
@@ -473,9 +582,12 @@ export class VeSyncHumidifier extends VeSyncFan {
      */
     async changeFanSpeed(speed: number): Promise<boolean> {
         if (!this.speeds.includes(speed)) {
-            throw new Error(`Invalid speed: ${speed}. Must be one of: ${this.speeds.join(', ')}`);
+            const error = `Invalid speed: ${speed}. Must be one of: ${this.speeds.join(', ')}`;
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
         }
 
+        logger.debug(`Changing fan speed to ${speed} for device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -496,7 +608,11 @@ export class VeSyncHumidifier extends VeSyncFan {
             Helpers.reqHeaderBypass()
         );
 
-        return this.checkResponse([response, status], 'changeFanSpeed');
+        const success = this.checkResponse([response, status], 'changeFanSpeed');
+        if (!success) {
+            logger.error(`Failed to change fan speed to ${speed} for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
@@ -504,9 +620,12 @@ export class VeSyncHumidifier extends VeSyncFan {
      */
     async setMode(mode: string): Promise<boolean> {
         if (!this.modes.includes(mode as any)) {
-            throw new Error(`Invalid mode: ${mode}. Must be one of: ${this.modes.join(', ')}`);
+            const error = `Invalid mode: ${mode}. Must be one of: ${this.modes.join(', ')}`;
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
         }
 
+        logger.debug(`Setting mode to ${mode} for device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -525,7 +644,11 @@ export class VeSyncHumidifier extends VeSyncFan {
             Helpers.reqHeaderBypass()
         );
 
-        return this.checkResponse([response, status], 'setMode');
+        const success = this.checkResponse([response, status], 'setMode');
+        if (!success) {
+            logger.error(`Failed to set mode to ${mode} for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
@@ -533,13 +656,18 @@ export class VeSyncHumidifier extends VeSyncFan {
      */
     async setMistLevel(level: number): Promise<boolean> {
         if (!this.hasFeature('mist')) {
-            throw new Error('Mist control not supported');
+            const error = 'Mist control not supported';
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
         }
 
         if (!this.mistLevels.includes(level)) {
-            throw new Error(`Invalid mist level: ${level}. Must be one of: ${this.mistLevels.join(', ')}`);
+            const error = `Invalid mist level: ${level}. Must be one of: ${this.mistLevels.join(', ')}`;
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
         }
 
+        logger.debug(`Setting mist level to ${level} for device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -558,7 +686,11 @@ export class VeSyncHumidifier extends VeSyncFan {
             Helpers.reqHeaderBypass()
         );
 
-        return this.checkResponse([response, status], 'setMistLevel');
+        const success = this.checkResponse([response, status], 'setMistLevel');
+        if (!success) {
+            logger.error(`Failed to set mist level to ${level} for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
@@ -566,13 +698,18 @@ export class VeSyncHumidifier extends VeSyncFan {
      */
     async setHumidity(humidity: number): Promise<boolean> {
         if (!this.hasFeature('humidity')) {
-            throw new Error('Humidity control not supported');
+            const error = 'Humidity control not supported';
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
         }
 
         if (humidity < this.humidityRange.min || humidity > this.humidityRange.max) {
-            throw new Error(`Invalid humidity: ${humidity}. Must be between ${this.humidityRange.min} and ${this.humidityRange.max}`);
+            const error = `Invalid humidity: ${humidity}. Must be between ${this.humidityRange.min} and ${this.humidityRange.max}`;
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
         }
 
+        logger.debug(`Setting target humidity to ${humidity}% for device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -591,7 +728,11 @@ export class VeSyncHumidifier extends VeSyncFan {
             Helpers.reqHeaderBypass()
         );
 
-        return this.checkResponse([response, status], 'setHumidity');
+        const success = this.checkResponse([response, status], 'setHumidity');
+        if (!success) {
+            logger.error(`Failed to set target humidity to ${humidity}% for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
@@ -599,9 +740,12 @@ export class VeSyncHumidifier extends VeSyncFan {
      */
     async setDisplay(enabled: boolean): Promise<boolean> {
         if (!this.hasFeature('display')) {
-            throw new Error('Display control not supported');
+            const error = 'Display control not supported';
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
         }
 
+        logger.debug(`Setting display to ${enabled ? 'on' : 'off'} for device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -620,7 +764,11 @@ export class VeSyncHumidifier extends VeSyncFan {
             Helpers.reqHeaderBypass()
         );
 
-        return this.checkResponse([response, status], 'setDisplay');
+        const success = this.checkResponse([response, status], 'setDisplay');
+        if (!success) {
+            logger.error(`Failed to set display to ${enabled ? 'on' : 'off'} for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
@@ -628,9 +776,12 @@ export class VeSyncHumidifier extends VeSyncFan {
      */
     async setTimer(hours: number): Promise<boolean> {
         if (!this.hasFeature('timer')) {
-            throw new Error('Timer not supported');
+            const error = 'Timer not supported';
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
         }
 
+        logger.debug(`Setting timer to ${hours} hours for device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -650,7 +801,11 @@ export class VeSyncHumidifier extends VeSyncFan {
             Helpers.reqHeaderBypass()
         );
 
-        return this.checkResponse([response, status], 'setTimer');
+        const success = this.checkResponse([response, status], 'setTimer');
+        if (!success) {
+            logger.error(`Failed to set timer to ${hours} hours for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
@@ -658,9 +813,12 @@ export class VeSyncHumidifier extends VeSyncFan {
      */
     async clearTimer(): Promise<boolean> {
         if (!this.hasFeature('timer')) {
-            throw new Error('Timer not supported');
+            const error = 'Timer not supported';
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
         }
 
+        logger.debug(`Clearing timer for device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -677,13 +835,18 @@ export class VeSyncHumidifier extends VeSyncFan {
             Helpers.reqHeaderBypass()
         );
 
-        return this.checkResponse([response, status], 'clearTimer');
+        const success = this.checkResponse([response, status], 'clearTimer');
+        if (!success) {
+            logger.error(`Failed to clear timer for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
      * Turn automatic stop on
      */
     async automaticStopOn(): Promise<boolean> {
+        logger.debug(`Setting automatic stop on for device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -702,13 +865,18 @@ export class VeSyncHumidifier extends VeSyncFan {
             Helpers.reqHeaderBypass()
         );
 
-        return this.checkResponse([response, status], 'automaticStopOn');
+        const success = this.checkResponse([response, status], 'automaticStopOn');
+        if (!success) {
+            logger.error(`Failed to set automatic stop on for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
      * Turn automatic stop off
      */
     async automaticStopOff(): Promise<boolean> {
+        logger.debug(`Setting automatic stop off for device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -727,35 +895,59 @@ export class VeSyncHumidifier extends VeSyncFan {
             Helpers.reqHeaderBypass()
         );
 
-        return this.checkResponse([response, status], 'automaticStopOff');
+        const success = this.checkResponse([response, status], 'automaticStopOff');
+        if (!success) {
+            logger.error(`Failed to set automatic stop off for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
      * Set auto mode
      */
     async setAutoMode(): Promise<boolean> {
-        return await this.setMode('auto');
+        logger.debug(`Setting auto mode for device: ${this.deviceName}`);
+        const success = await this.setMode('auto');
+        if (!success) {
+            logger.error(`Failed to set auto mode for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
      * Set manual mode
      */
     async setManualMode(): Promise<boolean> {
-        return await this.setMode('manual');
+        logger.debug(`Setting manual mode for device: ${this.deviceName}`);
+        const success = await this.setMode('manual');
+        if (!success) {
+            logger.error(`Failed to set manual mode for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
      * Turn off display
      */
     async turnOffDisplay(): Promise<boolean> {
-        return await this.setDisplay(false);
+        logger.debug(`Turning off display for device: ${this.deviceName}`);
+        const success = await this.setDisplay(false);
+        if (!success) {
+            logger.error(`Failed to turn off display for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
      * Turn on display
      */
     async turnOnDisplay(): Promise<boolean> {
-        return await this.setDisplay(true);
+        logger.debug(`Turning on display for device: ${this.deviceName}`);
+        const success = await this.setDisplay(true);
+        if (!success) {
+            logger.error(`Failed to turn on display for device: ${this.deviceName}`);
+        }
+        return success;
     }
 }
 
@@ -767,6 +959,7 @@ export class VeSyncWarmHumidifier extends VeSyncHumidifier {
 
     constructor(details: Record<string, any>, manager: VeSync) {
         super(details, manager);
+        logger.debug(`Initialized VeSyncWarmHumidifier device: ${this.deviceName}`);
     }
 
     /**
@@ -774,13 +967,18 @@ export class VeSyncWarmHumidifier extends VeSyncHumidifier {
      */
     async setWarmLevel(level: number): Promise<boolean> {
         if (!this.hasFeature('warm')) {
-            throw new Error('Warm mist control not supported');
+            const error = 'Warm mist control not supported';
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
         }
 
         if (!this.warmLevels.includes(level)) {
-            throw new Error(`Invalid warm level: ${level}. Must be one of: ${this.warmLevels.join(', ')}`);
+            const error = `Invalid warm level: ${level}. Must be one of: ${this.warmLevels.join(', ')}`;
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
         }
 
+        logger.debug(`Setting warm level to ${level} for device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -799,7 +997,11 @@ export class VeSyncWarmHumidifier extends VeSyncHumidifier {
             Helpers.reqHeaderBypass()
         );
 
-        return this.checkResponse([response, status], 'setWarmLevel');
+        const success = this.checkResponse([response, status], 'setWarmLevel');
+        if (!success) {
+            logger.error(`Failed to set warm level to ${level} for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
@@ -807,9 +1009,12 @@ export class VeSyncWarmHumidifier extends VeSyncHumidifier {
      */
     async setDryingModeEnabled(enabled: boolean): Promise<boolean> {
         if (!this.hasFeature('drying')) {
-            throw new Error('Drying mode not supported');
+            const error = 'Drying mode not supported';
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
         }
 
+        logger.debug(`Setting drying mode to ${enabled} for device: ${this.deviceName}`);
         const [response, status] = await Helpers.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -828,7 +1033,11 @@ export class VeSyncWarmHumidifier extends VeSyncHumidifier {
             Helpers.reqHeaderBypass()
         );
 
-        return this.checkResponse([response, status], 'setDryingModeEnabled');
+        const success = this.checkResponse([response, status], 'setDryingModeEnabled');
+        if (!success) {
+            logger.error(`Failed to set drying mode to ${enabled} for device: ${this.deviceName}`);
+        }
+        return success;
     }
 }
 

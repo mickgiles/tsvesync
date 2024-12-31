@@ -394,7 +394,7 @@ export abstract class VeSyncFan extends VeSyncBaseDevice {
         }
 
         for (const [key, value, unit = ''] of info) {
-            logger.debug(`${key.toString().padEnd(30, '.')} ${value}${unit}`);
+            logger.info(`${key.toString().padEnd(30, '.')} ${value}${unit}`);
         }
     }
 
