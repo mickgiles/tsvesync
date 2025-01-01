@@ -58,11 +58,29 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
      */
     async getDetails(): Promise<void> {
         logger.debug(`[${this.deviceName}] Getting outlet details`);
-        const url = `/v1/${this.deviceType}/${this.deviceType}-${this.cid}/detail`;
+        
+        const body = {
+            ...Helpers.reqBody(this.manager, 'devicedetail'),
+            uuid: this.uuid
+        };
+
+        let url: string;
+        if (this.deviceType === 'wifi-switch-1.3') {
+            url = `/v1/device/${this.deviceType}-${this.cid}/detail`;
+        } else if (this.deviceType.startsWith('ESO15')) {
+            url = '/outdoorsocket15a/v1/device/devicedetail';
+        } else if (this.deviceType.startsWith('ESW15')) {
+            url = '/15a/v1/device/devicedetail';
+        } else if (this.deviceType.startsWith('ESW03') || this.deviceType.startsWith('ESW01')) {
+            url = '/10a/v1/device/devicedetail';
+        } else {
+            url = '/v1/device/devicedetail';
+        }
+
         const [response] = await Helpers.callApi(
             url,
-            'get',
-            null,
+            this.deviceType === 'wifi-switch-1.3' ? 'get' : 'post',
+            this.deviceType === 'wifi-switch-1.3' ? null : body,
             Helpers.reqHeaders(this.manager)
         );
 
