@@ -2,14 +2,14 @@
  * VeSync API Device Library
  */
 
-import { Helpers, API_RATE_LIMIT, DEFAULT_TZ } from './helpers';
+import { Helpers, API_RATE_LIMIT, DEFAULT_TZ, setApiBaseUrl } from './helpers';
 import { VeSyncBaseDevice } from './vesyncBaseDevice';
 import { fanModules } from './vesyncFanImpl';
 import { outletModules } from './vesyncOutletImpl';
 import { switchModules } from './vesyncSwitchImpl';
 import { bulbModules } from './vesyncBulbImpl';
 import { VeSyncBulb } from './vesyncBulb';
-import { logger } from './logger';
+import { logger, setLogger, Logger } from './logger';
 
 const DEFAULT_ENERGY_UPDATE_INTERVAL = 21600;
 
@@ -145,13 +145,22 @@ export class VeSync {
 
     /**
      * Initialize VeSync Manager
+     * @param username - VeSync account username
+     * @param password - VeSync account password
+     * @param timeZone - Optional timezone (defaults to America/New_York)
+     * @param debug - Optional debug mode flag
+     * @param redact - Optional redact mode flag
+     * @param apiUrl - Optional API base URL override
+     * @param customLogger - Optional custom logger implementation
      */
     constructor(
         username: string,
         password: string,
         timeZone: string = DEFAULT_TZ,
         debug = false,
-        redact = true
+        redact = true,
+        apiUrl?: string,
+        customLogger?: Logger
     ) {
         this._debug = debug;
         this._redact = redact;
@@ -181,6 +190,16 @@ export class VeSync {
             switches: this.switches,
             bulbs: this.bulbs
         };
+
+        // Set custom API URL if provided
+        if (apiUrl) {
+            setApiBaseUrl(apiUrl);
+        }
+
+        // Set custom logger if provided
+        if (customLogger) {
+            setLogger(customLogger);
+        }
 
         if (typeof timeZone === 'string' && timeZone) {
             const regTest = /[^a-zA-Z/_]/;
