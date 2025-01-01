@@ -3,8 +3,6 @@
  * Tests core functionality of the VeSync API implementation
  */
 
-// Set environment variables for testing
-process.env.VESYNC_API_URL = 'http://localhost:8000';
 
 import { VeSync } from '../src/lib/vesync';
 import { VeSyncBaseDevice } from '../src/lib/vesyncBaseDevice';
@@ -54,7 +52,7 @@ export class VeSyncTestService {
     private verbose: boolean = false;
 
     constructor(verbose: boolean = false) {
-        this.manager = new VeSync('test@example.com', 'test123');
+        this.manager = new VeSync('test@example.com', 'test123', 'America/New_York', false, true, 'http://localhost:8000');
         this.verbose = verbose;
     }
 

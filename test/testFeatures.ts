@@ -7,7 +7,6 @@ import { VeSyncBaseDevice } from '../src/lib/vesyncBaseDevice';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
-import { setApiBaseUrl } from '../src/lib/helpers';
 
 // Configure logging
 const DEBUG = true;
@@ -88,13 +87,14 @@ class DeviceFeatureTest {
     };
 
     constructor() {
-        setApiBaseUrl('http://localhost:8000');
         
         this.manager = new VeSync(
             'test@example.com',
             'test123',
             'America/New_York',
-            DEBUG
+            DEBUG,
+            true,
+            'http://localhost:8000'
         );
         
         // Load all YAML specs

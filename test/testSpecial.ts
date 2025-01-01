@@ -11,7 +11,6 @@ dotenv.config({ path: '.env' });
 
 // Now import the rest of the modules
 import { VeSync } from '../src/lib/vesync';
-import { setApiBaseUrl } from '../src/lib/helpers';
 import { Helpers } from '../src/lib/helpers';
 
 /**
@@ -157,12 +156,10 @@ async function runTest() {
     console.log(`Username: ${username}`);
     console.log(`Password: ${password.replace(/./g, '*')}`);
     
-    // Set API URL
-    setApiBaseUrl(apiUrl);
     console.log(`Using API URL: ${apiUrl}`);
 
     // Create VeSync manager
-    const manager = new VeSync(username, password);
+    const manager = new VeSync(username, password, 'America/New_York', false, true, apiUrl);
 
     // Attempt login
     console.log('\nAttempting login...');
