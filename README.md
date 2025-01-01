@@ -166,7 +166,7 @@ for (const device of manager.devices) {
 const fan = manager.devices.find(d => d.deviceType === 'Core300S');
 if (fan) {
     await fan.setMode('auto');  // Available modes: auto, sleep, manual
-    await fan.setSpeed(2);      // Speed range depends on model
+    await fan.changeFanSpeed(2);      // Speed range depends on model
 }
 
 // Control an outlet
