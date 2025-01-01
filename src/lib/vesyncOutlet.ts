@@ -66,7 +66,7 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
 
         let url: string;
         if (this.deviceType === 'wifi-switch-1.3') {
-            url = `/v1/device/${this.deviceType}-${this.cid}/detail`;
+            url = `/v1/device/wifi-switch-1.3-${this.cid}/detail`;
         } else if (this.deviceType.startsWith('ESO15')) {
             url = '/outdoorsocket15a/v1/device/devicedetail';
         } else if (this.deviceType.startsWith('ESW15')) {
@@ -84,12 +84,47 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
             Helpers.reqHeaders(this.manager)
         );
 
-        if (response?.code === 0) {
-            this.details = response.result;
-            this.deviceStatus = response.result.deviceStatus;
+        if (!response) {
+            logger.debug(`[${this.deviceName}] No response received from API`);
+            return;
+        }
+
+        // Handle error responses
+        if (response.error) {
+            logger.debug(`[${this.deviceName}] Failed to get outlet details: ${JSON.stringify(response)}`);
+            return;
+        }
+
+        // Handle successful responses
+        if (response.code === 0) {
+            this.details = response;
+
+            // Handle outdoor plugs with subdevices
+            if (response.subDevices) {
+                const subDevice = response.subDevices.find(
+                    (dev: any) => dev.subDeviceName === this.deviceName
+                );
+                if (subDevice) {
+                    this.deviceStatus = subDevice.subDeviceStatus;
+                    logger.debug(`[${this.deviceName}] Successfully retrieved subdevice status: ${this.deviceStatus}`);
+                    return;
+                }
+            }
+
+            // Handle regular devices
+            if (response.deviceStatus !== undefined) {
+                this.deviceStatus = response.deviceStatus;
+            } else if (response.status !== undefined) {
+                this.deviceStatus = response.status;
+            } else if (response.power !== undefined) {
+                this.deviceStatus = response.power === 'on' ? 'on' : 'off';
+            } else {
+                logger.debug(`[${this.deviceName}] Device status not found in response: ${JSON.stringify(response)}`);
+                return;
+            }
             logger.debug(`[${this.deviceName}] Successfully retrieved outlet details`);
         } else {
-            logger.error(`[${this.deviceName}] Failed to get outlet details: ${JSON.stringify(response)}`);
+            logger.debug(`[${this.deviceName}] Failed to get outlet details: ${JSON.stringify(response)}`);
         }
     }
 
