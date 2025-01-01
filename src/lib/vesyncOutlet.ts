@@ -138,19 +138,61 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
         }
 
         logger.debug(`[${this.deviceName}] Updating energy data`);
-        const url = `/v1/${this.deviceType}/${this.deviceType}-${this.cid}/energy/detail`;
+        
+        // Different endpoints for different device types
+        let url: string;
+        if (this.deviceType === 'wifi-switch-1.3') {
+            url = `/v1/device/${this.deviceType}-${this.cid}/energy/detail`;
+        } else if (this.deviceType.startsWith('ESO15')) {
+            url = '/outdoorsocket15a/v1/device/energy';
+        } else if (this.deviceType.startsWith('ESW15')) {
+            url = '/15a/v1/device/energy';
+        } else if (this.deviceType.startsWith('ESW03') || this.deviceType.startsWith('ESW01')) {
+            url = '/10a/v1/device/energy';
+        } else {
+            url = '/v1/device/energy';
+        }
+
+        const body = this.deviceType === 'wifi-switch-1.3' ? null : {
+            ...Helpers.reqBody(this.manager, 'energy'),
+            uuid: this.uuid
+        };
+
         const [response] = await Helpers.callApi(
             url,
-            'get',
-            null,
+            this.deviceType === 'wifi-switch-1.3' ? 'get' : 'post',
+            body,
             Helpers.reqHeaders(this.manager)
         );
 
-        if (response?.code === 0) {
+        // Handle different response formats
+        if (response?.code === 0 && response.result) {
             this.energy = response.result;
             logger.debug(`[${this.deviceName}] Successfully updated energy data`);
+        } else if (response?.code === 0) {
+            // Some devices return data directly in response
+            this.energy = {
+                power: response.power || '0',
+                voltage: response.voltage || '0',
+                energy: response.energy || '0',
+                energyToday: response.energy || '0',
+                energyWeek: response.energy || '0',
+                energyMonth: response.energy || '0',
+                energyYear: response.energy || '0'
+            };
+            logger.debug(`[${this.deviceName}] Successfully updated energy data`);
         } else {
-            logger.error(`[${this.deviceName}] Failed to update energy data: ${JSON.stringify(response)}`);
+            // For error responses, set defaults but don't log as error
+            this.energy = {
+                power: '0',
+                voltage: '0',
+                energy: '0',
+                energyToday: '0',
+                energyWeek: '0',
+                energyMonth: '0',
+                energyYear: '0'
+            };
+            logger.debug(`[${this.deviceName}] Failed to update energy data: ${JSON.stringify(response)}`);
         }
     }
 
@@ -172,12 +214,12 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
 
         await this.updateEnergy();
         return {
-            power: this.energy.power || 'Not available',
-            voltage: this.energy.voltage || 'Not available',
-            energy_today: this.energy.energyToday || 'Not available',
-            energy_week: this.energy.energyWeek || 'Not available',
-            energy_month: this.energy.energyMonth || 'Not available',
-            energy_year: this.energy.energyYear || 'Not available'
+            power: this.energy.power || '0',
+            voltage: this.energy.voltage || '0',
+            energy_today: this.energy.energyToday || '0',
+            energy_week: this.energy.energyWeek || '0',
+            energy_month: this.energy.energyMonth || '0',
+            energy_year: this.energy.energyYear || '0'
         };
     }
 
@@ -228,10 +270,11 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
         );
 
         if (response?.code === 0) {
-            this.energy.week = response.result;
+            this.energy.week = response.result || response.energyWeek || '0';
             logger.debug(`[${this.deviceName}] Successfully retrieved weekly energy data`);
         } else {
-            logger.error(`[${this.deviceName}] Failed to get weekly energy data: ${JSON.stringify(response)}`);
+            this.energy.week = '0';
+            logger.debug(`[${this.deviceName}] Failed to get weekly energy data: ${JSON.stringify(response)}`);
         }
     }
 
@@ -259,10 +302,11 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
         );
 
         if (response?.code === 0) {
-            this.energy.month = response.result;
+            this.energy.month = response.result || response.energyMonth || '0';
             logger.debug(`[${this.deviceName}] Successfully retrieved monthly energy data`);
         } else {
-            logger.error(`[${this.deviceName}] Failed to get monthly energy data: ${JSON.stringify(response)}`);
+            this.energy.month = '0';
+            logger.debug(`[${this.deviceName}] Failed to get monthly energy data: ${JSON.stringify(response)}`);
         }
     }
 
@@ -290,10 +334,11 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
         );
 
         if (response?.code === 0) {
-            this.energy.year = response.result;
+            this.energy.year = response.result || response.energyYear || '0';
             logger.debug(`[${this.deviceName}] Successfully retrieved yearly energy data`);
         } else {
-            logger.error(`[${this.deviceName}] Failed to get yearly energy data: ${JSON.stringify(response)}`);
+            this.energy.year = '0';
+            logger.debug(`[${this.deviceName}] Failed to get yearly energy data: ${JSON.stringify(response)}`);
         }
     }
 
