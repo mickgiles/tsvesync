@@ -70,6 +70,8 @@ export class Helpers {
             throw new Error('Manager accountId and token must be set');
         }
         return {
+            'Content-Type': 'application/json; charset=UTF-8',
+            'User-Agent': BYPASS_HEADER_UA,
             'accept-language': 'en',
             'accountId': manager.accountId,
             'appVersion': APP_VERSION,

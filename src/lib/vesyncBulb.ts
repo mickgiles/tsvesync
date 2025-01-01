@@ -120,7 +120,7 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
                     this.colorValue = response.result.value || this.colorValue;
                 }
             }
-            logger.debug(`[${this.deviceName}] Successfully retrieved bulb details`);
+            logger.info(`[${this.deviceName}] Successfully retrieved bulb details`);
         } else {
             logger.error(`[${this.deviceName}] Failed to get bulb details: ${JSON.stringify(response)}`);
         }
@@ -132,7 +132,7 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
     async update(): Promise<void> {
         logger.debug(`[${this.deviceName}] Updating bulb information`);
         await this.getDetails();
-        logger.debug(`[${this.deviceName}] Successfully updated bulb information`);
+        logger.info(`[${this.deviceName}] Successfully updated bulb information`);
     }
 
     /**
@@ -175,7 +175,7 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
 
         if (response?.code === 0) {
             this.deviceStatus = 'on';
-            logger.debug(`[${this.deviceName}] Successfully turned bulb on`);
+            logger.info(`[${this.deviceName}] Successfully turned bulb on`);
             return true;
         }
         logger.error(`[${this.deviceName}] Failed to turn bulb on: ${JSON.stringify(response)}`);
@@ -222,7 +222,7 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
 
         if (response?.code === 0) {
             this.deviceStatus = 'off';
-            logger.debug(`[${this.deviceName}] Successfully turned bulb off`);
+            logger.info(`[${this.deviceName}] Successfully turned bulb off`);
             return true;
         }
         logger.error(`[${this.deviceName}] Failed to turn bulb off: ${JSON.stringify(response)}`);
@@ -279,7 +279,7 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
 
         if (response?.code === 0) {
             this.brightness = brightness;
-            logger.debug(`[${this.deviceName}] Successfully set brightness to ${brightness}`);
+            logger.info(`[${this.deviceName}] Successfully set brightness to ${brightness}`);
             return true;
         }
         logger.error(`[${this.deviceName}] Failed to set brightness: ${JSON.stringify(response)}`);

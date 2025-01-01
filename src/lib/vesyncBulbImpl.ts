@@ -56,7 +56,7 @@ export class VeSyncBulbESL100CW extends VeSyncBulb {
 
         if (response?.code === 0) {
             this.colorTemp = colorTemp;
-            logger.debug(`[${this.deviceName}] Successfully set color temperature to ${colorTemp}`);
+            logger.info(`[${this.deviceName}] Successfully set color temperature to ${colorTemp}`);
             return true;
         }
         logger.error(`[${this.deviceName}] Failed to set color temperature: ${JSON.stringify(response)}`);
@@ -107,7 +107,7 @@ export class VeSyncBulbXYD0001 extends VeSyncBulb {
 
         if (response?.code === 0) {
             this.colorTemp = colorTemp;
-            logger.debug(`[${this.deviceName}] Successfully set color temperature to ${colorTemp}`);
+            logger.info(`[${this.deviceName}] Successfully set color temperature to ${colorTemp}`);
             return true;
         }
         logger.error(`[${this.deviceName}] Failed to set color temperature: ${JSON.stringify(response)}`);
@@ -151,7 +151,7 @@ export class VeSyncBulbXYD0001 extends VeSyncBulb {
             this.colorHue = hue;
             this.colorSaturation = saturation;
             this.colorValue = value;
-            logger.debug(`[${this.deviceName}] Successfully set HSV color`);
+            logger.info(`[${this.deviceName}] Successfully set HSV color`);
             return true;
         }
         logger.error(`[${this.deviceName}] Failed to set HSV color: ${JSON.stringify(response)}`);
@@ -188,7 +188,7 @@ export class VeSyncBulbXYD0001 extends VeSyncBulb {
 
         if (response?.code === 0) {
             this.colorMode = 'white';
-            logger.debug(`[${this.deviceName}] Successfully enabled white mode`);
+            logger.info(`[${this.deviceName}] Successfully enabled white mode`);
             return true;
         }
         logger.error(`[${this.deviceName}] Failed to enable white mode: ${JSON.stringify(response)}`);
@@ -238,7 +238,7 @@ export class VeSyncBulbESL100MC extends VeSyncBulb {
 
         if (response?.code === 0) {
             this.rgbValues = { red, green, blue };
-            logger.debug(`[${this.deviceName}] Successfully set RGB color`);
+            logger.info(`[${this.deviceName}] Successfully set RGB color`);
             return true;
         }
         logger.error(`[${this.deviceName}] Failed to set RGB color: ${JSON.stringify(response)}`);
@@ -267,7 +267,7 @@ export class VeSyncBulbESL100MC extends VeSyncBulb {
 
         if (response?.code === 0) {
             this.colorMode = 'white';
-            logger.debug(`[${this.deviceName}] Successfully enabled white mode`);
+            logger.info(`[${this.deviceName}] Successfully enabled white mode`);
             return true;
         }
         logger.error(`[${this.deviceName}] Failed to enable white mode: ${JSON.stringify(response)}`);
