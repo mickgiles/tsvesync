@@ -358,40 +358,53 @@ export class VeSync {
     /**
      * Process devices from API response
      */
-    private processDevices(deviceList: any[]): void {
-        // Clear existing devices
-        for (const category of Object.keys(this._devList)) {
-            this._devList[category].length = 0;
-        }
-
-        // Process each device
-        deviceList.forEach(dev => {
-            const [category, device] = objectFactory(dev, this);
-            
-            // Handle outdoor plug sub-devices
-            if (dev.deviceType === 'ESO15-TB' && dev.subDevices) {
-                dev.subDevices.forEach((subDev: any) => {
-                    const subDeviceDetails = {
-                        ...dev,
-                        deviceName: subDev.subDeviceName,
-                        deviceStatus: subDev.subDeviceStatus,
-                        subDeviceNo: subDev.subDeviceNo,
-                        isSubDevice: true,
-                        parentCid: dev.cid,
-                        cid: `${dev.cid}_${subDev.subDeviceNo}`
-                    };
-                    const [subCategory, subDevice] = objectFactory(subDeviceDetails, this);
-                    if (subDevice && subCategory in this._devList) {
-                        this._devList[subCategory].push(subDevice);
-                    }
-                });
-            } else if (device && category in this._devList) {
-                this._devList[category].push(device);
+    private processDevices(deviceList: any[]): boolean {
+        try {
+            // Clear existing devices
+            for (const category of Object.keys(this._devList)) {
+                this._devList[category].length = 0;
             }
-        });
 
-        // Update device list reference
-        this.devices = Object.values(this._devList).flat();
+            if (!deviceList || deviceList.length === 0) {
+                logger.warn('No devices found in API response');
+                return false;
+            }
+
+            // Process each device
+            deviceList.forEach(dev => {
+                const [category, device] = objectFactory(dev, this);
+                
+                // Handle outdoor plug sub-devices
+                if (dev.deviceType === 'ESO15-TB' && dev.subDevices) {
+                    dev.subDevices.forEach((subDev: any) => {
+                        const subDeviceDetails = {
+                            ...dev,
+                            deviceName: subDev.subDeviceName,
+                            deviceStatus: subDev.subDeviceStatus,
+                            subDeviceNo: subDev.subDeviceNo,
+                            isSubDevice: true,
+                            parentCid: dev.cid,
+                            cid: `${dev.cid}_${subDev.subDeviceNo}`
+                        };
+                        const [subCategory, subDevice] = objectFactory(subDeviceDetails, this);
+                        if (subDevice && subCategory in this._devList) {
+                            this._devList[subCategory].push(subDevice);
+                        }
+                    });
+                } else if (device && category in this._devList) {
+                    this._devList[category].push(device);
+                }
+            });
+
+            // Update device list reference
+            this.devices = Object.values(this._devList).flat();
+
+            // Return true if we processed at least one device successfully
+            return this.devices.length > 0;
+        } catch (error) {
+            logger.error('Error processing devices:', error);
+            return false;
+        }
     }
 
     /**
@@ -404,7 +417,7 @@ export class VeSync {
         }
 
         this._inProcess = true;
-        let procReturn = false;
+        let success = false;
 
         try {
             const [response] = await Helpers.callApi(
@@ -416,7 +429,7 @@ export class VeSync {
 
             if (response?.result?.list) {
                 const deviceList = response.result.list;
-                this.processDevices(deviceList);
+                success = this.processDevices(deviceList);
 
                 // Log device discovery results
                 logger.debug('\n=== Device Discovery Summary ===');
@@ -458,7 +471,7 @@ export class VeSync {
         }
 
         this._inProcess = false;
-        return procReturn;
+        return success;
     }
 
     /**
