@@ -254,25 +254,19 @@ export class VeSyncOutlet15A extends VeSyncOutlet {
  * VeSync Outdoor Plug
  */
 export class VeSyncOutdoorPlug extends VeSyncOutlet {
-    protected subDeviceNo?: number;
-    protected isSubDevice: boolean;
-    protected parentCid?: string;
+    public subDeviceNo?: number;
+    public isSubDevice: boolean;
 
     constructor(details: Record<string, any>, manager: VeSync) {
         super(details, manager);
         this.isSubDevice = details.isSubDevice || false;
         this.subDeviceNo = details.subDeviceNo;
-        this.parentCid = details.parentCid;
     }
 
     /**
      * Turn outlet on
      */
     async turnOn(): Promise<boolean> {
-        if (!this.isSubDevice) {
-            logger.error(`[${this.deviceName}] Cannot control parent device directly`);
-            return false;
-        }
 
         logger.debug(`[${this.deviceName}] Turning outlet on`);
         const body = {
@@ -302,10 +296,6 @@ export class VeSyncOutdoorPlug extends VeSyncOutlet {
      * Turn outlet off
      */
     async turnOff(): Promise<boolean> {
-        if (!this.isSubDevice) {
-            logger.error(`[${this.deviceName}] Cannot control parent device directly`);
-            return false;
-        }
 
         logger.debug(`[${this.deviceName}] Turning outlet off`);
         const body = {

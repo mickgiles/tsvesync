@@ -23,7 +23,10 @@ async function printDeviceStatus(device: any) {
     console.log('Device Type:', device.deviceType);
     console.log('Config Module:', device.configModule);
     console.log('Device Status:', device.deviceStatus);
+    console.log('CID:', device.cid);
     console.log('UUID:', device.uuid);
+    console.log('Sub Device:', device.subDeviceNo);
+    console.log('isSubDevice:', device.isSubDevice);
     console.log('MAC ID:', device.macId || 'Not available');
 
     // Get latest device details
@@ -198,7 +201,8 @@ async function runTest() {
             console.log(`  • ${d.deviceName}`);
             console.log(`    Type: ${d.deviceType}`);
             console.log(`    Status: ${d.deviceStatus}`);
-            console.log(`    ID: ${d.cid}`);
+            console.log(`    CID: ${d.cid}`);
+            console.log(`    UUID: ${d.uuid}`);
         });
     }
 
@@ -210,7 +214,8 @@ async function runTest() {
             console.log(`  • ${d.deviceName}`);
             console.log(`    Type: ${d.deviceType}`);
             console.log(`    Status: ${d.deviceStatus}`);
-            console.log(`    ID: ${d.cid}`);
+            console.log(`    CID: ${d.cid}`);
+            console.log(`    UUID: ${d.uuid}`);
         });
     }
 

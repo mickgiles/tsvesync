@@ -8,7 +8,6 @@ import { fanModules } from './vesyncFanImpl';
 import { outletModules } from './vesyncOutletImpl';
 import { switchModules } from './vesyncSwitchImpl';
 import { bulbModules } from './vesyncBulbImpl';
-import { VeSyncBulb } from './vesyncBulb';
 import { logger, setLogger, Logger } from './logger';
 
 const DEFAULT_ENERGY_UPDATE_INTERVAL = 21600;
@@ -105,24 +104,20 @@ function objectFactory(details: Record<string, any>, manager: VeSync): [string, 
             details.deviceCategory = category;
 
             // Handle outdoor plug sub-devices
-            if (deviceType === 'ESO15-TB' && details.subDevices) {
+            if (deviceType === 'ESO15-TB' && details.subDeviceNo) {
                 const devices: [string, VeSyncBaseDevice | null][] = [];
                 
                 // Create a device instance for each sub-device
-                details.subDevices.forEach((subDevice: any) => {
-                    const subDeviceDetails = {
-                        ...details,
-                        deviceName: subDevice.subDeviceName,
-                        deviceStatus: subDevice.subDeviceStatus,
-                        subDeviceNo: subDevice.subDeviceNo,
-                        isSubDevice: true,
-                        parentCid: details.cid,
-                        // Generate a unique CID for the sub-device
-                        cid: `${details.cid}_${subDevice.subDeviceNo}`
-                    };
-                    const device = new DeviceClass(subDeviceDetails, manager);
-                    devices.push([category, device]);
-                });
+
+                const subDeviceDetails = {
+                    ...details,
+                    deviceName: details.deviceName,
+                    deviceStatus: details.deviceStatus,
+                    subDeviceNo: details.subDeviceNo,
+                    isSubDevice: true
+                };
+                const device = new DeviceClass(subDeviceDetails, manager);
+                devices.push([category, device]);
                 
                 // Return array of sub-devices
                 return devices[0]; // Return first device, manager will handle adding all devices
@@ -373,24 +368,19 @@ export class VeSync {
             // Process each device
             deviceList.forEach(dev => {
                 const [category, device] = objectFactory(dev, this);
-                
                 // Handle outdoor plug sub-devices
-                if (dev.deviceType === 'ESO15-TB' && dev.subDevices) {
-                    dev.subDevices.forEach((subDev: any) => {
-                        const subDeviceDetails = {
-                            ...dev,
-                            deviceName: subDev.subDeviceName,
-                            deviceStatus: subDev.subDeviceStatus,
-                            subDeviceNo: subDev.subDeviceNo,
-                            isSubDevice: true,
-                            parentCid: dev.cid,
-                            cid: `${dev.cid}_${subDev.subDeviceNo}`
-                        };
-                        const [subCategory, subDevice] = objectFactory(subDeviceDetails, this);
-                        if (subDevice && subCategory in this._devList) {
-                            this._devList[subCategory].push(subDevice);
-                        }
-                    });
+                if (dev.deviceType === 'ESO15-TB' && dev.subDeviceNo) {
+                    const subDeviceDetails = {
+                        ...dev,
+                        deviceName: dev.deviceName,
+                        deviceStatus: dev.deviceStatus,
+                        subDeviceNo: dev.subDeviceNo,
+                        isSubDevice: true,
+                    };
+                    const [subCategory, subDevice] = objectFactory(subDeviceDetails, this);
+                    if (subDevice && subCategory in this._devList) {
+                        this._devList[subCategory].push(subDevice);
+                    }
                 } else if (device && category in this._devList) {
                     this._devList[category].push(device);
                 }
