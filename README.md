@@ -130,6 +130,18 @@ A TypeScript library for interacting with VeSync smart home devices. This librar
   - Modes: Normal, Auto, Advanced Sleep, Turbo
   - Fan speeds: 1-12
 
+### Wall Switches
+- ESWL01
+  - Basic on/off control
+  - Status monitoring
+- ESWL03
+  - Basic on/off control
+  - Status monitoring
+- ESWD16
+  - Dimming control
+  - RGB indicator light control
+  - Status monitoring
+  
 ## Installation
 
 ```bash
