@@ -101,12 +101,31 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
 
             // Handle outdoor plugs with subdevices
             if (response.subDevices) {
-                const subDevice = response.subDevices.find(
-                    (dev: any) => dev.subDeviceName === this.deviceName
-                );
+                const subDevice = response.subDevices.find((dev: any) => {
+                    // Match by name (primary identifier)
+                    if (dev.subDeviceName === this.deviceName) {
+                        return true;
+                    }
+
+                    // Match by subDeviceNo if available
+                    if ('subDeviceNo' in this && (this as any).subDeviceNo === dev.subDeviceNo) {
+                        return true;
+                    }
+
+                    // Match by cid/uuid if available (cid might be in format parentCid_subDeviceNo)
+                    if (this.cid && this.cid.includes('_')) {
+                        const [_, subId] = this.cid.split('_');
+                        if (subId && dev.subDeviceNo === parseInt(subId)) {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                });
+
                 if (subDevice) {
                     this.deviceStatus = subDevice.subDeviceStatus;
-                    logger.info(`[${this.deviceName}] Successfully retrieved subdevice status: ${this.deviceStatus}`);
+                    logger.info(`[${this.deviceName}] Successfully retrieved sub-device status: ${this.deviceStatus}`);
                     return;
                 }
             }

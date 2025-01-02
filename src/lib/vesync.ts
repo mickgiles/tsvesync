@@ -103,8 +103,33 @@ function objectFactory(details: Record<string, any>, manager: VeSync): [string, 
         try {
             // Add category to device details
             details.deviceCategory = category;
-            const device = new DeviceClass(details, manager);
-            return [category, device];
+
+            // Handle outdoor plug sub-devices
+            if (deviceType === 'ESO15-TB' && details.subDevices) {
+                const devices: [string, VeSyncBaseDevice | null][] = [];
+                
+                // Create a device instance for each sub-device
+                details.subDevices.forEach((subDevice: any) => {
+                    const subDeviceDetails = {
+                        ...details,
+                        deviceName: subDevice.subDeviceName,
+                        deviceStatus: subDevice.subDeviceStatus,
+                        subDeviceNo: subDevice.subDeviceNo,
+                        isSubDevice: true,
+                        parentCid: details.cid,
+                        // Generate a unique CID for the sub-device
+                        cid: `${details.cid}_${subDevice.subDeviceNo}`
+                    };
+                    const device = new DeviceClass(subDeviceDetails, manager);
+                    devices.push([category, device]);
+                });
+                
+                // Return array of sub-devices
+                return devices[0]; // Return first device, manager will handle adding all devices
+            } else {
+                const device = new DeviceClass(details, manager);
+                return [category, device];
+            }
         } catch (error) {
             logger.error(`Error creating device instance for ${deviceType}:`, error);
             return [category, null];
@@ -331,63 +356,42 @@ export class VeSync {
     }
 
     /**
-     * Process device list and instantiate device objects
+     * Process devices from API response
      */
-    processDevices(devList: any[]): boolean {
-        // Ensure devices have proper IDs
-        const devices = VeSync.setDevId(devList);
-
-        // Count current devices
-        let numDevices = 0;
-        for (const deviceList of Object.values(this._devList)) {
-            numDevices += deviceList.length;
+    private processDevices(deviceList: any[]): void {
+        // Clear existing devices
+        for (const category of Object.keys(this._devList)) {
+            this._devList[category].length = 0;
         }
 
-        if (!devices || devices.length === 0) {
-            logger.warn('No devices found in api return');
-            return false;
-        }
-
-        // Initialize new device list or remove old devices
-        if (numDevices === 0) {
-            logger.debug('New device list initialized');
-        } else {
-            this.removeOldDevices(devices);
-        }
-
-        // Filter out devices that already exist
-        const newDevices = devices.filter(dev => this.addDevTest(dev));
-
-        // Required keys for device instantiation
-        const requiredKeys = ['deviceType', 'deviceName', 'deviceStatus', 'cid'];
-        
-        // Process each new device
-        for (const dev of newDevices) {
-            // Verify required device properties
-            if (!requiredKeys.every(key => key in dev)) {
-                logger.debug(`Error adding device - missing required properties: ${dev.deviceName || 'Unknown'}`);
-                continue;
+        // Process each device
+        deviceList.forEach(dev => {
+            const [category, device] = objectFactory(dev, this);
+            
+            // Handle outdoor plug sub-devices
+            if (dev.deviceType === 'ESO15-TB' && dev.subDevices) {
+                dev.subDevices.forEach((subDev: any) => {
+                    const subDeviceDetails = {
+                        ...dev,
+                        deviceName: subDev.subDeviceName,
+                        deviceStatus: subDev.subDeviceStatus,
+                        subDeviceNo: subDev.subDeviceNo,
+                        isSubDevice: true,
+                        parentCid: dev.cid,
+                        cid: `${dev.cid}_${subDev.subDeviceNo}`
+                    };
+                    const [subCategory, subDevice] = objectFactory(subDeviceDetails, this);
+                    if (subDevice && subCategory in this._devList) {
+                        this._devList[subCategory].push(subDevice);
+                    }
+                });
+            } else if (device && category in this._devList) {
+                this._devList[category].push(device);
             }
+        });
 
-            const devType = dev.deviceType;
-            try {
-                // Create device instance using factory
-                const [category, deviceObj] = objectFactory(dev, this);
-                
-                // Add device to appropriate category if valid
-                if (deviceObj && category in this._devList) {
-                    this._devList[category].push(deviceObj);
-                    logger.debug(`Added ${devType} device to ${category} category`);
-                } else if (category === 'unknown') {
-                    logger.debug(`Unknown device type: ${devType}`);
-                }
-            } catch (err) {
-                logger.error(`Error creating device ${devType}:`, err);
-                continue;
-            }
-        }
-
-        return true;
+        // Update device list reference
+        this.devices = Object.values(this._devList).flat();
     }
 
     /**
@@ -412,10 +416,7 @@ export class VeSync {
 
             if (response?.result?.list) {
                 const deviceList = response.result.list;
-                procReturn = this.processDevices(deviceList);
-
-                // Update the main devices array with all devices
-                this.devices = Object.values(this._devList).flat();
+                this.processDevices(deviceList);
 
                 // Log device discovery results
                 logger.debug('\n=== Device Discovery Summary ===');

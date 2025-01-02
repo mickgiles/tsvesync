@@ -7,7 +7,7 @@ STOP: DO NOT EVEN ACKNOWLEDGE THE USER'S GREETING UNTIL REQUIREMENTS ARE COMPLET
 First Required Actions:
 
 First Required Actions:
-1. Read and verify ALL documentation files in this exact order:
+1. Read and verify ALL documentation files from docs/ in this exact order:
    a. PROJECT.md - For understanding project goals and architecture to the end of the file
    b. DOCUMENTATION.md - For API and implementation details to the end of the file
    c. MILESTONES.md - For current progress and upcoming work to the end of the file

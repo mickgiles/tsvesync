@@ -254,20 +254,32 @@ export class VeSyncOutlet15A extends VeSyncOutlet {
  * VeSync Outdoor Plug
  */
 export class VeSyncOutdoorPlug extends VeSyncOutlet {
+    protected subDeviceNo?: number;
+    protected isSubDevice: boolean;
+    protected parentCid?: string;
+
     constructor(details: Record<string, any>, manager: VeSync) {
         super(details, manager);
+        this.isSubDevice = details.isSubDevice || false;
+        this.subDeviceNo = details.subDeviceNo;
+        this.parentCid = details.parentCid;
     }
 
     /**
      * Turn outlet on
      */
     async turnOn(): Promise<boolean> {
+        if (!this.isSubDevice) {
+            logger.error(`[${this.deviceName}] Cannot control parent device directly`);
+            return false;
+        }
+
         logger.debug(`[${this.deviceName}] Turning outlet on`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             uuid: this.uuid,
             status: 'on',
-            switchNo: 1
+            switchNo: this.subDeviceNo
         };
 
         const [response] = await Helpers.callApi(
@@ -290,12 +302,17 @@ export class VeSyncOutdoorPlug extends VeSyncOutlet {
      * Turn outlet off
      */
     async turnOff(): Promise<boolean> {
+        if (!this.isSubDevice) {
+            logger.error(`[${this.deviceName}] Cannot control parent device directly`);
+            return false;
+        }
+
         logger.debug(`[${this.deviceName}] Turning outlet off`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             uuid: this.uuid,
             status: 'off',
-            switchNo: 1
+            switchNo: this.subDeviceNo
         };
 
         const [response] = await Helpers.callApi(
