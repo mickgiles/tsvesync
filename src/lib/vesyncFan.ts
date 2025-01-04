@@ -437,7 +437,7 @@ export abstract class VeSyncFan extends VeSyncBaseDevice {
         }, null, 4);
     }
 
-    abstract getDetails(): Promise<void>;
+    abstract getDetails(): Promise<Boolean>;
     abstract turnOn(): Promise<boolean>;
     abstract turnOff(): Promise<boolean>;
     abstract changeFanSpeed(speed: number): Promise<boolean>;

@@ -81,15 +81,22 @@ export abstract class VeSyncSwitch extends VeSyncBaseDevice {
         }, null, 4);
     }
 
-    abstract getDetails(): Promise<void>;
+    /**
+     * Get switch details
+     */
+    abstract getDetails(): Promise<Boolean>;
+
+    /**
+     * Update switch details
+     */
+    async update(): Promise<Boolean> {
+        logger.debug(`[${this.deviceName}] Updating switch information`);
+        const success = await this.getDetails();
+        logger.debug(`[${this.deviceName}] Successfully updated switch information`);
+        return success;
+    }
+
     abstract getConfig(): Promise<void>;
     abstract turnOn(): Promise<boolean>;
     abstract turnOff(): Promise<boolean>;
-
-    /**
-     * Update device details
-     */
-    async update(): Promise<void> {
-        await this.getDetails();
-    }
 } 

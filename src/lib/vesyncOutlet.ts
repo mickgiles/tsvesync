@@ -56,7 +56,7 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
     /**
      * Get outlet details
      */
-    async getDetails(): Promise<void> {
+    async getDetails(): Promise<Boolean> {
         logger.debug(`[${this.deviceName}] Getting outlet details`);
         
         const body = {
@@ -77,7 +77,7 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
             url = '/v1/device/devicedetail';
         }
 
-        const [response] = await this.callApi(
+        const [response, statusCode] = await this.callApi(
             url,
             this.deviceType === 'wifi-switch-1.3' ? 'get' : 'post',
             this.deviceType === 'wifi-switch-1.3' ? null : body,
@@ -86,13 +86,13 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
 
         if (!response) {
             logger.debug(`[${this.deviceName}] No response received from API`);
-            return;
+            return false;
         }
 
         // Handle error responses
         if (response.error) {
             logger.debug(`[${this.deviceName}] Failed to get outlet details: ${JSON.stringify(response)}`);
-            return;
+            return false;
         }
 
         // Handle successful responses
@@ -126,7 +126,7 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
                 if (subDevice) {
                     this.deviceStatus = subDevice.subDeviceStatus;
                     logger.debug(`[${this.deviceName}] Successfully retrieved sub-device status: ${this.deviceStatus}`);
-                    return;
+                    return true;
                 }
             }
 
@@ -139,11 +139,13 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
                 this.deviceStatus = response.power === 'on' ? 'on' : 'off';
             } else {
                 logger.debug(`[${this.deviceName}] Device status not found in response: ${JSON.stringify(response)}`);
-                return;
+                return false;
             }
             logger.debug(`[${this.deviceName}] Successfully retrieved outlet details`);
+            return true;
         } else {
             logger.debug(`[${this.deviceName}] Failed to get outlet details: ${JSON.stringify(response)}`);
+            return false;
         }
     }
 
@@ -364,13 +366,14 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
     /**
      * Update outlet details and energy info
      */
-    async update(): Promise<void> {
+    async update(): Promise<Boolean> {
         logger.debug(`[${this.deviceName}] Updating outlet information`);
-        await this.getDetails();
-        if (this.features.includes('energy')) {
+        const success = await this.getDetails();
+        if (success && this.features.includes('energy')) {
             await this.updateEnergy();
         }
         logger.info(`[${this.deviceName}] Successfully updated outlet information`);
+        return success;
     }
 
     /**

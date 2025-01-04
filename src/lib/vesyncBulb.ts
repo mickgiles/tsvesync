@@ -71,7 +71,7 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
     /**
      * Get bulb details
      */
-    async getDetails(): Promise<void> {
+    async getDetails(): Promise<Boolean> {
         logger.debug(`[${this.deviceName}] Getting bulb details`);
         
         const isV2Device = this.deviceType === 'XYD0001';
@@ -94,14 +94,15 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
             }
         };
 
-        const [response] = await this.callApi(
+        const [response, statusCode] = await this.callApi(
             endpoint,
             'post',
             body,
             Helpers.reqHeaders(this.manager)
         );
 
-        if (response?.code === 0 && response?.result) {
+        const success = this.checkResponse([response, statusCode], 'getDetails');
+        if (success && response?.result) {
             this.deviceStatus = response.result.enabled ? 'on' : 'off';
             this.brightness = response.result.brightness || this.brightness;
             if (this.features.includes('color_temp')) {
@@ -121,18 +122,18 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
                 }
             }
             logger.debug(`[${this.deviceName}] Successfully retrieved bulb details`);
-        } else {
-            logger.error(`[${this.deviceName}] Failed to get bulb details: ${JSON.stringify(response)}`);
         }
+        return success;
     }
 
     /**
-     * Update bulb status
+     * Update bulb details
      */
-    async update(): Promise<void> {
+    async update(): Promise<Boolean> {
         logger.debug(`[${this.deviceName}] Updating bulb information`);
-        await this.getDetails();
+        const success = await this.getDetails();
         logger.info(`[${this.deviceName}] Successfully updated bulb information`);
+        return success;
     }
 
     /**

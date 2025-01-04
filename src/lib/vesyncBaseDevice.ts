@@ -105,13 +105,13 @@ export abstract class VeSyncBaseDevice {
     /**
      * Get device details
      */
-    abstract getDetails(): Promise<void>;
+    abstract getDetails(): Promise<Boolean>;
 
     /**
      * Update device details
      */
-    async update(): Promise<void> {
-        await this.getDetails();
+    async update(): Promise<Boolean> {
+        return await this.getDetails();
     }
 
     /**

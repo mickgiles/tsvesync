@@ -24,7 +24,7 @@ export class VeSyncAirBypass extends VeSyncFan {
     /**
      * Get device details
      */
-    async getDetails(): Promise<void> {
+    async getDetails(): Promise<Boolean> {
         logger.debug(`Getting details for device: ${this.deviceName}`);
         const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
@@ -42,7 +42,8 @@ export class VeSyncAirBypass extends VeSyncFan {
             Helpers.reqHeaderBypass()
         );
 
-        if (this.checkResponse([response, status], 'getDetails')) {
+        const success = this.checkResponse([response, status], 'getDetails');
+        if (success) {
             const result = response?.result?.result;
             if (result) {
                 // Update device status
@@ -64,9 +65,8 @@ export class VeSyncAirBypass extends VeSyncFan {
                 }
                 logger.debug(`Successfully got details for device: ${this.deviceName}`);
             }
-        } else {
-            logger.error(`Failed to get details for device: ${this.deviceName}`);
         }
+        return success;
     }
 
     /**
@@ -488,7 +488,7 @@ export class VeSyncHumidifier extends VeSyncFan {
     /**
      * Get device details
      */
-    async getDetails(): Promise<void> {
+    async getDetails(): Promise<Boolean> {
         logger.debug(`Getting details for device: ${this.deviceName}`);
         const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
@@ -507,12 +507,11 @@ export class VeSyncHumidifier extends VeSyncFan {
         );
 
         const success = this.checkResponse([response, status], 'getDetails');
-        if (success) {
+        if (success && response?.result?.result) {
             this.details = response.result.result;
             logger.debug(`Successfully got details for device: ${this.deviceName}`);
-        } else {
-            logger.error(`Failed to get details for device: ${this.deviceName}`);
         }
+        return success;
     }
 
     /**

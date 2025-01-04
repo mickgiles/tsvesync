@@ -19,7 +19,7 @@ export class VeSyncWallSwitch extends VeSyncSwitch {
     /**
      * Get wall switch details
      */
-    async getDetails(): Promise<void> {
+    async getDetails(): Promise<Boolean> {
         logger.debug(`Getting details for device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicedetail'),
@@ -27,22 +27,22 @@ export class VeSyncWallSwitch extends VeSyncSwitch {
             method: 'devicedetail'
         };
 
-        const [response] = await this.callApi(
+        const [response, statusCode] = await this.callApi(
             '/inwallswitch/v1/device/devicedetail',
             'post',
             body,
             Helpers.reqHeaders(this.manager)
         );
 
-        if (response?.code === 0 && response?.result) {
+        const success = this.checkResponse([response, statusCode], 'getDetails');
+        if (success && response?.result) {
             const result = response.result;
             this.deviceStatus = result.deviceStatus || this.deviceStatus;
             this.details.active_time = result.activeTime || 0;
             this.connectionStatus = result.connectionStatus || this.connectionStatus;
             logger.debug(`Successfully got details for device: ${this.deviceName}`);
-        } else {
-            logger.error(`Failed to get details for device: ${this.deviceName}`);
         }
+        return success;
     }
 
     /**
@@ -143,7 +143,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
     /**
      * Get dimmer switch details
      */
-    async getDetails(): Promise<void> {
+    async getDetails(): Promise<Boolean> {
         logger.debug(`Getting details for device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicedetail'),
@@ -151,14 +151,15 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
             method: 'devicedetail'
         };
 
-        const [response] = await this.callApi(
+        const [response, statusCode] = await this.callApi(
             '/dimmer/v1/device/devicedetail',
             'post',
             body,
             Helpers.reqHeaders(this.manager)
         );
 
-        if (response?.code === 0 && response?.result) {
+        const success = this.checkResponse([response, statusCode], 'getDetails');
+        if (success && response?.result) {
             const result = response.result;
             this.deviceStatus = result.deviceStatus || this.deviceStatus;
             this.details.active_time = result.activeTime || 0;
@@ -174,9 +175,8 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
                 };
             }
             logger.debug(`Successfully got details for device: ${this.deviceName}`);
-        } else {
-            logger.error(`Failed to get details for device: ${this.deviceName}`);
         }
+        return success;
     }
 
     /**
