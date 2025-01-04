@@ -130,7 +130,7 @@ function objectFactory(details: Record<string, any>, manager: VeSync): [string, 
             return [category, null];
         }
     } else {
-        logger.warn(`No device class found for type: ${deviceType}`);
+        logger.debug(`No device class found for type: ${deviceType}`);
         return [category, null];
     }
 }

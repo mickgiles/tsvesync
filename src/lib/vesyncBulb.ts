@@ -120,7 +120,7 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
                     this.colorValue = response.result.value || this.colorValue;
                 }
             }
-            logger.info(`[${this.deviceName}] Successfully retrieved bulb details`);
+            logger.debug(`[${this.deviceName}] Successfully retrieved bulb details`);
         } else {
             logger.error(`[${this.deviceName}] Failed to get bulb details: ${JSON.stringify(response)}`);
         }

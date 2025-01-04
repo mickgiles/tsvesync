@@ -125,7 +125,7 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
 
                 if (subDevice) {
                     this.deviceStatus = subDevice.subDeviceStatus;
-                    logger.info(`[${this.deviceName}] Successfully retrieved sub-device status: ${this.deviceStatus}`);
+                    logger.debug(`[${this.deviceName}] Successfully retrieved sub-device status: ${this.deviceStatus}`);
                     return;
                 }
             }
@@ -141,7 +141,7 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
                 logger.debug(`[${this.deviceName}] Device status not found in response: ${JSON.stringify(response)}`);
                 return;
             }
-            logger.info(`[${this.deviceName}] Successfully retrieved outlet details`);
+            logger.debug(`[${this.deviceName}] Successfully retrieved outlet details`);
         } else {
             logger.debug(`[${this.deviceName}] Failed to get outlet details: ${JSON.stringify(response)}`);
         }
@@ -290,7 +290,7 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
 
         if (response?.code === 0) {
             this.energy.week = response.result || response.energyWeek || '0';
-            logger.info(`[${this.deviceName}] Successfully retrieved weekly energy data`);
+            logger.debug(`[${this.deviceName}] Successfully retrieved weekly energy data`);
         } else {
             this.energy.week = '0';
             logger.debug(`[${this.deviceName}] Failed to get weekly energy data: ${JSON.stringify(response)}`);
@@ -322,7 +322,7 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
 
         if (response?.code === 0) {
             this.energy.month = response.result || response.energyMonth || '0';
-            logger.info(`[${this.deviceName}] Successfully retrieved monthly energy data`);
+            logger.debug(`[${this.deviceName}] Successfully retrieved monthly energy data`);
         } else {
             this.energy.month = '0';
             logger.debug(`[${this.deviceName}] Failed to get monthly energy data: ${JSON.stringify(response)}`);
@@ -354,7 +354,7 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
 
         if (response?.code === 0) {
             this.energy.year = response.result || response.energyYear || '0';
-            logger.info(`[${this.deviceName}] Successfully retrieved yearly energy data`);
+            logger.debug(`[${this.deviceName}] Successfully retrieved yearly energy data`);
         } else {
             this.energy.year = '0';
             logger.debug(`[${this.deviceName}] Failed to get yearly energy data: ${JSON.stringify(response)}`);
