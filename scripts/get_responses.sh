@@ -3,13 +3,28 @@
 # Default values
 DEFAULT_USERNAME="test@example.com"
 DEFAULT_PASSWORD="test123"
-DEFAULT_BASE_URL="http://localhost:8000"
+DEFAULT_BASE_URL="https://smartapi.vesync.com"
 
 # Initialize variables with defaults
 VESYNC_USERNAME="$DEFAULT_USERNAME"
 VESYNC_PASSWORD="$DEFAULT_PASSWORD"
 BASE_URL="$DEFAULT_BASE_URL"
 DEVICE_FILTER=""
+DEBUG=false
+
+# Function to normalize model numbers
+normalize_model() {
+    local model=$1
+    
+    # Convert to lowercase for comparison
+    model=$(echo "$model" | tr '[:upper:]' '[:lower:]')
+    
+    # Special case mappings
+    case $model in
+        *"leh-s601s"*) echo "6000s" ;;
+        *) echo "$model" ;;
+    esac
+}
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -30,14 +45,19 @@ while [[ $# -gt 0 ]]; do
       DEVICE_FILTER=$(echo "$2" | tr '[:upper:]' '[:lower:]')
       shift 2
       ;;
+    --debug)
+      DEBUG=true
+      shift
+      ;;
     -h|--help)
-      echo "Usage: $0 [-u|--username USERNAME] [-p|--password PASSWORD] [-b|--base-url BASE_URL] [-d|--device-type DEVICE_TYPE]"
+      echo "Usage: $0 [-u|--username USERNAME] [-p|--password PASSWORD] [-b|--base-url BASE_URL] [-d|--device-type DEVICE_TYPE] [--debug]"
       echo ""
       echo "Options:"
       echo "  -u, --username USERNAME     VeSync username (default: $DEFAULT_USERNAME)"
       echo "  -p, --password PASSWORD     VeSync password (default: $DEFAULT_PASSWORD)"
       echo "  -b, --base-url BASE_URL     Base URL for VeSync API (default: $DEFAULT_BASE_URL)"
       echo "  -d, --device-type TYPE      Filter devices by type (case-insensitive partial match, optional)"
+      echo "  --debug                     Enable debug output"
       echo "  -h, --help                  Show this help message"
       exit 0
       ;;
@@ -85,8 +105,6 @@ if [ "$TOKEN" == "null" ] || [ "$ACCOUNT_ID" == "null" ]; then
 fi
 
 echo "Successfully logged in"
-echo "Token: $TOKEN"
-echo "Account ID: $ACCOUNT_ID"
 
 # Step 2: Get list of devices
 echo "Getting device list..."
@@ -118,17 +136,38 @@ DEVICES_RESPONSE=$(curl -s -X POST "$BASE_URL/cloud/v2/deviceManaged/devices" \
 #echo "$DEVICES_RESPONSE" | jq -r '.result.list[] | .deviceType'
 
 # Process each device
+FOUND_DEVICES=0
+ALL_DEVICE_TYPES=()
+
 echo "$DEVICES_RESPONSE" | jq -c '.result.list[]' | while read -r device; do
     DEVICE_NAME=$(echo "$device" | jq -r '.deviceName')
     DEVICE_TYPE=$(echo "$device" | jq -r '.deviceType')
+    
+    # Store all device types for later display if needed
+    ALL_DEVICE_TYPES+=("$DEVICE_TYPE")
     
     # Skip if device type doesn't match filter (when filter is set)
     if [ -n "$DEVICE_FILTER" ]; then
         DEVICE_TYPE_LOWER=$(echo "$DEVICE_TYPE" | tr '[:upper:]' '[:lower:]')
         FILTER_LOWER=$(echo "$DEVICE_FILTER" | tr '[:upper:]' '[:lower:]')
-        #echo "Comparing device type '$DEVICE_TYPE_LOWER' with filter '$FILTER_LOWER'"
-        if [[ ! "$DEVICE_TYPE_LOWER" =~ .*"$FILTER_LOWER".* ]]; then
-            #echo "Skipping device $DEVICE_NAME ($DEVICE_TYPE)"
+        NORMALIZED_TYPE=$(normalize_model "$DEVICE_TYPE_LOWER")
+        NORMALIZED_FILTER=$(normalize_model "$FILTER_LOWER")
+        
+        if [ "$DEBUG" = true ]; then
+            echo "Debug: Comparing device type '$DEVICE_TYPE_LOWER' (normalized: $NORMALIZED_TYPE) with filter '$FILTER_LOWER' (normalized: $NORMALIZED_FILTER)"
+        fi
+        
+        # Try different matching patterns
+        if [[ "$DEVICE_TYPE_LOWER" =~ .*"$FILTER_LOWER".* ]] || \
+           [[ "$DEVICE_TYPE_LOWER" =~ ^"$FILTER_LOWER".* ]] || \
+           [[ "$DEVICE_TYPE_LOWER" == *"$FILTER_LOWER" ]] || \
+           [[ "${DEVICE_TYPE_LOWER//[^a-z0-9]/}" == *"${FILTER_LOWER//[^a-z0-9]}"* ]] || \
+           [[ "$NORMALIZED_TYPE" == "$NORMALIZED_FILTER" ]]; then
+            FOUND_DEVICES=$((FOUND_DEVICES + 1))
+        else
+            if [ "$DEBUG" = true ]; then
+                echo "Debug: No match for device $DEVICE_NAME ($DEVICE_TYPE)"
+            fi
             continue
         fi
     fi
@@ -778,5 +817,12 @@ echo "$DEVICES_RESPONSE" | jq -c '.result.list[]' | while read -r device; do
     
     echo "----------------------------------------"
 done
+
+# If no devices were found with the filter, show available device types
+if [ -n "$DEVICE_FILTER" ] && [ "$FOUND_DEVICES" -eq 0 ]; then
+    echo "No devices found matching filter: $DEVICE_FILTER"
+    echo "Available device types:"
+    printf '%s\n' "${ALL_DEVICE_TYPES[@]}" | sort -u
+fi
 
 echo "Done!" 
