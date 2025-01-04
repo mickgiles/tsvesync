@@ -414,7 +414,8 @@ export class VeSync {
                 '/cloud/v2/deviceManaged/devices',
                 'post',
                 Helpers.reqBody(this, 'devicelist'),
-                Helpers.reqHeaders(this)
+                Helpers.reqHeaders(this),
+                this
             );
 
             if (response?.result?.list) {
@@ -478,7 +479,9 @@ export class VeSync {
             const [response, status] = await Helpers.callApi(
                 '/cloud/v1/user/login',
                 'post',
-                body
+                body,
+                {},
+                this
             );
 
             logger.debug('Login response:', { status, response });
@@ -548,5 +551,17 @@ export class VeSync {
         }
         
         return null;
+    }
+
+    /**
+     * Call API with authentication
+     */
+    protected async callApi(
+        endpoint: string,
+        method: string,
+        data: any = null,
+        headers: Record<string, string> = {}
+    ): Promise<[any, number]> {
+        return await Helpers.callApi(endpoint, method, data, headers, this);
     }
 } 

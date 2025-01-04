@@ -94,7 +94,7 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
             }
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             endpoint,
             'post',
             body,
@@ -166,7 +166,7 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
             }
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             endpoint,
             'post',
             body,
@@ -213,7 +213,7 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
             }
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             endpoint,
             'post',
             body,
@@ -270,7 +270,7 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
             }
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             endpoint,
             'post',
             body,

@@ -77,7 +77,7 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
             url = '/v1/device/devicedetail';
         }
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             url,
             this.deviceType === 'wifi-switch-1.3' ? 'get' : 'post',
             this.deviceType === 'wifi-switch-1.3' ? null : body,
@@ -177,7 +177,7 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
             uuid: this.uuid
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             url,
             this.deviceType === 'wifi-switch-1.3' ? 'get' : 'post',
             body,
@@ -281,7 +281,7 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
             uuid: this.uuid
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             isLegacyDevice ? `/${this.getApiPrefix()}/energy/week` : `/${this.getApiPrefix()}/energyweek`,
             isLegacyDevice ? 'get' : 'post',
             body,
@@ -313,7 +313,7 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
             uuid: this.uuid
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             isLegacyDevice ? `/${this.getApiPrefix()}/energy/month` : `/${this.getApiPrefix()}/energymonth`,
             isLegacyDevice ? 'get' : 'post',
             body,
@@ -345,7 +345,7 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
             uuid: this.uuid
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             isLegacyDevice ? `/${this.getApiPrefix()}/energy/year` : `/${this.getApiPrefix()}/energyyear`,
             isLegacyDevice ? 'get' : 'post',
             body,

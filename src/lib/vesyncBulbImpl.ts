@@ -47,7 +47,7 @@ export class VeSyncBulbESL100CW extends VeSyncBulb {
             }
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/cloud/v1/deviceManaged/bypass',
             'post',
             body,
@@ -98,7 +98,7 @@ export class VeSyncBulbXYD0001 extends VeSyncBulb {
             }
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             body,
@@ -140,7 +140,7 @@ export class VeSyncBulbXYD0001 extends VeSyncBulb {
             }
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             body,
@@ -179,7 +179,7 @@ export class VeSyncBulbXYD0001 extends VeSyncBulb {
             }
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             body,
@@ -229,7 +229,7 @@ export class VeSyncBulbESL100MC extends VeSyncBulb {
             }
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/cloud/v1/deviceManaged/bypass',
             'post',
             body,
@@ -258,7 +258,7 @@ export class VeSyncBulbESL100MC extends VeSyncBulb {
             }
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/cloud/v1/deviceManaged/bypass',
             'post',
             body,

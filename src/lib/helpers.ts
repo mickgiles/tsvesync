@@ -202,7 +202,8 @@ export class Helpers {
         endpoint: string,
         method: string,
         data: any = null,
-        headers: Record<string, string> = {}
+        headers: Record<string, string> = {},
+        manager: VeSync
     ): Promise<[any, number]> {
         try {
             const url = _apiBaseUrl + endpoint;
@@ -217,7 +218,20 @@ export class Helpers {
             return [response.data, response.status];
         } catch (error: any) {
             if (error.response) {
-                return [error.response.data, error.response.status];
+                const responseData = error.response.data;
+                
+                // Check for token expiration
+                if (responseData?.code === 4001004 || responseData?.msg === "token expired") {
+                    logger.debug('Token expired, attempting to re-login...');
+                    
+                    // Re-login
+                    if (await manager.login()) {
+                        // Retry the original request
+                        logger.debug('Re-login successful, retrying original request...');
+                        return await this.callApi(endpoint, method, data, headers, manager);
+                    }
+                }
+                return [responseData, error.response.status];
             }
             logger.error('API call failed:', error.message);
             return [null, 0];

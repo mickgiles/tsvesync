@@ -27,7 +27,7 @@ export class VeSyncWallSwitch extends VeSyncSwitch {
             method: 'devicedetail'
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/inwallswitch/v1/device/devicedetail',
             'post',
             body,
@@ -56,7 +56,7 @@ export class VeSyncWallSwitch extends VeSyncSwitch {
             uuid: this.cid
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/inwallswitch/v1/device/configurations',
             'post',
             body,
@@ -82,7 +82,7 @@ export class VeSyncWallSwitch extends VeSyncSwitch {
             uuid: this.cid
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/inwallswitch/v1/device/devicestatus',
             'put',
             body,
@@ -109,7 +109,7 @@ export class VeSyncWallSwitch extends VeSyncSwitch {
             uuid: this.cid
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/inwallswitch/v1/device/devicestatus',
             'put',
             body,
@@ -151,7 +151,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
             method: 'devicedetail'
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/dimmer/v1/device/devicedetail',
             'post',
             body,
@@ -190,7 +190,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
             uuid: this.cid
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/dimmer/v1/device/configurations',
             'post',
             body,
@@ -216,7 +216,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
             uuid: this.cid
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/dimmer/v1/device/devicestatus',
             'put',
             body,
@@ -243,7 +243,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
             uuid: this.cid
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/dimmer/v1/device/devicestatus',
             'put',
             body,
@@ -275,7 +275,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
             uuid: this.cid
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/dimmer/v1/device/updatebrightness',
             'put',
             body,
@@ -307,7 +307,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
             uuid: this.cid
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/dimmer/v1/device/devicergbstatus',
             'put',
             body,
@@ -335,7 +335,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
             uuid: this.cid
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/dimmer/v1/device/devicergbstatus',
             'put',
             body,
@@ -362,7 +362,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
             status: 'on'
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/dimmer/v1/device/devicergbstatus',
             'put',
             body,
@@ -389,7 +389,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
             status: 'on'
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/dimmer/v1/device/indicatorlightstatus',
             'put',
             body,
@@ -416,7 +416,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
             status: 'off'
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/dimmer/v1/device/indicatorlightstatus',
             'put',
             body,

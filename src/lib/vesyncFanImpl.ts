@@ -26,7 +26,7 @@ export class VeSyncAirBypass extends VeSyncFan {
      */
     async getDetails(): Promise<void> {
         logger.debug(`Getting details for device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {
@@ -74,7 +74,7 @@ export class VeSyncAirBypass extends VeSyncFan {
      */
     async turnOn(): Promise<boolean> {
         logger.debug(`Turning on device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {
@@ -105,7 +105,7 @@ export class VeSyncAirBypass extends VeSyncFan {
      */
     async turnOff(): Promise<boolean> {
         logger.debug(`Turning off device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {
@@ -142,7 +142,7 @@ export class VeSyncAirBypass extends VeSyncFan {
         }
 
         logger.debug(`Changing fan speed to ${speed} for device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {
@@ -181,7 +181,7 @@ export class VeSyncAirBypass extends VeSyncFan {
         }
 
         logger.debug(`Setting mode to ${mode} for device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {
@@ -217,7 +217,7 @@ export class VeSyncAirBypass extends VeSyncFan {
         }
 
         logger.debug(`Setting display to ${enabled ? 'on' : 'off'} for device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {
@@ -253,7 +253,7 @@ export class VeSyncAirBypass extends VeSyncFan {
         }
 
         logger.debug(`Setting child lock to ${enabled ? 'on' : 'off'} for device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {
@@ -289,7 +289,7 @@ export class VeSyncAirBypass extends VeSyncFan {
         }
 
         logger.debug(`Setting timer to ${hours} hours for device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {
@@ -326,7 +326,7 @@ export class VeSyncAirBypass extends VeSyncFan {
         }
 
         logger.debug(`Clearing timer for device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {
@@ -354,7 +354,7 @@ export class VeSyncAirBypass extends VeSyncFan {
      */
     async automaticStopOn(): Promise<boolean> {
         logger.debug(`Setting automatic stop on for device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {
@@ -384,7 +384,7 @@ export class VeSyncAirBypass extends VeSyncFan {
      */
     async automaticStopOff(): Promise<boolean> {
         logger.debug(`Setting automatic stop off for device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {
@@ -490,7 +490,7 @@ export class VeSyncHumidifier extends VeSyncFan {
      */
     async getDetails(): Promise<void> {
         logger.debug(`Getting details for device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {
@@ -520,7 +520,7 @@ export class VeSyncHumidifier extends VeSyncFan {
      */
     async turnOn(): Promise<boolean> {
         logger.debug(`Turning on device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {
@@ -551,7 +551,7 @@ export class VeSyncHumidifier extends VeSyncFan {
      */
     async turnOff(): Promise<boolean> {
         logger.debug(`Turning off device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {
@@ -588,7 +588,7 @@ export class VeSyncHumidifier extends VeSyncFan {
         }
 
         logger.debug(`Changing fan speed to ${speed} for device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {
@@ -626,7 +626,7 @@ export class VeSyncHumidifier extends VeSyncFan {
         }
 
         logger.debug(`Setting mode to ${mode} for device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {
@@ -668,7 +668,7 @@ export class VeSyncHumidifier extends VeSyncFan {
         }
 
         logger.debug(`Setting mist level to ${level} for device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {
@@ -710,7 +710,7 @@ export class VeSyncHumidifier extends VeSyncFan {
         }
 
         logger.debug(`Setting target humidity to ${humidity}% for device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {
@@ -746,7 +746,7 @@ export class VeSyncHumidifier extends VeSyncFan {
         }
 
         logger.debug(`Setting display to ${enabled ? 'on' : 'off'} for device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {
@@ -782,7 +782,7 @@ export class VeSyncHumidifier extends VeSyncFan {
         }
 
         logger.debug(`Setting timer to ${hours} hours for device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {
@@ -819,7 +819,7 @@ export class VeSyncHumidifier extends VeSyncFan {
         }
 
         logger.debug(`Clearing timer for device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {
@@ -847,7 +847,7 @@ export class VeSyncHumidifier extends VeSyncFan {
      */
     async automaticStopOn(): Promise<boolean> {
         logger.debug(`Setting automatic stop on for device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {
@@ -877,7 +877,7 @@ export class VeSyncHumidifier extends VeSyncFan {
      */
     async automaticStopOff(): Promise<boolean> {
         logger.debug(`Setting automatic stop off for device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {
@@ -979,7 +979,7 @@ export class VeSyncWarmHumidifier extends VeSyncHumidifier {
         }
 
         logger.debug(`Setting warm level to ${level} for device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {
@@ -1015,7 +1015,7 @@ export class VeSyncWarmHumidifier extends VeSyncHumidifier {
         }
 
         logger.debug(`Setting drying mode to ${enabled} for device: ${this.deviceName}`);
-        const [response, status] = await Helpers.callApi(
+        const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
             {

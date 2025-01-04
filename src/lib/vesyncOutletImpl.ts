@@ -21,7 +21,7 @@ export class VeSyncOutlet7A extends VeSyncOutlet {
     async turnOn(): Promise<boolean> {
         logger.debug(`[${this.deviceName}] Turning outlet on`);
         const url = `/v1/wifi-switch-1.3/${this.cid}/status/on`;
-        const [response, statusCode] = await Helpers.callApi(
+        const [response, statusCode] = await this.callApi(
             url,
             'put',
             {},
@@ -43,7 +43,7 @@ export class VeSyncOutlet7A extends VeSyncOutlet {
     async turnOff(): Promise<boolean> {
         logger.debug(`[${this.deviceName}] Turning outlet off`);
         const url = `/v1/wifi-switch-1.3/${this.cid}/status/off`;
-        const [response, statusCode] = await Helpers.callApi(
+        const [response, statusCode] = await this.callApi(
             url,
             'put',
             {},
@@ -79,7 +79,7 @@ export class VeSyncOutlet10A extends VeSyncOutlet {
             status: 'on'
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/10a/v1/device/devicestatus',
             'put',
             body,
@@ -106,7 +106,7 @@ export class VeSyncOutlet10A extends VeSyncOutlet {
             status: 'off'
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/10a/v1/device/devicestatus',
             'put',
             body,
@@ -142,7 +142,7 @@ export class VeSyncOutlet15A extends VeSyncOutlet {
             status: 'on'
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/15a/v1/device/devicestatus',
             'put',
             body,
@@ -169,7 +169,7 @@ export class VeSyncOutlet15A extends VeSyncOutlet {
             status: 'off'
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/15a/v1/device/devicestatus',
             'put',
             body,
@@ -201,7 +201,7 @@ export class VeSyncOutlet15A extends VeSyncOutlet {
             mode: 'auto'
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/15a/v1/device/nightlightstatus',
             'put',
             body,
@@ -233,7 +233,7 @@ export class VeSyncOutlet15A extends VeSyncOutlet {
             mode: 'manual'
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/15a/v1/device/nightlightstatus',
             'put',
             body,
@@ -267,7 +267,6 @@ export class VeSyncOutdoorPlug extends VeSyncOutlet {
      * Turn outlet on
      */
     async turnOn(): Promise<boolean> {
-
         logger.debug(`[${this.deviceName}] Turning outlet on`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
@@ -276,7 +275,7 @@ export class VeSyncOutdoorPlug extends VeSyncOutlet {
             switchNo: this.subDeviceNo
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/outdoorsocket15a/v1/device/devicestatus',
             'put',
             body,
@@ -296,7 +295,6 @@ export class VeSyncOutdoorPlug extends VeSyncOutlet {
      * Turn outlet off
      */
     async turnOff(): Promise<boolean> {
-
         logger.debug(`[${this.deviceName}] Turning outlet off`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
@@ -305,7 +303,7 @@ export class VeSyncOutdoorPlug extends VeSyncOutlet {
             switchNo: this.subDeviceNo
         };
 
-        const [response] = await Helpers.callApi(
+        const [response] = await this.callApi(
             '/outdoorsocket15a/v1/device/devicestatus',
             'put',
             body,

@@ -4,6 +4,7 @@
 
 import { VeSync } from './vesync';
 import { logger } from './logger';
+import { Helpers } from './helpers';
 
 export abstract class VeSyncBaseDevice {
     protected manager: VeSync;
@@ -111,5 +112,17 @@ export abstract class VeSyncBaseDevice {
      */
     async update(): Promise<void> {
         await this.getDetails();
+    }
+
+    /**
+     * Call API with proper headers
+     */
+    protected async callApi(
+        endpoint: string,
+        method: string,
+        data: any = null,
+        headers: Record<string, string> = {}
+    ): Promise<[any, number]> {
+        return await Helpers.callApi(endpoint, method, data, headers, this.manager);
     }
 } 

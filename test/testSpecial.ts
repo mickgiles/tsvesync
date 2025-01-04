@@ -13,6 +13,8 @@ dotenv.config({ path: '.env' });
 import { VeSync } from '../src/lib/vesync';
 import { Helpers } from '../src/lib/helpers';
 
+let manager: VeSync;
+
 /**
  * Print detailed device status
  */
@@ -37,7 +39,7 @@ async function printDeviceStatus(device: any) {
         try {
             // Get device details based on type
             if (device.deviceType === 'wifi-switch-1.3') {
-                const [response] = await Helpers.callApi(
+                const [response] = await callApi(
                     `/v1/device/${device.cid}/detail`,
                     'get',
                     null,
@@ -56,7 +58,7 @@ async function printDeviceStatus(device: any) {
                     uuid: device.uuid
                 };
                 const endpoint = device.deviceType === 'ESW03-USA' ? '/10a/v1/device/devicedetail' : '/15a/v1/device/devicedetail';
-                const [response] = await Helpers.callApi(
+                const [response] = await callApi(
                     endpoint,
                     'post',
                     body,
@@ -79,7 +81,7 @@ async function printDeviceStatus(device: any) {
                 uuid: device.uuid
             };
             const weekEndpoint = device.deviceType === 'ESW03-USA' ? '/10a/v1/device/energyweek' : '/15a/v1/device/energyweek';
-            const [weekResponse] = await Helpers.callApi(
+            const [weekResponse] = await callApi(
                 weekEndpoint,
                 'post',
                 weekBody,
@@ -93,7 +95,7 @@ async function printDeviceStatus(device: any) {
                 uuid: device.uuid
             };
             const monthEndpoint = device.deviceType === 'ESW03-USA' ? '/10a/v1/device/energymonth' : '/15a/v1/device/energymonth';
-            const [monthResponse] = await Helpers.callApi(
+            const [monthResponse] = await callApi(
                 monthEndpoint,
                 'post',
                 monthBody,
@@ -107,7 +109,7 @@ async function printDeviceStatus(device: any) {
                 uuid: device.uuid
             };
             const yearEndpoint = device.deviceType === 'ESW03-USA' ? '/10a/v1/device/energyyear' : '/15a/v1/device/energyyear';
-            const [yearResponse] = await Helpers.callApi(
+            const [yearResponse] = await callApi(
                 yearEndpoint,
                 'post',
                 yearBody,
@@ -144,6 +146,18 @@ async function printDeviceStatus(device: any) {
     }
 }
 
+/**
+ * Call API with proper headers
+ */
+async function callApi(
+    endpoint: string,
+    method: string,
+    data: any = null,
+    headers: Record<string, string> = {}
+): Promise<[any, number]> {
+    return await Helpers.callApi(endpoint, method, data, headers, manager);
+}
+
 async function runTest() {
     // Get credentials from .env
     const username = process.env.VESYNC_USERNAME;
@@ -162,7 +176,7 @@ async function runTest() {
     console.log(`Using API URL: ${apiUrl}`);
 
     // Create VeSync manager
-    const manager = new VeSync(username, password, 'America/New_York', false, true, apiUrl);
+    manager = new VeSync(username, password, 'America/New_York', false, true, apiUrl);
 
     // Attempt login
     console.log('\nAttempting login...');
