@@ -456,6 +456,7 @@ export class VeSync {
                 logger.debug('\n=== End of Device Discovery ===\n');
             } else {
                 logger.error('No devices found in response');
+                logger.error(response.code, response.msg);
             }
         } catch (error) {
             logger.error('Unable to get device list:', error);
