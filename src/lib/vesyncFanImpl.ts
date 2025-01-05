@@ -475,13 +475,24 @@ export class VeSyncAirBypass extends VeSyncFan {
  */
 export class VeSyncHumidifier extends VeSyncFan {
     protected readonly modes = ['auto', 'manual', 'sleep'] as const;
-    protected readonly speeds = [1, 2, 3];
+    protected readonly mistLevels: number[];
     protected readonly displayModes = ['on', 'off'] as const;
-    protected readonly mistLevels = [1, 2, 3];
     protected readonly humidityRange = { min: 30, max: 80 };
 
     constructor(details: Record<string, any>, manager: VeSync) {
         super(details, manager);
+        // Set mist levels based on model
+        switch (this.deviceType) {
+            case 'Dual200S':
+            case 'LUH-D301S-WUSR':
+            case 'LUH-D301S-WJP':
+            case 'LUH-D301S-WEU':
+                this.mistLevels = [1, 2];
+                break;
+            default:
+                // All other models support levels 1-9
+                this.mistLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+        }
         logger.debug(`Initialized VeSyncHumidifier device: ${this.deviceName}`);
     }
 
@@ -510,6 +521,88 @@ export class VeSyncHumidifier extends VeSyncFan {
         if (success && response?.result?.result) {
             this.details = response.result.result;
             logger.debug(`Successfully got details for device: ${this.deviceName}`);
+        }
+        return success;
+    }
+
+    /**
+     * Set mist level
+     */
+    async setMistLevel(level: number): Promise<boolean> {
+        if (!this.mistLevels.includes(level)) {
+            const error = `Invalid mist level: ${level}. Must be one of: ${this.mistLevels.join(', ')}`;
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
+        }
+
+        logger.info(`Setting mist level to ${level} for device: ${this.deviceName}`);
+        const [response, status] = await this.callApi(
+            '/cloud/v2/deviceManaged/bypassV2',
+            'post',
+            {
+                ...Helpers.reqBody(this.manager, 'bypassV2'),
+                cid: this.cid,
+                configModule: this.configModule,
+                payload: {
+                    data: {
+                        id: 0,
+                        level: level,
+                        type: 'mist'
+                    },
+                    method: 'setVirtualLevel',
+                    source: 'APP'
+                }
+            },
+            Helpers.reqHeaderBypass()
+        );
+
+        const success = this.checkResponse([response, status], 'setMistLevel');
+        if (!success) {
+            logger.error(`Failed to set mist level to ${level} for device: ${this.deviceName}`);
+        }
+        return success;
+    }
+
+    /**
+     * Change fan speed - Implemented to satisfy interface but redirects to setMistLevel
+     */
+    async changeFanSpeed(speed: number): Promise<boolean> {
+        logger.debug(`Redirecting fan speed change to mist level for device: ${this.deviceName}`);
+        return this.setMistLevel(speed);
+    }
+
+    /**
+     * Set device mode
+     */
+    async setMode(mode: string): Promise<boolean> {
+        if (!this.modes.includes(mode as any)) {
+            const error = `Invalid mode: ${mode}. Must be one of: ${this.modes.join(', ')}`;
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
+        }
+
+        logger.debug(`Setting mode to ${mode} for device: ${this.deviceName}`);
+        const [response, status] = await this.callApi(
+            '/cloud/v2/deviceManaged/bypassV2',
+            'post',
+            {
+                ...Helpers.reqBody(this.manager, 'bypassV2'),
+                cid: this.cid,
+                configModule: this.configModule,
+                payload: {
+                    data: {
+                        mode
+                    },
+                    method: 'setHumidifierMode',
+                    source: 'APP'
+                }
+            },
+            Helpers.reqHeaderBypass()
+        );
+
+        const success = this.checkResponse([response, status], 'setMode');
+        if (!success) {
+            logger.error(`Failed to set mode to ${mode} for device: ${this.deviceName}`);
         }
         return success;
     }
@@ -572,122 +665,6 @@ export class VeSyncHumidifier extends VeSyncFan {
         const success = this.checkResponse([response, status], 'turnOff');
         if (!success) {
             logger.error(`Failed to turn off device: ${this.deviceName}`);
-        }
-        return success;
-    }
-
-    /**
-     * Change fan speed
-     */
-    async changeFanSpeed(speed: number): Promise<boolean> {
-        if (!this.speeds.includes(speed)) {
-            const error = `Invalid speed: ${speed}. Must be one of: ${this.speeds.join(', ')}`;
-            logger.error(`${error} for device: ${this.deviceName}`);
-            throw new Error(error);
-        }
-
-        logger.info(`Changing fan speed to ${speed} for device: ${this.deviceName}`);
-        const [response, status] = await this.callApi(
-            '/cloud/v2/deviceManaged/bypassV2',
-            'post',
-            {
-                ...Helpers.reqBody(this.manager, 'bypassV2'),
-                cid: this.cid,
-                configModule: this.configModule,
-                payload: {
-                    data: {
-                        id: 0,
-                        level: speed,
-                        type: 'wind'
-                    },
-                    method: 'setLevel',
-                    source: 'APP'
-                }
-            },
-            Helpers.reqHeaderBypass()
-        );
-
-        const success = this.checkResponse([response, status], 'changeFanSpeed');
-        if (!success) {
-            logger.error(`Failed to change fan speed to ${speed} for device: ${this.deviceName}`);
-        }
-        return success;
-    }
-
-    /**
-     * Set device mode
-     */
-    async setMode(mode: string): Promise<boolean> {
-        if (!this.modes.includes(mode as any)) {
-            const error = `Invalid mode: ${mode}. Must be one of: ${this.modes.join(', ')}`;
-            logger.error(`${error} for device: ${this.deviceName}`);
-            throw new Error(error);
-        }
-
-        logger.debug(`Setting mode to ${mode} for device: ${this.deviceName}`);
-        const [response, status] = await this.callApi(
-            '/cloud/v2/deviceManaged/bypassV2',
-            'post',
-            {
-                ...Helpers.reqBody(this.manager, 'bypassV2'),
-                cid: this.cid,
-                configModule: this.configModule,
-                payload: {
-                    data: {
-                        mode
-                    },
-                    method: 'setHumidifierMode',
-                    source: 'APP'
-                }
-            },
-            Helpers.reqHeaderBypass()
-        );
-
-        const success = this.checkResponse([response, status], 'setMode');
-        if (!success) {
-            logger.error(`Failed to set mode to ${mode} for device: ${this.deviceName}`);
-        }
-        return success;
-    }
-
-    /**
-     * Set mist level
-     */
-    async setMistLevel(level: number): Promise<boolean> {
-        if (!this.hasFeature('mist')) {
-            const error = 'Mist control not supported';
-            logger.error(`${error} for device: ${this.deviceName}`);
-            throw new Error(error);
-        }
-
-        if (!this.mistLevels.includes(level)) {
-            const error = `Invalid mist level: ${level}. Must be one of: ${this.mistLevels.join(', ')}`;
-            logger.error(`${error} for device: ${this.deviceName}`);
-            throw new Error(error);
-        }
-
-        logger.debug(`Setting mist level to ${level} for device: ${this.deviceName}`);
-        const [response, status] = await this.callApi(
-            '/cloud/v2/deviceManaged/bypassV2',
-            'post',
-            {
-                ...Helpers.reqBody(this.manager, 'bypassV2'),
-                cid: this.cid,
-                configModule: this.configModule,
-                payload: {
-                    data: {
-                        mistLevel: level
-                    },
-                    method: 'setMistLevel',
-                    source: 'APP'
-                }
-            },
-            Helpers.reqHeaderBypass()
-        );
-
-        const success = this.checkResponse([response, status], 'setMistLevel');
-        if (!success) {
-            logger.error(`Failed to set mist level to ${level} for device: ${this.deviceName}`);
         }
         return success;
     }
@@ -959,6 +936,50 @@ export class VeSyncWarmHumidifier extends VeSyncHumidifier {
     constructor(details: Record<string, any>, manager: VeSync) {
         super(details, manager);
         logger.debug(`Initialized VeSyncWarmHumidifier device: ${this.deviceName}`);
+    }
+
+    /**
+     * Change fan speed - Implemented to satisfy interface but redirects to setMistLevel
+     */
+    async changeFanSpeed(speed: number): Promise<boolean> {
+        logger.debug(`Redirecting fan speed change to mist level for device: ${this.deviceName}`);
+        return this.setMistLevel(speed);
+    }
+
+    /**
+     * Set device mode
+     */
+    async setMode(mode: string): Promise<boolean> {
+        if (!this.modes.includes(mode as any)) {
+            const error = `Invalid mode: ${mode}. Must be one of: ${this.modes.join(', ')}`;
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
+        }
+
+        logger.debug(`Setting mode to ${mode} for device: ${this.deviceName}`);
+        const [response, status] = await this.callApi(
+            '/cloud/v2/deviceManaged/bypassV2',
+            'post',
+            {
+                ...Helpers.reqBody(this.manager, 'bypassV2'),
+                cid: this.cid,
+                configModule: this.configModule,
+                payload: {
+                    data: {
+                        mode
+                    },
+                    method: 'setHumidifierMode',
+                    source: 'APP'
+                }
+            },
+            Helpers.reqHeaderBypass()
+        );
+
+        const success = this.checkResponse([response, status], 'setMode');
+        if (!success) {
+            logger.error(`Failed to set mode to ${mode} for device: ${this.deviceName}`);
+        }
+        return success;
     }
 
     /**
