@@ -75,7 +75,7 @@ export class VeSyncWallSwitch extends VeSyncSwitch {
      * Turn off wall switch
      */
     async turnOff(): Promise<boolean> {
-        logger.debug(`Turning off device: ${this.deviceName}`);
+        logger.info(`Turning off device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             status: 'off',
@@ -102,7 +102,7 @@ export class VeSyncWallSwitch extends VeSyncSwitch {
      * Turn on wall switch
      */
     async turnOn(): Promise<boolean> {
-        logger.debug(`Turning on device: ${this.deviceName}`);
+        logger.info(`Turning on device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             status: 'on',
@@ -209,7 +209,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
      * Turn off dimmer switch
      */
     async turnOff(): Promise<boolean> {
-        logger.debug(`Turning off device: ${this.deviceName}`);
+        logger.info(`Turning off device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             status: 'off',
@@ -236,7 +236,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
      * Turn on dimmer switch
      */
     async turnOn(): Promise<boolean> {
-        logger.debug(`Turning on device: ${this.deviceName}`);
+        logger.info(`Turning on device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             status: 'on',

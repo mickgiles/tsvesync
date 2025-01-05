@@ -195,62 +195,79 @@ async function runTest() {
         process.exit(0);
     }
 
-    // Print device discovery summary
-    console.log('\n=== Device Discovery Summary ===');
-    console.log('Total devices processed:', manager.devices.length);
-    
-    // Get unique device types
-    const deviceTypes = [...new Set(manager.devices.map(d => d.deviceType))];
-    console.log('\nDevice types found:', JSON.stringify(deviceTypes, null, 2));
+    // Function to print device summary
+    const printDeviceSummary = () => {
+        // Print device discovery summary
+        console.log('\n=== Device Discovery Summary ===');
+        console.log('Total devices processed:', manager.devices?.length || 0);
+        
+        // Get unique device types
+        const deviceTypes = [...new Set(manager.devices?.map(d => d.deviceType) || [])];
+        console.log('\nDevice types found:', JSON.stringify(deviceTypes, null, 2));
 
-    // Group devices by category
-    console.log('\nDevices by Category:');
-    console.log('---------------------\n');
-    
-    // Fans
-    const fans = manager.devices.filter(d => d.deviceType.toLowerCase().includes('core'));
-    if (fans.length > 0) {
-        console.log('FANS (' + fans.length + ' devices):');
-        fans.forEach(d => {
-            console.log(`  • ${d.deviceName}`);
-            console.log(`    Type: ${d.deviceType}`);
-            console.log(`    Status: ${d.deviceStatus}`);
-            console.log(`    CID: ${d.cid}`);
-            console.log(`    UUID: ${d.uuid}`);
-        });
-    }
+        // Group devices by category
+        console.log('\nDevices by Category:');
+        console.log('---------------------\n');
+        
+        // Fans
+        const fans = manager.devices?.filter(d => d.deviceType.toLowerCase().includes('core')) || [];
+        if (fans.length > 0) {
+            console.log('FANS (' + fans.length + ' devices):');
+            fans.forEach(d => {
+                console.log(`  • ${d.deviceName}`);
+                console.log(`    Type: ${d.deviceType}`);
+                console.log(`    Status: ${d.deviceStatus}`);
+                console.log(`    CID: ${d.cid}`);
+                console.log(`    UUID: ${d.uuid}`);
+            });
+        }
 
-    // Outlets
-    const outlets = manager.devices.filter(d => ['ESO15-TB', 'ESW03-USA', 'wifi-switch-1.3'].includes(d.deviceType));
-    if (outlets.length > 0) {
-        console.log('\nOUTLETS (' + outlets.length + ' devices):');
-        outlets.forEach(d => {
-            console.log(`  • ${d.deviceName}`);
-            console.log(`    Type: ${d.deviceType}`);
-            console.log(`    Status: ${d.deviceStatus}`);
-            console.log(`    CID: ${d.cid}`);
-            console.log(`    UUID: ${d.uuid}`);
-        });
-    }
+        // Outlets
+        const outlets = manager.devices?.filter(d => ['ESO15-TB', 'ESW03-USA', 'wifi-switch-1.3'].includes(d.deviceType)) || [];
+        if (outlets.length > 0) {
+            console.log('\nOUTLETS (' + outlets.length + ' devices):');
+            outlets.forEach(d => {
+                console.log(`  • ${d.deviceName}`);
+                console.log(`    Type: ${d.deviceType}`);
+                console.log(`    Status: ${d.deviceStatus}`);
+                console.log(`    CID: ${d.cid}`);
+                console.log(`    UUID: ${d.uuid}`);
+            });
+        }
 
-    // Print summary statistics
-    console.log('\nSummary Statistics:');
-    console.log('-------------------');
-    console.log('Total Devices:', manager.devices.length);
-    console.log('fans:', fans.length, 'devices');
-    console.log('outlets:', outlets.length, 'devices');
-    console.log('switches:', manager.devices.filter(d => d.deviceType.toLowerCase().includes('switch')).length, 'devices');
-    console.log('bulbs:', manager.devices.filter(d => d.deviceType.toLowerCase().includes('bulb')).length, 'devices');
+        // Print summary statistics
+        console.log('\nSummary Statistics:');
+        console.log('-------------------');
+        console.log('Total Devices:', manager.devices?.length || 0);
+        console.log('fans:', fans.length, 'devices');
+        console.log('outlets:', outlets.length, 'devices');
+        console.log('switches:', manager.devices?.filter(d => d.deviceType.toLowerCase().includes('switch')).length || 0, 'devices');
+        console.log('bulbs:', manager.devices?.filter(d => d.deviceType.toLowerCase().includes('bulb')).length || 0, 'devices');
 
-    console.log('\n=== End of Device Discovery ===\n');
+        console.log('\n=== End of Device Discovery ===\n');
+        
+        // Print timestamp
+        console.log('Last update:', new Date().toLocaleString());
+    };
 
-    // Print detailed status for all devices
-    console.log('\n=== Device Status Summary ===');
+    // Print initial summary
+    printDeviceSummary();
     for (const device of manager.devices) {
         await printDeviceStatus(device);
     }
-
-    console.log('\nTest complete');
+    // Set up periodic updates
+    console.log('\nStarting periodic updates every 10 seconds...\n');
+    setInterval(async () => {
+        try {
+            await manager.update();
+            printDeviceSummary();
+            for (const device of manager.devices ?? []) {
+                await printDeviceStatus(device);
+            }
+        } catch (error) {
+            console.error('Error during update:', error);
+        }
+    }, 10000);
 }
 
 // Run the test

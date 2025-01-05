@@ -73,7 +73,7 @@ export class VeSyncAirBypass extends VeSyncFan {
      * Turn device on
      */
     async turnOn(): Promise<boolean> {
-        logger.debug(`Turning on device: ${this.deviceName}`);
+        logger.info(`Turning on device: ${this.deviceName}`);
         const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -104,7 +104,7 @@ export class VeSyncAirBypass extends VeSyncFan {
      * Turn device off
      */
     async turnOff(): Promise<boolean> {
-        logger.debug(`Turning off device: ${this.deviceName}`);
+        logger.info(`Turning off device: ${this.deviceName}`);
         const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -141,7 +141,7 @@ export class VeSyncAirBypass extends VeSyncFan {
             throw new Error(error);
         }
 
-        logger.debug(`Changing fan speed to ${speed} for device: ${this.deviceName}`);
+        logger.info(`Changing fan speed to ${speed} for device: ${this.deviceName}`);
         const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -518,7 +518,7 @@ export class VeSyncHumidifier extends VeSyncFan {
      * Turn device on
      */
     async turnOn(): Promise<boolean> {
-        logger.debug(`Turning on device: ${this.deviceName}`);
+        logger.info(`Turning on device: ${this.deviceName}`);
         const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -549,7 +549,7 @@ export class VeSyncHumidifier extends VeSyncFan {
      * Turn device off
      */
     async turnOff(): Promise<boolean> {
-        logger.debug(`Turning off device: ${this.deviceName}`);
+        logger.info(`Turning off device: ${this.deviceName}`);
         const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -586,7 +586,7 @@ export class VeSyncHumidifier extends VeSyncFan {
             throw new Error(error);
         }
 
-        logger.debug(`Changing fan speed to ${speed} for device: ${this.deviceName}`);
+        logger.info(`Changing fan speed to ${speed} for device: ${this.deviceName}`);
         const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
