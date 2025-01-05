@@ -233,7 +233,7 @@ export class Helpers {
                 }
                 return [responseData, error.response.status];
             }
-            logger.error('API call failed:', JSON.stringify(error));
+            logger.error('API call failed:', error.code, error.message);
             return [null, 0];
         }
     }

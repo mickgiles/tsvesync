@@ -80,7 +80,7 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
         const [response, statusCode] = await this.callApi(
             url,
             this.deviceType === 'wifi-switch-1.3' ? 'get' : 'post',
-            this.deviceType === 'wifi-switch-1.3' ? null : body,
+            body,
             Helpers.reqHeaders(this.manager)
         );
 
