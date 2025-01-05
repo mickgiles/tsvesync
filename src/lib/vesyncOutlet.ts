@@ -66,7 +66,7 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
 
         let url: string;
         if (this.deviceType === 'wifi-switch-1.3') {
-            url = `/v1/device/wifi-switch-1.3-${this.cid}/detail`;
+            url = '/v1/device/' + this.cid + '/detail';
         } else if (this.deviceType.startsWith('ESO15')) {
             url = '/outdoorsocket15a/v1/device/devicedetail';
         } else if (this.deviceType.startsWith('ESW15')) {
@@ -91,7 +91,7 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
 
         // Handle error responses
         if (response.error) {
-            logger.debug(`[${this.deviceName}] Failed to get outlet details: ${JSON.stringify(response)}`);
+            logger.error(`[${this.deviceName}] Failed to get outlet details for ${url}: ${JSON.stringify(response)}`);
             return false;
         }
 
