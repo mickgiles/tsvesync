@@ -233,7 +233,11 @@ export class Helpers {
                 }
                 return [responseData, error.response.status];
             }
-            logger.error('API call failed:', error.code, error.message);
+            if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
+                logger.debug('API call failed:', error.code, error.message);
+            } else {
+                logger.error('API call failed:', error.code, error.message);
+            }
             return [null, 0];
         }
     }
