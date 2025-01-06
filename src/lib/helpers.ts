@@ -19,7 +19,7 @@ export function setApiBaseUrl(url: string): void {
 }
 
 export const API_RATE_LIMIT = 30;
-export const API_TIMEOUT = 5000;
+export const API_TIMEOUT = 15000;
 
 export const APP_VERSION = '2.8.6';
 export const PHONE_BRAND = 'SM N9005';
@@ -233,11 +233,8 @@ export class Helpers {
                 }
                 return [responseData, error.response.status];
             }
-            if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
-                logger.debug('API call failed:', error.code, error.message);
-            } else {
-                logger.error('API call failed:', error.code, error.message);
-            }
+
+            logger.error('API call failed:', error.code, error.message);
             return [null, 0];
         }
     }
