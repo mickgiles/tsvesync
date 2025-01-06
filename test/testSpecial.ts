@@ -255,19 +255,6 @@ async function runTest() {
     for (const device of manager.devices) {
         await printDeviceStatus(device);
     }
-    // Set up periodic updates
-    console.log('\nStarting periodic updates every 10 seconds...\n');
-    setInterval(async () => {
-        try {
-            await manager.update();
-            printDeviceSummary();
-            for (const device of manager.devices ?? []) {
-                await printDeviceStatus(device);
-            }
-        } catch (error) {
-            console.error('Error during update:', error);
-        }
-    }, 10000);
 }
 
 // Run the test
