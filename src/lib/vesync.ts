@@ -469,38 +469,52 @@ export class VeSync {
     /**
      * Login to VeSync server
      */
-    async login(): Promise<boolean> {
+    async login(retryAttempts: number = 3, initialDelayMs: number = 1000): Promise<boolean> {
         const body = Helpers.reqBody(this, 'login');
         logger.debug('Login request:', {
             url: `${process.env.VESYNC_API_URL}/cloud/v1/user/login`,
             body
         });
 
-        try {
-            const [response, status] = await Helpers.callApi(
-                '/cloud/v1/user/login',
-                'post',
-                body,
-                {},
-                this
-            );
+        for (let attempt = 0; attempt < retryAttempts; attempt++) {
+            try {
+                const [response, status] = await Helpers.callApi(
+                    '/cloud/v1/user/login',
+                    'post',
+                    body,
+                    {},
+                    this
+                );
 
-            logger.debug('Login response:', { status, response });
+                logger.debug('Login response:', { status, response });
 
-            if (response?.result?.token) {
-                this.token = response.result.token;
-                this.accountId = response.result.accountID;
-                this.countryCode = response.result.countryCode;
-                this.enabled = true;
-                return true;
+                if (response?.result?.token) {
+                    this.token = response.result.token;
+                    this.accountId = response.result.accountID;
+                    this.countryCode = response.result.countryCode;
+                    this.enabled = true;
+                    return true;
+                }
+
+                // If we reach here, login failed but didn't throw an error
+                const delay = initialDelayMs * Math.pow(2, attempt);
+                logger.debug(`Login attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                
+            } catch (error) {
+                if (attempt === retryAttempts - 1) {
+                    logger.error('Login error after all retry attempts:', error);
+                    return false;
+                }
+                
+                const delay = initialDelayMs * Math.pow(2, attempt);
+                logger.debug(`Login attempt ${attempt + 1} failed with error, retrying in ${delay}ms...`, error);
+                await new Promise(resolve => setTimeout(resolve, delay));
             }
-
-            logger.error('Unable to login with supplied credentials');
-            return false;
-        } catch (error) {
-            logger.error('Login error:', error);
-            return false;
         }
+
+        logger.error('Unable to login with supplied credentials after all retry attempts');
+        return false;
     }
 
     /**
