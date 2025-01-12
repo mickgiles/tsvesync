@@ -246,6 +246,10 @@ export const fanConfig: FanConfig = {
         module: 'VeSyncWarmHumidifier',
         features: ['display', 'humidity', 'mist', 'warm', 'timer', 'auto_mode']
     },
+    'LUH-M101S-WEUR': {
+        module: 'VeSyncWarmHumidifier',
+        features: ['display', 'humidity', 'mist', 'warm', 'timer', 'auto_mode']
+    },
     
     // LEH Series
     'LEH-S601S-WUS': {

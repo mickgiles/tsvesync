@@ -1129,6 +1129,7 @@ export const fanModules: Record<string, new (details: Record<string, any>, manag
     'LUH-O601S-WUS': VeSyncWarmHumidifier,
     'LUH-O601S-KUS': VeSyncWarmHumidifier,
     'LUH-M101S-WUS': VeSyncWarmHumidifier,
+    'LUH-M101S-WEUR': VeSyncWarmHumidifier,
     
     // LEH Series
     'LEH-S601S-WUS': VeSyncWarmHumidifier,
