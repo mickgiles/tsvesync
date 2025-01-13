@@ -26,6 +26,51 @@ export class VeSyncAirBypass extends VeSyncFan {
      */
     async getDetails(): Promise<Boolean> {
         logger.debug(`Getting details for device: ${this.deviceName}`);
+
+        // Special handling for LV series
+        if (this.deviceType.startsWith('LV-')) {
+            const [response, status] = await this.callApi(
+                '/131airPurifier/v1/device/devicedetail',
+                'post',
+                {
+                    acceptLanguage: 'en',
+                    accountID: this.manager.accountId!,
+                    appVersion: '2.8.6',
+                    method: 'devicedetail',
+                    mobileId: '1234567890123456',
+                    phoneBrand: 'SM N9005',
+                    phoneOS: 'Android',
+                    timeZone: this.manager.timeZone!,
+                    token: this.manager.token!,
+                    uuid: this.uuid
+                },
+                {
+                    'accept-language': 'en',
+                    'accountId': this.manager.accountId!,
+                    'appVersion': '2.8.6',
+                    'content-type': 'application/json',
+                    'tk': this.manager.token!,
+                    'tz': this.manager.timeZone!
+                }
+            );
+
+            const success = this.checkResponse([response, status], 'getDetails');
+            if (success && response) {
+                this.deviceStatus = response.result?.result?.deviceStatus === 'on' ? 'on' : 'off';
+                this.details = {
+                    mode: response.result?.result?.mode || '',
+                    speed: response.result?.result?.level || 0,
+                    filterLife: response.result?.result?.filterLife || 0,
+                    screenStatus: response.result?.result?.display || false,
+                    childLock: response.result?.result?.childLock || false,
+                    airQuality: response.result?.result?.airQuality || 0
+                };
+                return true;
+            }
+            return false;
+        }
+
+        // Original implementation for other devices
         const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -46,10 +91,7 @@ export class VeSyncAirBypass extends VeSyncFan {
         if (success) {
             const result = response?.result?.result;
             if (result) {
-                // Update device status
                 this.deviceStatus = result.enabled ? 'on' : 'off';
-                
-                // Store device settings
                 this.details = {
                     mode: result.mode || '',
                     speed: result.level || 0,
@@ -59,7 +101,6 @@ export class VeSyncAirBypass extends VeSyncFan {
                     airQuality: result.air_quality || 0
                 };
 
-                // Store configuration if available
                 if (result.configuration) {
                     this.config = result.configuration;
                 }
@@ -74,6 +115,38 @@ export class VeSyncAirBypass extends VeSyncFan {
      */
     async turnOn(): Promise<boolean> {
         logger.info(`Turning on device: ${this.deviceName}`);
+
+        // Special handling for LV series
+        if (this.deviceType.startsWith('LV-')) {
+            const [response, status] = await this.callApi(
+                '/131airPurifier/v1/device/deviceStatus',
+                'put',
+                {
+                    acceptLanguage: 'en',
+                    accountID: this.manager.accountId!,
+                    status: 'on',
+                    timeZone: this.manager.timeZone!,
+                    token: this.manager.token!,
+                    uuid: this.uuid
+                },
+                {
+                    'accept-language': 'en',
+                    'accountId': this.manager.accountId!,
+                    'appVersion': '2.8.6',
+                    'content-type': 'application/json',
+                    'tk': this.manager.token!,
+                    'tz': this.manager.timeZone!
+                }
+            );
+
+            const success = this.checkResponse([response, status], 'turnOn');
+            if (!success) {
+                logger.error(`Failed to turn on device: ${this.deviceName}`);
+            }
+            return success;
+        }
+
+        // Original implementation for other devices
         const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -105,6 +178,38 @@ export class VeSyncAirBypass extends VeSyncFan {
      */
     async turnOff(): Promise<boolean> {
         logger.info(`Turning off device: ${this.deviceName}`);
+
+        // Special handling for LV series
+        if (this.deviceType.startsWith('LV-')) {
+            const [response, status] = await this.callApi(
+                '/131airPurifier/v1/device/deviceStatus',
+                'put',
+                {
+                    acceptLanguage: 'en',
+                    accountID: this.manager.accountId!,
+                    status: 'off',
+                    timeZone: this.manager.timeZone!,
+                    token: this.manager.token!,
+                    uuid: this.uuid
+                },
+                {
+                    'accept-language': 'en',
+                    'accountId': this.manager.accountId!,
+                    'appVersion': '2.8.6',
+                    'content-type': 'application/json',
+                    'tk': this.manager.token!,
+                    'tz': this.manager.timeZone!
+                }
+            );
+
+            const success = this.checkResponse([response, status], 'turnOff');
+            if (!success) {
+                logger.error(`Failed to turn off device: ${this.deviceName}`);
+            }
+            return success;
+        }
+
+        // Original implementation for other devices
         const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -519,8 +624,96 @@ export class VeSyncHumidifier extends VeSyncFan {
 
         const success = this.checkResponse([response, status], 'getDetails');
         if (success && response?.result?.result) {
-            this.details = response.result.result;
+            const result = response.result.result;
+            
+            // Handle model-specific status fields
+            if (this.deviceType.startsWith('Classic') || this.deviceType === 'Dual200S') {
+                this.deviceStatus = result.enabled ? 'on' : 'off';
+            } else {
+                this.deviceStatus = result.powerSwitch === 1 ? 'on' : 'off';
+            }
+
+            this.details = {
+                mode: result.mode || '',
+                humidity: result.humidity || 0,
+                mist_level: result.mistLevel || 0,
+                mist_virtual_level: result.virtualLevel || 0,
+                warm_level: result.warmLevel || 0,
+                water_lacks: result.waterLacks || false,
+                humidity_high: result.humidityHigh || false,
+                water_tank_lifted: result.waterTankLifted || false,
+                display: result.display || false,
+                automatic_stop: result.automaticStop || false,
+                configuration: result.configuration || {},
+                connection_status: result.connectionStatus || null
+            };
             logger.debug(`Successfully got details for device: ${this.deviceName}`);
+        }
+        return success;
+    }
+
+    /**
+     * Turn device on
+     */
+    async turnOn(): Promise<boolean> {
+        return this.toggleSwitch(true);
+    }
+
+    /**
+     * Turn device off
+     */
+    async turnOff(): Promise<boolean> {
+        return this.toggleSwitch(false);
+    }
+
+    /**
+     * Get model-specific toggle payload
+     */
+    protected getTogglePayload(enabled: boolean): Record<string, any> {
+        // Model-specific toggle payload based on PyVeSync implementation
+        if (this.deviceType.startsWith('Classic') || this.deviceType === 'Dual200S') {
+            return {
+                enabled: enabled,
+                id: 0
+            };
+        } else if (this.deviceType.startsWith('Superior')) {
+            return {
+                powerSwitch: enabled ? 1 : 0,
+                switchIdx: 0
+            };
+        } else {
+            return {
+                powerSwitch: enabled ? 1 : 0
+            };
+        }
+    }
+
+    /**
+     * Toggle device power
+     */
+    async toggleSwitch(enabled: boolean): Promise<boolean> {
+        logger.info(`Setting device power to ${enabled ? 'on' : 'off'}: ${this.deviceName}`);
+        const [response, status] = await this.callApi(
+            '/cloud/v2/deviceManaged/bypassV2',
+            'post',
+            {
+                ...Helpers.reqBody(this.manager, 'bypassV2'),
+                cid: this.cid,
+                configModule: this.configModule,
+                payload: {
+                    data: this.getTogglePayload(enabled),
+                    method: 'setSwitch',
+                    source: 'APP'
+                }
+            },
+            Helpers.reqHeaderBypass()
+        );
+
+        const success = this.checkResponse([response, status], 'toggleSwitch');
+        if (success) {
+            this.deviceStatus = enabled ? 'on' : 'off';
+        } else {
+            logger.error(`Failed to set device power to ${enabled ? 'on' : 'off'} for device: ${this.deviceName}`);
         }
         return success;
     }
@@ -603,68 +796,6 @@ export class VeSyncHumidifier extends VeSyncFan {
         const success = this.checkResponse([response, status], 'setMode');
         if (!success) {
             logger.error(`Failed to set mode to ${mode} for device: ${this.deviceName}`);
-        }
-        return success;
-    }
-
-    /**
-     * Turn device on
-     */
-    async turnOn(): Promise<boolean> {
-        logger.info(`Turning on device: ${this.deviceName}`);
-        const [response, status] = await this.callApi(
-            '/cloud/v2/deviceManaged/bypassV2',
-            'post',
-            {
-                ...Helpers.reqBody(this.manager, 'bypassV2'),
-                cid: this.cid,
-                configModule: this.configModule,
-                payload: {
-                    data: {
-                        enabled: true,
-                        id: 0
-                    },
-                    method: 'setSwitch',
-                    source: 'APP'
-                }
-            },
-            Helpers.reqHeaderBypass()
-        );
-
-        const success = this.checkResponse([response, status], 'turnOn');
-        if (!success) {
-            logger.error(`Failed to turn on device: ${this.deviceName}`);
-        }
-        return success;
-    }
-
-    /**
-     * Turn device off
-     */
-    async turnOff(): Promise<boolean> {
-        logger.info(`Turning off device: ${this.deviceName}`);
-        const [response, status] = await this.callApi(
-            '/cloud/v2/deviceManaged/bypassV2',
-            'post',
-            {
-                ...Helpers.reqBody(this.manager, 'bypassV2'),
-                cid: this.cid,
-                configModule: this.configModule,
-                payload: {
-                    data: {
-                        enabled: false,
-                        id: 0
-                    },
-                    method: 'setSwitch',
-                    source: 'APP'
-                }
-            },
-            Helpers.reqHeaderBypass()
-        );
-
-        const success = this.checkResponse([response, status], 'turnOff');
-        if (!success) {
-            logger.error(`Failed to turn off device: ${this.deviceName}`);
         }
         return success;
     }
@@ -939,6 +1070,25 @@ export class VeSyncWarmHumidifier extends VeSyncHumidifier {
     }
 
     /**
+     * Get device details
+     */
+    async getDetails(): Promise<Boolean> {
+        const success = await super.getDetails();
+        if (success && this.details) {
+            // Add warm humidifier specific fields
+            this.details = {
+                ...this.details,
+                warm_enabled: this.details.warm_level > 0,
+                drying_mode_enabled: this.details.autoDryingSwitch === 1,
+                drying_mode_state: this.details.dryingMode || '',
+                drying_mode_level: this.details.dryingLevel || 0,
+                drying_mode_seconds_remaining: this.details.dryingRemainTime || 0
+            };
+        }
+        return success;
+    }
+
+    /**
      * Change fan speed - Implemented to satisfy interface but redirects to setMistLevel
      */
     async changeFanSpeed(speed: number): Promise<boolean> {
@@ -976,7 +1126,9 @@ export class VeSyncWarmHumidifier extends VeSyncHumidifier {
         );
 
         const success = this.checkResponse([response, status], 'setMode');
-        if (!success) {
+        if (success) {
+            this.details.mode = mode;
+        } else {
             logger.error(`Failed to set mode to ${mode} for device: ${this.deviceName}`);
         }
         return success;
@@ -1018,7 +1170,10 @@ export class VeSyncWarmHumidifier extends VeSyncHumidifier {
         );
 
         const success = this.checkResponse([response, status], 'setWarmLevel');
-        if (!success) {
+        if (success) {
+            this.details.warm_level = level;
+            this.details.warm_enabled = level > 0;
+        } else {
             logger.error(`Failed to set warm level to ${level} for device: ${this.deviceName}`);
         }
         return success;
@@ -1054,10 +1209,48 @@ export class VeSyncWarmHumidifier extends VeSyncHumidifier {
         );
 
         const success = this.checkResponse([response, status], 'setDryingModeEnabled');
-        if (!success) {
+        if (success) {
+            this.details.drying_mode_enabled = enabled;
+            this.details.autoDryingSwitch = enabled ? 1 : 0;
+        } else {
             logger.error(`Failed to set drying mode to ${enabled} for device: ${this.deviceName}`);
         }
         return success;
+    }
+
+    /**
+     * Get warm mist enabled status
+     */
+    get warmMistEnabled(): boolean {
+        return this.details.warm_enabled || false;
+    }
+
+    /**
+     * Get drying mode enabled status
+     */
+    get dryingModeEnabled(): boolean {
+        return this.details.drying_mode_enabled || false;
+    }
+
+    /**
+     * Get drying mode state
+     */
+    get dryingModeState(): string {
+        return this.details.drying_mode_state || '';
+    }
+
+    /**
+     * Get drying mode level
+     */
+    get dryingModeLevel(): number {
+        return this.details.drying_mode_level || 0;
+    }
+
+    /**
+     * Get drying mode seconds remaining
+     */
+    get dryingModeSecondsRemaining(): number {
+        return this.details.drying_mode_seconds_remaining || 0;
     }
 }
 
