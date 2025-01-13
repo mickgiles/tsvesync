@@ -501,12 +501,9 @@ echo "$DEVICES_RESPONSE" | jq -c '.result.list[]' | while read -r device; do
                 "deviceRegion": "US",
                 "method": "bypassV2",
                 "payload": {
-                    "data": {
-                        "type": "air",
-                        "id": 0
-                    },
-                    "method": "getPurifierStatus",
-                    "source": "APP"
+                    "method": "getHumidifierStatus",
+                    "source": "APP",
+                    "data": {}
                 },
                 "phoneBrand": "SM N9005",
                 "phoneOS": "Android",
@@ -565,7 +562,8 @@ echo "$DEVICES_RESPONSE" | jq -c '.result.list[]' | while read -r device; do
     echo "$DETAILS_RESPONSE" | jq '.'
     
     # Get device status based on device type
-    if [[ "$DEVICE_TYPE" == *"Core"* ]] || [[ "$DEVICE_TYPE" == *"LAP"* ]] || [[ "$DEVICE_TYPE" == "Dual200S" ]] || [[ "$DEVICE_TYPE" == *"LTF-"* ]] || [[ "$DEVICE_TYPE" == *"Classic"* ]] || [[ "$DEVICE_TYPE" == *"LUH"* ]] || [[ "$DEVICE_TYPE" == *"LEH"* ]]; then
+    if [[ "$DEVICE_TYPE" == *"Core"* ]] || [[ "$DEVICE_TYPE" == *"LAP"* ]]; then
+        # Air purifiers
         echo "Getting purifier status..."
         STATUS_RESPONSE=$(curl -s -X POST "$BASE_URL/cloud/v2/deviceManaged/bypassV2" \
             -H "Content-Type: application/json; charset=UTF-8" \
@@ -595,6 +593,66 @@ echo "$DEVICES_RESPONSE" | jq -c '.result.list[]' | while read -r device; do
             }')
         
         echo "Purifier status for $DEVICE_NAME:"
+        echo "$STATUS_RESPONSE" | jq '.'
+
+    elif [[ "$DEVICE_TYPE" == "Dual200S" ]] || [[ "$DEVICE_TYPE" == *"Classic"* ]] || [[ "$DEVICE_TYPE" == *"LUH"* ]] || [[ "$DEVICE_TYPE" == *"LEH"* ]]; then
+        # Humidifiers
+        echo "Getting humidifier status..."
+        STATUS_RESPONSE=$(curl -s -X POST "$BASE_URL/cloud/v2/deviceManaged/bypassV2" \
+            -H "Content-Type: application/json; charset=UTF-8" \
+            -H "User-Agent: okhttp/3.12.1" \
+            -d '{
+                "acceptLanguage": "en",
+                "accountID": "'"$ACCOUNT_ID"'",
+                "appVersion": "2.8.6",
+                "cid": "'"$DEVICE_CID"'",
+                "configModule": "'"$CONFIG_MODULE"'",
+                "debugMode": false,
+                "deviceRegion": "US",
+                "method": "bypassV2",
+                "payload": {
+                    "method": "getHumidifierStatus",
+                    "source": "APP",
+                    "data": {}
+                },
+                "phoneBrand": "SM N9005",
+                "phoneOS": "Android",
+                "timeZone": "America/New_York",
+                "token": "'"$TOKEN"'",
+                "traceId": "TRACE_ID"
+            }')
+        
+        echo "Humidifier status for $DEVICE_NAME:"
+        echo "$STATUS_RESPONSE" | jq '.'
+
+    elif [[ "$DEVICE_TYPE" == *"LTF-"* ]]; then
+        # Tower Fans
+        echo "Getting tower fan status..."
+        STATUS_RESPONSE=$(curl -s -X POST "$BASE_URL/cloud/v2/deviceManaged/bypassV2" \
+            -H "Content-Type: application/json; charset=UTF-8" \
+            -H "User-Agent: okhttp/3.12.1" \
+            -d '{
+                "acceptLanguage": "en",
+                "accountID": "'"$ACCOUNT_ID"'",
+                "appVersion": "2.8.6",
+                "cid": "'"$DEVICE_CID"'",
+                "configModule": "'"$CONFIG_MODULE"'",
+                "debugMode": false,
+                "deviceRegion": "US",
+                "method": "bypassV2",
+                "payload": {
+                    "method": "getTowerFanStatus",
+                    "source": "APP",
+                    "data": {}
+                },
+                "phoneBrand": "SM N9005",
+                "phoneOS": "Android",
+                "timeZone": "America/New_York",
+                "token": "'"$TOKEN"'",
+                "traceId": "TRACE_ID"
+            }')
+        
+        echo "Tower fan status for $DEVICE_NAME:"
         echo "$STATUS_RESPONSE" | jq '.'
     fi
     
@@ -791,28 +849,6 @@ echo "$DEVICES_RESPONSE" | jq -c '.result.list[]' | while read -r device; do
         
         echo "Yearly energy for $DEVICE_NAME:"
         echo "$YEARLY_RESPONSE" | jq '.'
-    fi
-    
-    # For humidifiers
-    if [[ "$DEVICE_TYPE" == *"Classic"* ]] || [[ "$DEVICE_TYPE" == *"LUH"* ]] || [[ "$DEVICE_TYPE" == *"LEH"* ]]; then
-        echo "Getting humidifier status..."
-        STATUS_RESPONSE=$(curl -s -X POST "$BASE_URL/cloud/v2/deviceManaged/bypassV2" \
-            -H "Content-Type: application/json" \
-            -d '{
-                "token": "'"$TOKEN"'",
-                "accountID": "'"$ACCOUNT_ID"'",
-                "cid": "'"$DEVICE_CID"'",
-                "configModule": "'"$CONFIG_MODULE"'",
-                "method": "bypassV2",
-                "payload": {
-                    "method": "getHumidifierStatus",
-                    "source": "APP",
-                    "data": {}
-                }
-            }')
-        
-        echo "Humidifier status for $DEVICE_NAME:"
-        echo "$STATUS_RESPONSE" | jq '.'
     fi
     
     echo "----------------------------------------"
