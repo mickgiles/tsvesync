@@ -325,6 +325,7 @@ export const outletModules: Record<string, new (details: Record<string, any>, ma
     'wifi-switch-1.3': VeSyncOutlet7A,
     'ESW03-USA': VeSyncOutlet10A,
     'ESW01-EU': VeSyncOutlet10A,
+    'ESW10-USA': VeSyncOutlet10A,
     'ESW15-USA': VeSyncOutlet15A,
     'ESO15-TB': VeSyncOutdoorPlug
 }; 

@@ -67,6 +67,7 @@ function objectFactory(details: Record<string, any>, manager: VeSync): [string, 
             'wifi-switch': 'outlets',
             'ESW03': 'outlets',
             'ESW01': 'outlets',
+            'ESW10': 'outlets',
             'ESW15': 'outlets',
             'ESO': 'outlets',
             // Switches

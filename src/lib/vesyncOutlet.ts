@@ -28,6 +28,10 @@ export const outletConfig: OutletConfig = {
         module: 'VeSyncOutlet10A',
         features: ['energy']
     },
+    'ESW10-USA': {
+        module: 'VeSyncOutlet10A',
+        features: ['energy']
+    },
     'ESW15-USA': {
         module: 'VeSyncOutlet15A',
         features: ['energy', 'nightlight']
@@ -71,7 +75,7 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
             url = '/outdoorsocket15a/v1/device/devicedetail';
         } else if (this.deviceType.startsWith('ESW15')) {
             url = '/15a/v1/device/devicedetail';
-        } else if (this.deviceType.startsWith('ESW03') || this.deviceType.startsWith('ESW01')) {
+        } else if (this.deviceType.startsWith('ESW03') || this.deviceType.startsWith('ESW01') || this.deviceType.startsWith('ESW10')) {
             url = '/10a/v1/device/devicedetail';
         } else {
             url = '/v1/device/devicedetail';
@@ -168,7 +172,7 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
             url = '/outdoorsocket15a/v1/device/energy';
         } else if (this.deviceType.startsWith('ESW15')) {
             url = '/15a/v1/device/energy';
-        } else if (this.deviceType.startsWith('ESW03') || this.deviceType.startsWith('ESW01')) {
+        } else if (this.deviceType.startsWith('ESW03') || this.deviceType.startsWith('ESW01') || this.deviceType.startsWith('ESW10')) {
             url = '/10a/v1/device/energy';
         } else {
             url = '/v1/device/energy';
@@ -261,7 +265,7 @@ export abstract class VeSyncOutlet extends VeSyncBaseDevice {
             return `v1/device/${this.deviceType}-${this.cid}`;
         } else if (this.deviceType.startsWith('ESW15') || this.deviceType.startsWith('ESO15')) {
             return '15a/v1/device';
-        } else if (this.deviceType.startsWith('ESW03') || this.deviceType.startsWith('ESW01')) {
+        } else if (this.deviceType.startsWith('ESW03') || this.deviceType.startsWith('ESW01') || this.deviceType.startsWith('ESW10')) {
             return '10a/v1/device';
         }
         return 'v1/device';

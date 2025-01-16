@@ -7,6 +7,7 @@
 - **10A Outlets**
   - ESW03-USA
   - ESW01-EU
+  - ESW10-USA
 - **7A Outlets**
   - wifi-switch-1.3
 - **Wall Switches**

@@ -121,6 +121,10 @@ A TypeScript library for interacting with VeSync smart home devices. This librar
   - Power monitoring
   - Energy usage tracking (daily/weekly/monthly/yearly)
   - Voltage monitoring
+- 10A Outlet (ESW10-USA)
+  - Power monitoring
+  - Energy usage tracking (daily/weekly/monthly/yearly)
+  - Voltage monitoring
 - 7A Outlet (wifi-switch-1.3)
   - Energy usage tracking (daily/weekly/monthly/yearly)
 
