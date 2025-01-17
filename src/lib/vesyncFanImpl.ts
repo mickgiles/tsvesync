@@ -1695,6 +1695,41 @@ export class VeSyncTowerFan extends VeSyncAirBaseV2 {
     }
 
     /**
+     * Set oscillation state
+     */
+    async setOscillation(toggle: boolean): Promise<boolean> {
+        logger.debug(`Setting oscillation to ${toggle ? 'on' : 'off'} for device: ${this.deviceName}`);
+        
+        const [head, body] = this.buildApiDict('setSwitch');
+        body.payload.data = {
+            oscillationSwitch: toggle ? 1 : 0
+        };
+
+        const [response, status] = await this.callApi(
+            '/cloud/v2/deviceManaged/bypassV2',
+            'post',
+            body,
+            head
+        );
+
+        return this.checkResponse([response, status], 'setOscillation');
+    }
+
+    /**
+     * Turn oscillation on
+     */
+    async setOscillationOn(): Promise<boolean> {
+        return this.setOscillation(true);
+    }
+
+    /**
+     * Turn oscillation off
+     */
+    async setOscillationOff(): Promise<boolean> {
+        return this.setOscillation(false);
+    }
+
+    /**
      * Display device info
      */
     override display(): void {
