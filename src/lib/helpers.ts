@@ -58,7 +58,7 @@ export class Helpers {
     /**
      * Calculate MD5 hash
      */
-    static md5(text: string): string {
+    static hashPassword(text: string): string {
         return crypto.createHash('md5').update(text).digest('hex');
     }
 
@@ -302,7 +302,7 @@ export class Helpers {
     /**
      * Calculate MD5 hash
      */
-    static hashPassword(text: string): string {
+    static md5(text: string): string {
         return crypto.createHash('md5').update(text).digest('hex');
     }
 } 

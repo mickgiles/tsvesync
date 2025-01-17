@@ -1392,15 +1392,29 @@ export class VeSyncTowerFan extends VeSyncAirBaseV2 {
     }
 
     /**
+     * Build API dictionary
+     */
+    protected buildApiDict(method: string): [Record<string, any>, Record<string, any>] {
+        const head = Helpers.reqHeaderBypass();
+        const body = Helpers.reqBody(this.manager, 'bypassV2');
+        body.cid = this.cid;
+        body.deviceId = this.cid;
+        body.configModule = this.configModule;
+        body.configModel = this.configModule;
+        body.payload = {
+            method: method,
+            source: 'APP',
+            data: {}
+        };
+        return [head, body];
+    }
+
+    /**
      * Get device details
      */
     async getDetails(): Promise<Boolean> {
         logger.debug(`Getting details for device: ${this.deviceName}`);
         const [head, body] = this.buildApiDict('getTowerFanStatus');
-        if (!head || !body) {
-            logger.debug('Error building API request');
-            return false;
-        }
 
         const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
@@ -1409,14 +1423,12 @@ export class VeSyncTowerFan extends VeSyncAirBaseV2 {
             head
         );
 
-        // First verify the outer response structure
         if (!this.checkResponse([response, status], 'getDetails') || !response?.result) {
             logger.debug('Error getting tower fan details');
             this.connectionStatus = 'offline';
             return false;
         }
 
-        // Then verify the inner result structure
         const innerResponse = response.result;
         if (innerResponse.code !== 0 || !innerResponse.result) {
             logger.debug('Error in inner response from tower fan');
@@ -1424,14 +1436,9 @@ export class VeSyncTowerFan extends VeSyncAirBaseV2 {
             return false;
         }
 
-        // Finally get the actual device data
         const deviceData = innerResponse.result;
-
-        // Map fields correctly based on API response
-        // Store original PyVeSync field names for API compatibility
         this.deviceStatus = deviceData.powerSwitch === 1 ? 'on' : 'off';
         this.details = {
-            // API fields exactly as they come from VeSync
             powerSwitch: deviceData.powerSwitch,
             workMode: deviceData.workMode,
             manualSpeedLevel: deviceData.manualSpeedLevel,
@@ -1457,50 +1464,15 @@ export class VeSyncTowerFan extends VeSyncAirBaseV2 {
     }
 
     /**
-     * Change fan speed
-     */
-    async changeFanSpeed(speed: number): Promise<boolean> {
-        if (!this.speeds.includes(speed)) {
-            logger.debug(`Invalid speed: ${speed}. Must be one of: ${this.speeds.join(', ')}`);
-            return false;
-        }
-
-        const [head, body] = this.buildApiDict('setLevel');
-        if (!head || !body) {
-            return false;
-        }
-
-        body.payload.data = {
-            levelIdx: 0,
-            levelType: 'wind',
-            manualSpeedLevel: speed
-        };
-
-        const [response, status] = await this.callApi(
-            '/cloud/v2/deviceManaged/bypassV2',
-            'post',
-            body,
-            head
-        );
-
-        const success = this.checkResponse([response, status], 'changeFanSpeed');
-        if (success) {
-            this.details.speed = speed;
-        } else {
-            logger.debug('Error setting fan speed');
-        }
-        return success;
-    }
-
-    /**
      * Toggle device power
      */
     async toggleSwitch(toggle: boolean): Promise<boolean> {
-        const [head, body] = this.buildApiDict('setSwitch');
-        if (!head || !body) {
+        if (typeof toggle !== 'boolean') {
+            logger.debug('Invalid toggle value for tower fan switch');
             return false;
         }
 
+        const [head, body] = this.buildApiDict('setSwitch');
         body.payload.data = {
             powerSwitch: toggle ? 1 : 0,
             switchIdx: 0
@@ -1517,7 +1489,7 @@ export class VeSyncTowerFan extends VeSyncAirBaseV2 {
         if (success) {
             this.deviceStatus = toggle ? 'on' : 'off';
         } else {
-            logger.debug('Error toggling device power');
+            logger.debug('Error toggling tower fan power');
         }
         return success;
     }
@@ -1544,7 +1516,7 @@ export class VeSyncTowerFan extends VeSyncAirBaseV2 {
     async mode_toggle(mode: string): Promise<boolean> {
         const validModes = this.towerModes.map(m => m.toLowerCase());
         if (!validModes.includes(mode.toLowerCase())) {
-            logger.debug(`Invalid purifier mode used - ${mode}`);
+            logger.debug(`Invalid tower fan mode used - ${mode}`);
             return false;
         }
 
@@ -1553,10 +1525,6 @@ export class VeSyncTowerFan extends VeSyncAirBaseV2 {
         }
 
         const [head, body] = this.buildApiDict('setTowerFanMode');
-        if (!head || !body) {
-            return false;
-        }
-
         body.deviceId = this.cid;
         body.payload.data = {
             workMode: mode
@@ -1571,9 +1539,41 @@ export class VeSyncTowerFan extends VeSyncAirBaseV2 {
 
         const success = this.checkResponse([response, status], 'mode_toggle');
         if (success) {
-            this.details.mode = mode;
+            this.details.workMode = mode;
         } else {
-            logger.debug('Error setting purifier mode');
+            logger.debug('Error setting tower fan mode');
+        }
+        return success;
+    }
+
+    /**
+     * Change fan speed
+     */
+    async changeFanSpeed(speed: number): Promise<boolean> {
+        if (!this.speeds.includes(speed)) {
+            logger.debug(`Invalid speed: ${speed}. Must be one of: ${this.speeds.join(', ')}`);
+            return false;
+        }
+
+        const [head, body] = this.buildApiDict('setLevel');
+        body.payload.data = {
+            levelIdx: 0,
+            levelType: 'wind',
+            manualSpeedLevel: speed
+        };
+
+        const [response, status] = await this.callApi(
+            '/cloud/v2/deviceManaged/bypassV2',
+            'post',
+            body,
+            head
+        );
+
+        const success = this.checkResponse([response, status], 'changeFanSpeed');
+        if (success) {
+            this.details.manualSpeedLevel = speed;
+        } else {
+            logger.debug('Error setting fan speed');
         }
         return success;
     }
