@@ -1254,6 +1254,413 @@ export class VeSyncWarmHumidifier extends VeSyncHumidifier {
     }
 }
 
+/**
+ * VeSync Air Purifier with Bypass V2
+ */
+export class VeSyncAirBaseV2 extends VeSyncAirBypass {
+    protected _lightDetection: boolean = false;
+    protected _lightDetectionState: boolean = false;
+
+    constructor(details: Record<string, any>, manager: VeSync) {
+        super(details, manager);
+        logger.debug(`Initialized VeSyncAirBaseV2 device: ${this.deviceName}`);
+    }
+
+    /**
+     * Build API dictionary
+     */
+    protected buildApiDict(method: string): [Record<string, any>, Record<string, any>] {
+        const head = Helpers.reqHeaderBypass();
+        const body = {
+            ...Helpers.reqBody(this.manager, 'bypassV2'),
+            deviceId: this.cid,
+            configModule: this.configModule,
+            payload: {
+                method,
+                source: 'APP',
+                data: {}
+            }
+        };
+        return [head, body];
+    }
+
+    get lightDetection(): boolean {
+        return this._lightDetection;
+    }
+
+    set lightDetection(toggle: boolean) {
+        this._lightDetection = toggle;
+    }
+
+    get lightDetectionState(): boolean {
+        return this._lightDetectionState;
+    }
+
+    async setLightDetection(toggle: boolean): Promise<boolean> {
+        const [head, body] = this.buildApiDict('setLightDetection');
+        if (!head || !body) {
+            return false;
+        }
+
+        body.payload.data = { enabled: toggle };
+
+        const [response, status] = await this.callApi(
+            '/cloud/v2/deviceManaged/bypassV2',
+            'post',
+            body,
+            head
+        );
+
+        const success = this.checkResponse([response, status], 'setLightDetection');
+        if (success) {
+            this._lightDetection = toggle;
+        }
+        return success;
+    }
+
+    async setLightDetectionOn(): Promise<boolean> {
+        return this.setLightDetection(true);
+    }
+
+    async setLightDetectionOff(): Promise<boolean> {
+        return this.setLightDetection(false);
+    }
+
+    async turboMode(): Promise<boolean> {
+        return this.mode_toggle('turbo');
+    }
+
+    async petMode(): Promise<boolean> {
+        return this.mode_toggle('pet');
+    }
+
+    /**
+     * Build configuration dictionary
+     */
+    protected buildConfigDict(configDict: Record<string, any>): void {
+        if (configDict) {
+            this.config = configDict;
+        }
+    }
+
+    /**
+     * Set mode
+     */
+    protected async mode_toggle(mode: string): Promise<boolean> {
+        const validModes = this.modes.map(m => m.toLowerCase());
+        if (!validModes.includes(mode.toLowerCase())) {
+            logger.debug(`Invalid mode used - ${mode}`);
+            return false;
+        }
+
+        const [head, body] = this.buildApiDict('setPurifierMode');
+        if (!head || !body) {
+            return false;
+        }
+
+        body.payload.data = {
+            mode: mode
+        };
+
+        const [response, status] = await this.callApi(
+            '/cloud/v2/deviceManaged/bypassV2',
+            'post',
+            body,
+            head
+        );
+
+        const success = this.checkResponse([response, status], 'mode_toggle');
+        if (success) {
+            this.details.mode = mode;
+        } else {
+            logger.debug('Error setting mode');
+        }
+        return success;
+    }
+}
+
+/**
+ * VeSync Tower Fan Implementation
+ */
+export class VeSyncTowerFan extends VeSyncAirBaseV2 {
+    protected readonly towerModes = ['normal', 'advancedSleep', 'off'] as const;
+    protected readonly speeds = Array.from({length: 12}, (_, i) => i + 1);
+
+    constructor(details: Record<string, any>, manager: VeSync) {
+        super(details, manager);
+        logger.debug(`Initialized VeSyncTowerFan device: ${this.deviceName}`);
+    }
+
+    /**
+     * Get device details
+     */
+    async getDetails(): Promise<Boolean> {
+        logger.debug(`Getting details for device: ${this.deviceName}`);
+        const [head, body] = this.buildApiDict('getTowerFanStatus');
+        if (!head || !body) {
+            logger.debug('Error building API request');
+            return false;
+        }
+
+        const [response, status] = await this.callApi(
+            '/cloud/v2/deviceManaged/bypassV2',
+            'post',
+            body,
+            head
+        );
+
+        if (!this.checkResponse([response, status], 'getDetails') || !response) {
+            logger.debug('Error getting purifier details');
+            this.connectionStatus = 'offline';
+            return false;
+        }
+
+        const innerResult = response.result?.result;
+        if (!innerResult) {
+            this.connectionStatus = 'offline';
+            logger.debug('Error in inner result dict from purifier');
+            return false;
+        }
+
+        this.deviceStatus = innerResult.enabled ? 'on' : 'off';
+        this.details = {
+            mode: innerResult.mode || '',
+            speed: innerResult.speed || 0,
+            display: innerResult.display || false,
+            child_lock: innerResult.child_lock || false,
+            night_light: innerResult.night_light || 'off',
+            timer: innerResult.timer || 0,
+            configuration: innerResult.configuration || {},
+            light_detection: innerResult.light_detection || false,
+            light_detection_state: innerResult.light_detection_state || false
+        };
+
+        if (innerResult.configuration) {
+            this.buildConfigDict(innerResult.configuration);
+        }
+
+        this._lightDetection = innerResult.light_detection || false;
+        this._lightDetectionState = innerResult.light_detection_state || false;
+
+        logger.debug(`Successfully got details for device: ${this.deviceName}`);
+        return true;
+    }
+
+    /**
+     * Change fan speed
+     */
+    async changeFanSpeed(speed: number): Promise<boolean> {
+        if (!this.speeds.includes(speed)) {
+            logger.debug(`Invalid speed: ${speed}. Must be one of: ${this.speeds.join(', ')}`);
+            return false;
+        }
+
+        const [head, body] = this.buildApiDict('setLevel');
+        if (!head || !body) {
+            return false;
+        }
+
+        body.payload.data = {
+            levelIdx: 0,
+            levelType: 'wind',
+            manualSpeedLevel: speed
+        };
+
+        const [response, status] = await this.callApi(
+            '/cloud/v2/deviceManaged/bypassV2',
+            'post',
+            body,
+            head
+        );
+
+        const success = this.checkResponse([response, status], 'changeFanSpeed');
+        if (success) {
+            this.details.speed = speed;
+        } else {
+            logger.debug('Error setting fan speed');
+        }
+        return success;
+    }
+
+    /**
+     * Toggle device power
+     */
+    async toggleSwitch(toggle: boolean): Promise<boolean> {
+        const [head, body] = this.buildApiDict('setSwitch');
+        if (!head || !body) {
+            return false;
+        }
+
+        body.payload.data = {
+            powerSwitch: toggle ? 1 : 0,
+            switchIdx: 0
+        };
+
+        const [response, status] = await this.callApi(
+            '/cloud/v2/deviceManaged/bypassV2',
+            'post',
+            body,
+            head
+        );
+
+        const success = this.checkResponse([response, status], 'toggleSwitch');
+        if (success) {
+            this.deviceStatus = toggle ? 'on' : 'off';
+        } else {
+            logger.debug('Error toggling device power');
+        }
+        return success;
+    }
+
+    /**
+     * Turn device on
+     */
+    async turnOn(): Promise<boolean> {
+        logger.debug(`Turning on device: ${this.deviceName}`);
+        return this.toggleSwitch(true);
+    }
+
+    /**
+     * Turn device off
+     */
+    async turnOff(): Promise<boolean> {
+        logger.debug(`Turning off device: ${this.deviceName}`);
+        return this.toggleSwitch(false);
+    }
+
+    /**
+     * Set tower fan mode
+     */
+    async mode_toggle(mode: string): Promise<boolean> {
+        const validModes = this.towerModes.map(m => m.toLowerCase());
+        if (!validModes.includes(mode.toLowerCase())) {
+            logger.debug(`Invalid purifier mode used - ${mode}`);
+            return false;
+        }
+
+        if (mode.toLowerCase() === 'off') {
+            return this.turnOff();
+        }
+
+        const [head, body] = this.buildApiDict('setTowerFanMode');
+        if (!head || !body) {
+            return false;
+        }
+
+        body.deviceId = this.cid;
+        body.payload.data = {
+            workMode: mode
+        };
+
+        const [response, status] = await this.callApi(
+            '/cloud/v2/deviceManaged/bypassV2',
+            'post',
+            body,
+            head
+        );
+
+        const success = this.checkResponse([response, status], 'mode_toggle');
+        if (success) {
+            this.details.mode = mode;
+        } else {
+            logger.debug('Error setting purifier mode');
+        }
+        return success;
+    }
+
+    /**
+     * Set normal mode
+     */
+    async normal_mode(): Promise<boolean> {
+        logger.debug(`Setting normal mode for device: ${this.deviceName}`);
+        return this.mode_toggle('normal');
+    }
+
+    /**
+     * Set manual mode - adapter to set mode to normal
+     */
+    async manual_mode(): Promise<boolean> {
+        logger.debug(`Setting manual mode for device: ${this.deviceName}`);
+        return this.normal_mode();
+    }
+
+    /**
+     * Set advanced sleep mode
+     */
+    async advanced_sleep_mode(): Promise<boolean> {
+        logger.debug(`Setting advanced sleep mode for device: ${this.deviceName}`);
+        return this.mode_toggle('advancedSleep');
+    }
+
+    /**
+     * Set sleep mode - adapter for advanced sleep mode
+     */
+    async sleep_mode(): Promise<boolean> {
+        logger.debug(`Setting sleep mode for device: ${this.deviceName}`);
+        return this.advanced_sleep_mode();
+    }
+
+    /**
+     * Override setMode to handle tower fan specific modes
+     */
+    async setMode(mode: string): Promise<boolean> {
+        return this.mode_toggle(mode);
+    }
+
+    /**
+     * Get current speed
+     */
+    get speed(): number {
+        return this.details.speed || 0;
+    }
+
+    /**
+     * Get display status
+     */
+    get displayState(): boolean {
+        return this.details.display || false;
+    }
+
+    /**
+     * Get child lock status
+     */
+    override get childLock(): string {
+        return this.details.child_lock ? 'on' : 'off';
+    }
+
+    /**
+     * Get night light status
+     */
+    get nightLight(): string {
+        return this.details.night_light || 'off';
+    }
+
+    /**
+     * Get timer status
+     */
+    get timer(): number {
+        return this.details.timer || 0;
+    }
+
+    /**
+     * Display device info
+     */
+    override display(): void {
+        super.display();
+        const info = [
+            ['Speed: ', this.speed],
+            ['Display: ', this.displayState],
+            ['Child Lock: ', this.childLock],
+            ['Night Light: ', this.nightLight],
+            ['Timer: ', this.timer]
+        ];
+
+        for (const [key, value] of info) {
+            logger.info(`${key.toString().padEnd(30, '.')} ${value}`);
+        }
+    }
+}
+
 // Export fan modules dictionary
 export const fanModules: Record<string, new (details: Record<string, any>, manager: VeSync) => VeSyncFan> = {
     // Core Series
@@ -1292,10 +1699,10 @@ export const fanModules: Record<string, new (details: Record<string, any>, manag
     'LAP-EL551S-WUS': VeSyncAirBypass,
     
     // LTF Series
-    'LTF-F422S-KEU': VeSyncAirBypass,
-    'LTF-F422S-WUSR': VeSyncAirBypass,
-    'LTF-F422_WJP': VeSyncAirBypass,
-    'LTF-F422S-WUS': VeSyncAirBypass,
+    'LTF-F422S-KEU': VeSyncTowerFan,
+    'LTF-F422S-WUSR': VeSyncTowerFan,
+    'LTF-F422_WJP': VeSyncTowerFan,
+    'LTF-F422S-WUS': VeSyncTowerFan,
     
     // Classic Series
     'Classic300S': VeSyncHumidifier,

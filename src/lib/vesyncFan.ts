@@ -8,7 +8,7 @@ import { logger } from './logger';
 
 interface FanConfig {
     [key: string]: {
-        module: 'VeSyncAirBypass' | 'VeSyncHumidifier' | 'VeSyncWarmHumidifier';
+        module: 'VeSyncAirBypass' | 'VeSyncHumidifier' | 'VeSyncWarmHumidifier' | 'VeSyncTowerFan';
         features: string[];
     };
 }
@@ -145,20 +145,20 @@ export const fanConfig: FanConfig = {
     
     // LTF Series
     'LTF-F422S-KEU': {
-        module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'timer']
+        module: 'VeSyncTowerFan',
+        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speeds', 'tower_modes']
     },
     'LTF-F422S-WUSR': {
-        module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'timer']
+        module: 'VeSyncTowerFan',
+        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speeds', 'tower_modes']
     },
     'LTF-F422_WJP': {
-        module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'timer']
+        module: 'VeSyncTowerFan',
+        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speeds', 'tower_modes']
     },
     'LTF-F422S-WUS': {
-        module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'timer']
+        module: 'VeSyncTowerFan',
+        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speeds', 'tower_modes']
     },
     
     // Classic Series
