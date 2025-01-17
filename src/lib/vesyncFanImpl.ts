@@ -1409,38 +1409,48 @@ export class VeSyncTowerFan extends VeSyncAirBaseV2 {
             head
         );
 
-        if (!this.checkResponse([response, status], 'getDetails') || !response) {
-            logger.debug('Error getting purifier details');
+        // First verify the outer response structure
+        if (!this.checkResponse([response, status], 'getDetails') || !response?.result) {
+            logger.debug('Error getting tower fan details');
             this.connectionStatus = 'offline';
             return false;
         }
 
-        const innerResult = response.result?.result;
-        if (!innerResult) {
+        // Then verify the inner result structure
+        const innerResponse = response.result;
+        if (innerResponse.code !== 0 || !innerResponse.result) {
+            logger.debug('Error in inner response from tower fan');
             this.connectionStatus = 'offline';
-            logger.debug('Error in inner result dict from purifier');
             return false;
         }
 
-        this.deviceStatus = innerResult.enabled ? 'on' : 'off';
+        // Finally get the actual device data
+        const deviceData = innerResponse.result;
+
+        // Map fields correctly based on API response
+        // Store original PyVeSync field names for API compatibility
+        this.deviceStatus = deviceData.powerSwitch === 1 ? 'on' : 'off';
         this.details = {
-            mode: innerResult.mode || '',
-            speed: innerResult.speed || 0,
-            display: innerResult.display || false,
-            child_lock: innerResult.child_lock || false,
-            night_light: innerResult.night_light || 'off',
-            timer: innerResult.timer || 0,
-            configuration: innerResult.configuration || {},
-            light_detection: innerResult.light_detection || false,
-            light_detection_state: innerResult.light_detection_state || false
+            // API fields exactly as they come from VeSync
+            powerSwitch: deviceData.powerSwitch,
+            workMode: deviceData.workMode,
+            manualSpeedLevel: deviceData.manualSpeedLevel,
+            fanSpeedLevel: deviceData.fanSpeedLevel,
+            screenState: deviceData.screenState,
+            screenSwitch: deviceData.screenSwitch,
+            oscillationState: deviceData.oscillationState,
+            oscillationSwitch: deviceData.oscillationSwitch,
+            muteState: deviceData.muteState,
+            muteSwitch: deviceData.muteSwitch,
+            timerRemain: deviceData.timerRemain,
+            temperature: deviceData.temperature || 0,
+            humidity: deviceData.humidity || 0,
+            thermalComfort: deviceData.thermalComfort,
+            sleepPreference: deviceData.sleepPreference || {},
+            scheduleCount: deviceData.scheduleCount,
+            displayingType: deviceData.displayingType,
+            errorCode: deviceData.errorCode
         };
-
-        if (innerResult.configuration) {
-            this.buildConfigDict(innerResult.configuration);
-        }
-
-        this._lightDetection = innerResult.light_detection || false;
-        this._lightDetectionState = innerResult.light_detection_state || false;
 
         logger.debug(`Successfully got details for device: ${this.deviceName}`);
         return true;
@@ -1611,35 +1621,77 @@ export class VeSyncTowerFan extends VeSyncAirBaseV2 {
      * Get current speed
      */
     get speed(): number {
-        return this.details.speed || 0;
+        return this.details.manualSpeedLevel || 0;
     }
 
     /**
      * Get display status
      */
     get displayState(): boolean {
-        return this.details.display || false;
+        return Boolean(this.details.screenState);
     }
 
     /**
-     * Get child lock status
+     * Get oscillation status
      */
-    override get childLock(): string {
-        return this.details.child_lock ? 'on' : 'off';
+    get oscillationState(): boolean {
+        return Boolean(this.details.oscillationState);
     }
 
     /**
-     * Get night light status
+     * Get mute status
      */
-    get nightLight(): string {
-        return this.details.night_light || 'off';
+    get muteState(): boolean {
+        return Boolean(this.details.muteState);
     }
 
     /**
-     * Get timer status
+     * Get timer status (in seconds)
      */
     get timer(): number {
-        return this.details.timer || 0;
+        return this.details.timerRemain || 0;
+    }
+
+    /**
+     * Get temperature (in tenths of a degree)
+     */
+    get temperature(): number {
+        return this.details.temperature || 0;
+    }
+
+    /**
+     * Get humidity percentage
+     */
+    get humidity(): number {
+        return this.details.humidity || 0;
+    }
+
+    /**
+     * Get thermal comfort level
+     */
+    get thermalComfort(): number {
+        return this.details.thermalComfort || 0;
+    }
+
+    /**
+     * Get sleep preferences
+     */
+    get sleepPreference(): Record<string, any> {
+        return this.details.sleepPreference || {};
+    }
+
+    /**
+     * Get schedule count
+     */
+    get scheduleCount(): number {
+        return this.details.scheduleCount || 0;
+    }
+
+    /**
+     * Get error code
+     */
+    get errorCode(): number {
+        return this.details.errorCode || 0;
     }
 
     /**
@@ -1648,15 +1700,27 @@ export class VeSyncTowerFan extends VeSyncAirBaseV2 {
     override display(): void {
         super.display();
         const info = [
+            ['Mode: ', this.details.workMode || ''],
             ['Speed: ', this.speed],
+            ['Fan Speed Level: ', this.details.fanSpeedLevel || 0],
             ['Display: ', this.displayState],
-            ['Child Lock: ', this.childLock],
-            ['Night Light: ', this.nightLight],
-            ['Timer: ', this.timer]
+            ['Display Switch: ', this.details.screenSwitch],
+            ['Oscillation: ', this.oscillationState],
+            ['Oscillation Switch: ', this.details.oscillationSwitch],
+            ['Mute: ', this.muteState],
+            ['Mute Switch: ', this.details.muteSwitch],
+            ['Timer: ', this.timer],
+            ['Temperature: ', this.temperature / 10, '°C'],
+            ['Humidity: ', this.humidity, '%'],
+            ['Thermal Comfort: ', this.thermalComfort],
+            ['Sleep Preference: ', JSON.stringify(this.sleepPreference)],
+            ['Schedule Count: ', this.scheduleCount],
+            ['Displaying Type: ', this.details.displayingType],
+            ['Error Code: ', this.errorCode]
         ];
 
-        for (const [key, value] of info) {
-            logger.info(`${key.toString().padEnd(30, '.')} ${value}`);
+        for (const [key, value, unit = ''] of info) {
+            logger.info(`${key.toString().padEnd(30, '.')} ${value}${unit}`);
         }
     }
 }
