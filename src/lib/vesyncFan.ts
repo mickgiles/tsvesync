@@ -8,7 +8,7 @@ import { logger } from './logger';
 
 interface FanConfig {
     [key: string]: {
-        module: 'VeSyncAirBypass' | 'VeSyncHumidifier' | 'VeSyncWarmHumidifier' | 'VeSyncTowerFan';
+        module: 'VeSyncAirBypass' | 'VeSyncHumidifier' | 'VeSyncWarmHumidifier' | 'VeSyncTowerFan' | 'VeSyncAirBaseV2';
         features: string[];
     };
 }
@@ -79,68 +79,68 @@ export const fanConfig: FanConfig = {
         features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer']
     },
     'LAP-V102S-AASR': {
-        module: 'VeSyncAirBypass',
+        module: 'VeSyncAirBaseV2',
         features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer']
     },
     'LAP-V102S-WUS': {
-        module: 'VeSyncAirBypass',
+        module: 'VeSyncAirBaseV2',
         features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer']
     },
     'LAP-V102S-WEU': {
-        module: 'VeSyncAirBypass',
+        module: 'VeSyncAirBaseV2',
         features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer']
     },
     'LAP-V102S-AUSR': {
-        module: 'VeSyncAirBypass',
+        module: 'VeSyncAirBaseV2',
         features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer']
     },
     'LAP-V102S-WJP': {
-        module: 'VeSyncAirBypass',
+        module: 'VeSyncAirBaseV2',
         features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer']
     },
     'LAP-V201S-AASR': {
-        module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer']
+        module: 'VeSyncAirBaseV2',
+        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'light_detection']
     },
     'LAP-V201S-WJP': {
-        module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer']
+        module: 'VeSyncAirBaseV2',
+        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'light_detection']
     },
     'LAP-V201S-WEU': {
-        module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer']
+        module: 'VeSyncAirBaseV2',
+        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'light_detection']
     },
     'LAP-V201S-WUS': {
-        module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer']
+        module: 'VeSyncAirBaseV2',
+        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'light_detection']
     },
     'LAP-V201-AUSR': {
-        module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer']
+        module: 'VeSyncAirBaseV2',
+        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'light_detection']
     },
     'LAP-V201S-AUSR': {
-        module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer']
+        module: 'VeSyncAirBaseV2',
+        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'light_detection']
     },
     'LAP-V201S-AEUR': {
-        module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer']
+        module: 'VeSyncAirBaseV2',
+        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'light_detection']
     },
     'LAP-EL551S-AUS': {
-        module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer']
+        module: 'VeSyncAirBaseV2',
+        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_rotate']
     },
     'LAP-EL551S-AEUR': {
-        module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer']
+        module: 'VeSyncAirBaseV2',
+        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_rotate']
     },
     'LAP-EL551S-WEU': {
-        module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer']
+        module: 'VeSyncAirBaseV2',
+        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_rotate']
     },
     'LAP-EL551S-WUS': {
-        module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer']
+        module: 'VeSyncAirBaseV2',
+        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_rotate']
     },
     
     // LTF Series
@@ -280,6 +280,7 @@ export abstract class VeSyncFan extends VeSyncBaseDevice {
     protected mode_dict: Record<string, any> = {};
     protected speed_dict: Record<string, any> = {};
     protected features: string[] = [];
+    protected _timer: number | { duration: number; action: string } | null = null;
 
     constructor(details: Record<string, any>, manager: VeSync) {
         super(details, manager);
@@ -360,8 +361,12 @@ export abstract class VeSyncFan extends VeSyncBaseDevice {
     /**
      * Get timer status
      */
-    get timer(): number {
-        return this.details.timer ?? 0;
+    get timer(): number | { duration: number; action: string } | null {
+        return this._timer;
+    }
+
+    set timer(value: number | { duration: number; action: string } | null) {
+        this._timer = value;
     }
 
     /**
@@ -393,8 +398,13 @@ export abstract class VeSyncFan extends VeSyncBaseDevice {
         if (this.hasFeature('warm')) {
             info.push(['Warm Level: ', this.warmLevel]);
         }
-        if (this.hasFeature('timer')) {
-            info.push(['Timer: ', this.timer, 'hours']);
+        if (this.hasFeature('timer') && this.timer) {
+            if (typeof this.timer === 'number') {
+                info.push(['Timer: ', this.timer, 'hours']);
+            } else {
+                info.push(['Timer: ', this.timer.duration, 'seconds']);
+                info.push(['Timer Action: ', this.timer.action]);
+            }
         }
 
         for (const [key, value, unit = ''] of info) {
@@ -431,8 +441,13 @@ export abstract class VeSyncFan extends VeSyncBaseDevice {
         if (this.hasFeature('warm')) {
             details['Warm Level'] = this.warmLevel.toString();
         }
-        if (this.hasFeature('timer')) {
-            details['Timer'] = this.timer.toString();
+        if (this.hasFeature('timer') && this.timer) {
+            if (typeof this.timer === 'number') {
+                details['Timer'] = this.timer.toString();
+            } else {
+                details['Timer'] = this.timer.duration.toString();
+                details['Timer Action'] = this.timer.action;
+            }
         }
 
         return JSON.stringify({

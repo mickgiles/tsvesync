@@ -22,6 +22,24 @@ export class VeSyncAirBypass extends VeSyncFan {
     }
 
     /**
+     * Build API dictionary
+     */
+    protected buildApiDict(method: string): [Record<string, any>, Record<string, any>] {
+        const head = Helpers.reqHeaderBypass();
+        const body = {
+            ...Helpers.reqBody(this.manager, 'bypassV2'),
+            cid: this.cid,
+            configModule: this.configModule,
+            payload: {
+                method,
+                source: 'APP',
+                data: {}
+            }
+        };
+        return [head, body];
+    }
+
+    /**
      * Get device details
      */
     async getDetails(): Promise<Boolean> {
@@ -1260,10 +1278,46 @@ export class VeSyncWarmHumidifier extends VeSyncHumidifier {
 export class VeSyncAirBaseV2 extends VeSyncAirBypass {
     protected _lightDetection: boolean = false;
     protected _lightDetectionState: boolean = false;
+    protected setSpeedLevel: number | null = null;
+    protected autoPreferences: string[] = ['default', 'efficient', 'quiet'];
+    protected enabled: boolean = false;
+    protected _mode: string = '';
+    protected _speed: number = 0;
+    protected _timer: { duration: number; action: string } | null = null;
 
     constructor(details: Record<string, any>, manager: VeSync) {
         super(details, manager);
         logger.debug(`Initialized VeSyncAirBaseV2 device: ${this.deviceName}`);
+    }
+
+    protected buildConfigDict(configDict: Record<string, any>): void {
+        if (configDict) {
+            this.config = configDict;
+        }
+    }
+
+    get mode(): string {
+        return this._mode;
+    }
+
+    set mode(value: string) {
+        this._mode = value;
+    }
+
+    get speed(): number {
+        return this._speed;
+    }
+
+    set speed(value: number) {
+        this._speed = value;
+    }
+
+    get timer(): { duration: number; action: string } | null {
+        return this._timer;
+    }
+
+    set timer(value: { duration: number; action: string } | null) {
+        this._timer = value;
     }
 
     /**
@@ -1273,7 +1327,7 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
         const head = Helpers.reqHeaderBypass();
         const body = {
             ...Helpers.reqBody(this.manager, 'bypassV2'),
-            deviceId: this.cid,
+            cid: this.cid,
             configModule: this.configModule,
             payload: {
                 method,
@@ -1284,25 +1338,381 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
         return [head, body];
     }
 
-    get lightDetection(): boolean {
-        return this._lightDetection;
-    }
+    /**
+     * Get device details
+     */
+    async getDetails(): Promise<Boolean> {
+        logger.debug(`Getting details for device: ${this.deviceName}`);
+        const [head, body] = this.buildApiDict('getPurifierStatus');
 
-    set lightDetection(toggle: boolean) {
-        this._lightDetection = toggle;
-    }
+        const [response, status] = await this.callApi(
+            '/cloud/v2/deviceManaged/bypassV2',
+            'post',
+            body,
+            head
+        );
 
-    get lightDetectionState(): boolean {
-        return this._lightDetectionState;
-    }
-
-    async setLightDetection(toggle: boolean): Promise<boolean> {
-        const [head, body] = this.buildApiDict('setLightDetection');
-        if (!head || !body) {
+        if (!this.checkResponse([response, status], 'getDetails') || !response?.result) {
+            logger.debug('Error getting purifier details');
+            this.connectionStatus = 'offline';
             return false;
         }
 
-        body.payload.data = { enabled: toggle };
+        const innerResponse = response.result;
+        if (innerResponse.code !== 0 || !innerResponse.result) {
+            logger.debug('Error in inner response from purifier');
+            this.connectionStatus = 'offline';
+            return false;
+        }
+
+        const deviceData = innerResponse.result;
+        this.buildPurifierDict(deviceData);
+        if (deviceData.configuration) {
+            this.buildConfigDict(deviceData.configuration);
+        }
+        return true;
+    }
+
+    /**
+     * Build purifier dictionary
+     */
+    protected buildPurifierDict(devDict: Record<string, any>): void {
+        this.connectionStatus = 'online';
+        const powerSwitch = Boolean(devDict.powerSwitch ?? 0);
+        this.enabled = powerSwitch;
+        this.deviceStatus = powerSwitch ? 'on' : 'off';
+        this.mode = devDict.workMode ?? 'manual';
+        
+        this.speed = devDict.fanSpeedLevel ?? 0;
+        this.setSpeedLevel = devDict.manualSpeedLevel ?? 1;
+        
+        this.details = {
+            ...this.details,
+            filter_life: devDict.filterLifePercent ?? 0,
+            child_lock: Boolean(devDict.childLockSwitch ?? 0),
+            display: Boolean(devDict.screenState ?? 0),
+            light_detection_switch: Boolean(devDict.lightDetectionSwitch ?? 0),
+            environment_light_state: Boolean(devDict.environmentLightState ?? 0),
+            screen_switch: Boolean(devDict.screenSwitch ?? 0)
+        };
+
+        if (this.hasFeature('air_quality')) {
+            this.details.air_quality_value = devDict.PM25 ?? 0;
+            this.details.air_quality = devDict.AQLevel ?? 0;
+        }
+
+        if ('PM1' in devDict) this.details.pm1 = devDict.PM1;
+        if ('PM10' in devDict) this.details.pm10 = devDict.PM10;
+        if ('AQPercent' in devDict) this.details.aq_percent = devDict.AQPercent;
+        if ('fanRotateAngle' in devDict) this.details.fan_rotate_angle = devDict.fanRotateAngle;
+        if ('filterOpenState' in devDict) this.details.filter_open_state = Boolean(devDict.filterOpenState);
+        
+        if ((devDict.timerRemain ?? 0) > 0) {
+            this.timer = { duration: devDict.timerRemain, action: 'off' };
+        }
+
+        if (typeof devDict.autoPreference === 'object' && devDict.autoPreference) {
+            this.details.auto_preference_type = devDict.autoPreference?.autoPreferenceType ?? 'default';
+        } else {
+            this.details.auto_preference_type = null;
+        }
+    }
+
+    /**
+     * Toggle device power
+     */
+    async toggleSwitch(toggle: boolean): Promise<boolean> {
+        if (typeof toggle !== 'boolean') {
+            logger.debug('Invalid toggle value for purifier switch');
+            return false;
+        }
+
+        const [head, body] = this.buildApiDict('setSwitch');
+        body.payload.data = {
+            powerSwitch: toggle ? 1 : 0,
+            switchIdx: 0
+        };
+
+        const [response, status] = await this.callApi(
+            '/cloud/v2/deviceManaged/bypassV2',
+            'post',
+            body,
+            head
+        );
+
+        const success = this.checkResponse([response, status], 'toggleSwitch');
+        if (success) {
+            this.deviceStatus = toggle ? 'on' : 'off';
+        }
+        return success;
+    }
+
+    /**
+     * Turn device on - compatibility method that proxies to toggleSwitch
+     */
+    async turnOn(): Promise<boolean> {
+        logger.info(`Turning on device: ${this.deviceName}`);
+        return this.toggleSwitch(true);
+    }
+
+    /**
+     * Turn device off - compatibility method that proxies to toggleSwitch
+     */
+    async turnOff(): Promise<boolean> {
+        logger.info(`Turning off device: ${this.deviceName}`);
+        return this.toggleSwitch(false);
+    }
+
+    /**
+     * Change fan speed
+     */
+    async changeFanSpeed(speed: number): Promise<boolean> {
+        const speeds: number[] = this.config?.levels ?? [];
+        const currentSpeed = this.setSpeedLevel ?? 0;
+
+        if (speed !== undefined) {
+            if (!speeds.includes(speed)) {
+                logger.debug(`Invalid speed: ${speed}. Must be one of: ${speeds.join(', ')}`);
+                return false;
+            }
+        } else {
+            if (currentSpeed === speeds[speeds.length - 1] || currentSpeed === 0) {
+                speed = speeds[0];
+            } else {
+                const currentIndex = speeds.indexOf(currentSpeed);
+                speed = speeds[currentIndex + 1];
+            }
+        }
+
+        const [head, body] = this.buildApiDict('setLevel');
+        body.payload.data = {
+            levelIdx: 0,
+            manualSpeedLevel: speed,
+            levelType: 'wind'
+        };
+
+        const [response, status] = await this.callApi(
+            '/cloud/v2/deviceManaged/bypassV2',
+            'post',
+            body,
+            head
+        );
+
+        const success = this.checkResponse([response, status], 'changeFanSpeed');
+        if (success) {
+            this.setSpeedLevel = speed;
+            this.mode = 'manual';
+        }
+        return success;
+    }
+
+    /**
+     * Set mode
+     */
+    async setMode(mode: string): Promise<boolean> {
+        if (!this.modes.includes(mode as any)) {
+            logger.debug(`Invalid mode: ${mode}. Must be one of: ${this.modes.join(', ')}`);
+            return false;
+        }
+
+        if (mode === 'manual') {
+            if (!this.speed || this.speed === 0) {
+                return this.changeFanSpeed(1);
+            }
+            return this.changeFanSpeed(this.speed);
+        }
+
+        if (mode === 'off') {
+            return this.turnOff();
+        }
+
+        const [head, body] = this.buildApiDict('setPurifierMode');
+        body.payload.data = {
+            workMode: mode
+        };
+
+        const [response, status] = await this.callApi(
+            '/cloud/v2/deviceManaged/bypassV2',
+            'post',
+            body,
+            head
+        );
+
+        const success = this.checkResponse([response, status], 'setMode');
+        if (success) {
+            this.mode = mode;
+        }
+        return success;
+    }
+
+    /**
+     * Set display status
+     */
+    async setDisplay(enabled: boolean): Promise<boolean> {
+        if (!this.hasFeature('display')) {
+            const error = 'Display control not supported';
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
+        }
+
+        const [head, body] = this.buildApiDict('setDisplay');
+        body.payload.data = {
+            screenSwitch: enabled ? 1 : 0
+        };
+
+        const [response, status] = await this.callApi(
+            '/cloud/v2/deviceManaged/bypassV2',
+            'post',
+            body,
+            head
+        );
+
+        const success = this.checkResponse([response, status], 'setDisplay');
+        if (success) {
+            this.details.screen_switch = enabled;
+        }
+        return success;
+    }
+
+    /**
+     * Set child lock
+     */
+    async setChildLock(enabled: boolean): Promise<boolean> {
+        if (!this.hasFeature('child_lock')) {
+            const error = 'Child lock not supported';
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
+        }
+
+        const [head, body] = this.buildApiDict('setChildLock');
+        body.payload.data = {
+            childLockSwitch: enabled ? 1 : 0
+        };
+
+        const [response, status] = await this.callApi(
+            '/cloud/v2/deviceManaged/bypassV2',
+            'post',
+            body,
+            head
+        );
+
+        const success = this.checkResponse([response, status], 'setChildLock');
+        if (success) {
+            this.details.child_lock = enabled;
+        }
+        return success;
+    }
+
+    /**
+     * Set timer
+     */
+    async setTimer(timerDuration: number, action: 'on' | 'off' = 'off', method: string = 'powerSwitch'): Promise<boolean> {
+        if (!this.hasFeature('timer')) {
+            const error = 'Timer not supported';
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
+        }
+
+        if (!['on', 'off'].includes(action)) {
+            logger.debug('Invalid action for timer');
+            return false;
+        }
+        if (method !== 'powerSwitch') {
+            logger.debug('Invalid method for timer');
+            return false;
+        }
+
+        const [head, body] = this.buildApiDict('addTimerV2');
+        body.payload.subDeviceNo = 0;
+        body.payload.data = {
+            startAct: [{
+                type: method,
+                num: 0,
+                act: action === 'on' ? 1 : 0
+            }],
+            total: timerDuration,
+            subDeviceNo: 0
+        };
+
+        const [response, status] = await this.callApi(
+            '/cloud/v2/deviceManaged/bypassV2',
+            'post',
+            body,
+            head
+        );
+
+        const success = this.checkResponse([response, status], 'setTimer');
+        if (success) {
+            this.timer = { duration: timerDuration, action };
+        }
+        return success;
+    }
+
+    /**
+     * Clear timer
+     */
+    async clearTimer(): Promise<boolean> {
+        if (!this.hasFeature('timer')) {
+            const error = 'Timer not supported';
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
+        }
+
+        const [head, body] = this.buildApiDict('delTimerV2');
+        body.payload.subDeviceNo = 0;
+        body.payload.data = { id: 1, subDeviceNo: 0 };
+
+        const [response, status] = await this.callApi(
+            '/cloud/v2/deviceManaged/bypassV2',
+            'post',
+            body,
+            head
+        );
+
+        const success = this.checkResponse([response, status], 'clearTimer');
+        if (success) {
+            this.timer = null;
+        }
+        return success;
+    }
+
+    /**
+     * Set auto preference
+     */
+    async setAutoPreference(preference: string = 'default', roomSize: number = 600): Promise<boolean> {
+        if (!this.autoPreferences.includes(preference)) {
+            logger.debug(`Invalid preference: ${preference} - valid preferences are default, efficient, quiet`);
+            return false;
+        }
+
+        const [head, body] = this.buildApiDict('setAutoPreference');
+        body.payload.data = {
+            autoPreference: preference,
+            roomSize: roomSize
+        };
+
+        const [response, status] = await this.callApi(
+            '/cloud/v2/deviceManaged/bypassV2',
+            'post',
+            body,
+            head
+        );
+
+        const success = this.checkResponse([response, status], 'setAutoPreference');
+        if (success) {
+            this.details.auto_preference = preference;
+        }
+        return success;
+    }
+
+    /**
+     * Set light detection
+     */
+    async setLightDetection(enabled: boolean): Promise<boolean> {
+        const [head, body] = this.buildApiDict('setLightDetection');
+        body.payload.data = {
+            lightDetectionSwitch: enabled ? 1 : 0
+        };
 
         const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
@@ -1313,69 +1723,68 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
 
         const success = this.checkResponse([response, status], 'setLightDetection');
         if (success) {
-            this._lightDetection = toggle;
+            this.details.light_detection_switch = enabled;
         }
         return success;
     }
 
-    async setLightDetectionOn(): Promise<boolean> {
-        return this.setLightDetection(true);
-    }
-
-    async setLightDetectionOff(): Promise<boolean> {
-        return this.setLightDetection(false);
-    }
-
-    async turboMode(): Promise<boolean> {
-        return this.mode_toggle('turbo');
-    }
-
-    async petMode(): Promise<boolean> {
-        return this.mode_toggle('pet');
+    /**
+     * Get light detection status
+     */
+    get lightDetection(): boolean {
+        return Boolean(this.details.light_detection_switch);
     }
 
     /**
-     * Build configuration dictionary
+     * Get light detection state
      */
-    protected buildConfigDict(configDict: Record<string, any>): void {
-        if (configDict) {
-            this.config = configDict;
-        }
+    get lightDetectionState(): boolean {
+        return Boolean(this.details.environment_light_state);
     }
 
     /**
-     * Set mode
+     * Get auto preference type
      */
-    protected async mode_toggle(mode: string): Promise<boolean> {
-        const validModes = this.modes.map(m => m.toLowerCase());
-        if (!validModes.includes(mode.toLowerCase())) {
-            logger.debug(`Invalid mode used - ${mode}`);
-            return false;
-        }
+    get autoPreferenceType(): string | null {
+        return this.details.auto_preference_type;
+    }
 
-        const [head, body] = this.buildApiDict('setPurifierMode');
-        if (!head || !body) {
-            return false;
-        }
-
-        body.payload.data = {
-            mode: mode
+    /**
+     * Display JSON details
+     */
+    override displayJSON(): string {
+        const baseInfo = JSON.parse(super.displayJSON());
+        const details: Record<string, string> = {
+            ...baseInfo,
+            'Mode': this.mode,
+            'Filter Life': this.details.filter_life.toString(),
+            'Fan Level': this.speed.toString(),
+            'Display On': this.details.display.toString(),
+            'Child Lock': this.details.child_lock.toString(),
+            'Display Set On': this.details.screen_switch.toString(),
+            'Light Detection Enabled': this.details.light_detection_switch.toString(),
+            'Environment Light State': this.details.environment_light_state.toString()
         };
 
-        const [response, status] = await this.callApi(
-            '/cloud/v2/deviceManaged/bypassV2',
-            'post',
-            body,
-            head
-        );
-
-        const success = this.checkResponse([response, status], 'mode_toggle');
-        if (success) {
-            this.details.mode = mode;
-        } else {
-            logger.debug('Error setting mode');
+        if (this.hasFeature('air_quality')) {
+            details['Air Quality Level'] = (this.details.air_quality ?? '').toString();
+            details['Air Quality Value'] = (this.details.air_quality_value ?? '').toString();
         }
-        return success;
+
+        const everestKeys: Record<string, string> = {
+            'pm1': 'PM1',
+            'pm10': 'PM10',
+            'fan_rotate_angle': 'Fan Rotate Angle',
+            'filter_open_state': 'Filter Open State'
+        };
+
+        for (const [key, value] of Object.entries(everestKeys)) {
+            if (key in this.details) {
+                details[value] = this.details[key].toString();
+            }
+        }
+
+        return JSON.stringify(details, null, 4);
     }
 }
 
@@ -1392,19 +1801,35 @@ export class VeSyncTowerFan extends VeSyncAirBaseV2 {
     }
 
     /**
+     * Get timer status (in seconds)
+     */
+    override get timer(): { duration: number; action: string } | null {
+        const timerRemain = this.details.timerRemain || 0;
+        return timerRemain > 0 ? { duration: timerRemain, action: 'off' } : null;
+    }
+
+    override set timer(value: { duration: number; action: string } | null) {
+        if (value) {
+            this.details.timerRemain = value.duration;
+        } else {
+            this.details.timerRemain = 0;
+        }
+    }
+
+    /**
      * Build API dictionary
      */
     protected buildApiDict(method: string): [Record<string, any>, Record<string, any>] {
         const head = Helpers.reqHeaderBypass();
-        const body = Helpers.reqBody(this.manager, 'bypassV2');
-        body.cid = this.cid;
-        body.deviceId = this.cid;
-        body.configModule = this.configModule;
-        body.configModel = this.configModule;
-        body.payload = {
-            method: method,
-            source: 'APP',
-            data: {}
+        const body = {
+            ...Helpers.reqBody(this.manager, 'bypassV2'),
+            cid: this.cid,
+            configModule: this.configModule,
+            payload: {
+                method,
+                source: 'APP',
+                data: {}
+            }
         };
         return [head, body];
     }
@@ -1646,13 +2071,6 @@ export class VeSyncTowerFan extends VeSyncAirBaseV2 {
     }
 
     /**
-     * Get timer status (in seconds)
-     */
-    get timer(): number {
-        return this.details.timerRemain || 0;
-    }
-
-    /**
      * Get temperature (in tenths of a degree)
      */
     get temperature(): number {
@@ -1780,22 +2198,25 @@ export const fanModules: Record<string, new (details: Record<string, any>, manag
     'LAP-C601S-WUS': VeSyncAirBypass,
     'LAP-C601S-WUSR': VeSyncAirBypass,
     'LAP-C601S-WEU': VeSyncAirBypass,
-    'LAP-V102S-AASR': VeSyncAirBypass,
-    'LAP-V102S-WUS': VeSyncAirBypass,
-    'LAP-V102S-WEU': VeSyncAirBypass,
-    'LAP-V102S-AUSR': VeSyncAirBypass,
-    'LAP-V102S-WJP': VeSyncAirBypass,
-    'LAP-V201S-AASR': VeSyncAirBypass,
-    'LAP-V201S-WJP': VeSyncAirBypass,
-    'LAP-V201S-WEU': VeSyncAirBypass,
-    'LAP-V201S-WUS': VeSyncAirBypass,
-    'LAP-V201-AUSR': VeSyncAirBypass,
-    'LAP-V201S-AUSR': VeSyncAirBypass,
-    'LAP-V201S-AEUR': VeSyncAirBypass,
-    'LAP-EL551S-AUS': VeSyncAirBypass,
-    'LAP-EL551S-AEUR': VeSyncAirBypass,
-    'LAP-EL551S-WEU': VeSyncAirBypass,
-    'LAP-EL551S-WUS': VeSyncAirBypass,
+    // Vital100S Series - Using VeSyncAirBaseV2
+    'LAP-V102S-AASR': VeSyncAirBaseV2,
+    'LAP-V102S-WUS': VeSyncAirBaseV2,
+    'LAP-V102S-WEU': VeSyncAirBaseV2,
+    'LAP-V102S-AUSR': VeSyncAirBaseV2,
+    'LAP-V102S-WJP': VeSyncAirBaseV2,
+    // Vital200S Series - Using VeSyncAirBaseV2
+    'LAP-V201S-AASR': VeSyncAirBaseV2,
+    'LAP-V201S-WJP': VeSyncAirBaseV2,
+    'LAP-V201S-WEU': VeSyncAirBaseV2,
+    'LAP-V201S-WUS': VeSyncAirBaseV2,
+    'LAP-V201-AUSR': VeSyncAirBaseV2,
+    'LAP-V201S-AUSR': VeSyncAirBaseV2,
+    'LAP-V201S-AEUR': VeSyncAirBaseV2,
+    // EverestAir Series - Using VeSyncAirBaseV2
+    'LAP-EL551S-AUS': VeSyncAirBaseV2,
+    'LAP-EL551S-AEUR': VeSyncAirBaseV2,
+    'LAP-EL551S-WEU': VeSyncAirBaseV2,
+    'LAP-EL551S-WUS': VeSyncAirBaseV2,
     
     // LTF Series
     'LTF-F422S-KEU': VeSyncTowerFan,
