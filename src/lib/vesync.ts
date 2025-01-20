@@ -419,10 +419,25 @@ export class VeSync {
                 this
             );
 
-            if (response?.result?.list) {
-                const deviceList = response.result.list;
-                success = this.processDevices(deviceList);
+            if (!response) {
+                logger.error('No response received from VeSync API');
+                return false;
+            }
 
+            if (response.error) {
+                logger.error('API error:', response.msg || 'Unknown error');
+                return false;
+            }
+
+            if (!response.result?.list) {
+                logger.error('No device list found in response');
+                return false;
+            }
+
+            const deviceList = response.result.list;
+            success = this.processDevices(deviceList);
+
+            if (success) {
                 // Log device discovery results
                 logger.debug('\n=== Device Discovery Summary ===');
                 logger.debug(`Total devices processed: ${deviceList.length}`);
@@ -455,12 +470,16 @@ export class VeSync {
                 }
 
                 logger.debug('\n=== End of Device Discovery ===\n');
-            } else {
-                logger.error('No devices found in response');
-                logger.error(response.code, response.msg);
             }
-        } catch (error) {
-            logger.error('Unable to get device list:', error);
+        } catch (err) {
+            const error = err as { code?: string; message?: string };
+            if (error.code === 'ECONNABORTED') {
+                logger.error('VeSync API request timed out');
+            } else if (error.code === 'ECONNREFUSED') {
+                logger.error('Unable to connect to VeSync API');
+            } else {
+                logger.error('Error getting device list:', error.message || 'Unknown error');
+            }
         }
 
         this._inProcess = false;
