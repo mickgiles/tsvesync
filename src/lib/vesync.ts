@@ -12,6 +12,17 @@ import { logger, setLogger, Logger } from './logger';
 
 const DEFAULT_ENERGY_UPDATE_INTERVAL = 21600;
 
+/**
+ * Device exclusion configuration
+ */
+export interface ExcludeConfig {
+    type?: string[];
+    model?: string[];
+    name?: string[];
+    namePattern?: string[];
+    id?: string[];
+}
+
 // Device constructor type for concrete device classes only
 type DeviceConstructor = new (config: Record<string, any>, manager: VeSync) => VeSyncBaseDevice;
 
@@ -147,6 +158,7 @@ export class VeSync {
     private _devList: Record<string, VeSyncBaseDevice[]>;
     private _lastUpdateTs: number | null;
     private _inProcess: boolean;
+    private _excludeConfig: ExcludeConfig | null;
 
     username: string;
     password: string;
@@ -173,6 +185,7 @@ export class VeSync {
      * @param redact - Optional redact mode flag
      * @param apiUrl - Optional API base URL override
      * @param customLogger - Optional custom logger implementation
+     * @param excludeConfig - Optional device exclusion configuration
      */
     constructor(
         username: string,
@@ -181,7 +194,8 @@ export class VeSync {
         debug = false,
         redact = true,
         apiUrl?: string,
-        customLogger?: Logger
+        customLogger?: Logger,
+        excludeConfig?: ExcludeConfig
     ) {
         this._debug = debug;
         this._redact = redact;
@@ -189,6 +203,7 @@ export class VeSync {
         this._energyCheck = true;
         this._lastUpdateTs = null;
         this._inProcess = false;
+        this._excludeConfig = excludeConfig || null;
 
         this.username = username;
         this.password = password;
@@ -548,6 +563,58 @@ export class VeSync {
     }
 
     /**
+     * Check if a device should be excluded based on configuration
+     */
+    private shouldExcludeDevice(device: VeSyncBaseDevice): boolean {
+        if (!this._excludeConfig) {
+            return false;
+        }
+
+        const exclude = this._excludeConfig;
+
+        // Check device type
+        if (exclude.type?.includes(device.deviceType.toLowerCase())) {
+            logger.debug(`Excluding device ${device.deviceName} by type: ${device.deviceType}`);
+            return true;
+        }
+
+        // Check device model
+        if (exclude.model?.some(model => device.deviceType.toUpperCase().includes(model.toUpperCase()))) {
+            logger.debug(`Excluding device ${device.deviceName} by model: ${device.deviceType}`);
+            return true;
+        }
+
+        // Check exact name match
+        if (exclude.name?.includes(device.deviceName.trim())) {
+            logger.debug(`Excluding device ${device.deviceName} by exact name match`);
+            return true;
+        }
+
+        // Check name patterns
+        if (exclude.namePattern) {
+            for (const pattern of exclude.namePattern) {
+                try {
+                    const regex = new RegExp(pattern);
+                    if (regex.test(device.deviceName.trim())) {
+                        logger.debug(`Excluding device ${device.deviceName} by name pattern: ${pattern}`);
+                        return true;
+                    }
+                } catch (error) {
+                    logger.warn(`Invalid regex pattern in exclude config: ${pattern}`);
+                }
+            }
+        }
+
+        // Check device ID (cid or uuid)
+        if (exclude.id?.includes(device.cid) || exclude.id?.includes(device.uuid)) {
+            logger.debug(`Excluding device ${device.deviceName} by ID: ${device.cid}/${device.uuid}`);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Update device list and details
      */
     async update(): Promise<void> {
@@ -563,7 +630,11 @@ export class VeSync {
             for (const deviceList of Object.values(this._devList)) {
                 for (const device of deviceList) {
                     try {
-                        await device.getDetails();
+                        if (!this.shouldExcludeDevice(device)) {
+                            await device.getDetails();
+                        } else {
+                            logger.debug(`Skipping details update for excluded device: ${device.deviceName}`);
+                        }
                     } catch (error) {
                         logger.error(`Error updating ${device.deviceName}:`, error);
                     }
