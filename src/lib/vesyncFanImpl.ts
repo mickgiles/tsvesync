@@ -1786,6 +1786,33 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
 
         return JSON.stringify(details, null, 4);
     }
+
+    /**
+     * Set oscillation state
+     */
+    async setOscillation(toggle: boolean): Promise<boolean> {
+        logger.debug(`Setting oscillation to ${toggle ? 'on' : 'off'} for device: ${this.deviceName}`);
+        
+        const [head, body] = this.buildApiDict('setSwitch');
+        body.payload.data = {
+            oscillationSwitch: toggle ? 1 : 0,
+            switchIdx: 0
+        };
+
+        const [response, status] = await this.callApi(
+            '/cloud/v2/deviceManaged/bypassV2',
+            'post',
+            body,
+            head
+        );
+
+        const success = this.checkResponse([response, status], 'setOscillation');
+        if (success) {
+            this.details.oscillationState = toggle;
+            this.details.oscillationSwitch = toggle ? 1 : 0;
+        }
+        return success;
+    }
 }
 
 /**
@@ -2110,27 +2137,6 @@ export class VeSyncTowerFan extends VeSyncAirBaseV2 {
      */
     get errorCode(): number {
         return this.details.errorCode || 0;
-    }
-
-    /**
-     * Set oscillation state
-     */
-    async setOscillation(toggle: boolean): Promise<boolean> {
-        logger.debug(`Setting oscillation to ${toggle ? 'on' : 'off'} for device: ${this.deviceName}`);
-        
-        const [head, body] = this.buildApiDict('setSwitch');
-        body.payload.data = {
-            oscillationSwitch: toggle ? 1 : 0
-        };
-
-        const [response, status] = await this.callApi(
-            '/cloud/v2/deviceManaged/bypassV2',
-            'post',
-            body,
-            head
-        );
-
-        return this.checkResponse([response, status], 'setOscillation');
     }
 
     /**
