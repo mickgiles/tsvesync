@@ -12,7 +12,6 @@ import { logger } from './logger';
  */
 export class VeSyncAirBypass extends VeSyncFan {
     protected readonly modes = ['auto', 'manual', 'sleep'] as const;
-    protected readonly speeds = [1, 2, 3, 4, 5];
     protected readonly displayModes = ['on', 'off'] as const;
     protected readonly childLockModes = ['on', 'off'] as const;
 
@@ -258,10 +257,10 @@ export class VeSyncAirBypass extends VeSyncFan {
      * Change fan speed
      */
     async changeFanSpeed(speed: number): Promise<boolean> {
-        if (!this.speeds.includes(speed)) {
-            const error = `Invalid speed: ${speed}. Must be one of: ${this.speeds.join(', ')}`;
-            logger.error(`${error} for device: ${this.deviceName}`);
-            throw new Error(error);
+        const speeds = this.config.levels ?? [];
+        if (!speeds.includes(speed)) {
+            logger.error(`Invalid speed: ${speed}. Must be one of: ${speeds.join(', ')} for device: ${this.deviceName}`);
+            return false;
         }
 
         logger.info(`Changing fan speed to ${speed} for device: ${this.deviceName}`);
@@ -1096,7 +1095,7 @@ export class VeSyncWarmHumidifier extends VeSyncHumidifier {
             // Add warm humidifier specific fields
             this.details = {
                 ...this.details,
-                warm_enabled: this.details.warm_level > 0,
+                warm_enabled: Boolean(this.details.warm_level && this.details.warm_level > 0),
                 drying_mode_enabled: this.details.autoDryingSwitch === 1,
                 drying_mode_state: this.details.dryingMode || '',
                 drying_mode_level: this.details.dryingLevel || 0,
@@ -1292,7 +1291,10 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
 
     protected buildConfigDict(configDict: Record<string, any>): void {
         if (configDict) {
-            this.config = configDict;
+            this.config = {
+                ...this.config,  // Preserve existing config
+                ...configDict    // Merge in new config
+            };
         }
     }
 
@@ -1467,35 +1469,32 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
      * Change fan speed
      */
     async changeFanSpeed(speed: number): Promise<boolean> {
-        const speeds: number[] = this.config?.levels ?? [];
-        const currentSpeed = this.setSpeedLevel ?? 0;
-
-        if (speed !== undefined) {
-            if (!speeds.includes(speed)) {
-                logger.debug(`Invalid speed: ${speed}. Must be one of: ${speeds.join(', ')}`);
-                return false;
-            }
-        } else {
-            if (currentSpeed === speeds[speeds.length - 1] || currentSpeed === 0) {
-                speed = speeds[0];
-            } else {
-                const currentIndex = speeds.indexOf(currentSpeed);
-                speed = speeds[currentIndex + 1];
-            }
+        const speeds = this.config.levels ?? [];
+        if (!speeds.includes(speed)) {
+            logger.error(`Invalid speed: ${speed}. Must be one of: ${speeds.join(', ')} for device: ${this.deviceName}`);
+            return false;
         }
 
-        const [head, body] = this.buildApiDict('setLevel');
-        body.payload.data = {
-            levelIdx: 0,
-            manualSpeedLevel: speed,
-            levelType: 'wind'
-        };
-
+        logger.info(`Changing fan speed to ${speed} for device: ${this.deviceName}`);
         const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
-            body,
-            head
+            {
+                ...Helpers.reqBody(this.manager, 'bypassV2'),
+                cid: this.cid,
+                configModule: this.configModule,
+                payload: {
+                    data: {
+                        id: 0,
+                        level: speed,
+                        mode: 'manual',
+                        type: 'wind'
+                    },
+                    method: 'setLevel',
+                    source: 'APP'
+                }
+            },
+            Helpers.reqHeaderBypass()
         );
 
         const success = this.checkResponse([response, status], 'changeFanSpeed');
@@ -1757,13 +1756,14 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
         const details: Record<string, string> = {
             ...baseInfo,
             'Mode': this.mode,
-            'Filter Life': this.details.filter_life.toString(),
+            'Filter Life': (this.details.filter_life ?? 0).toString(),
             'Fan Level': this.speed.toString(),
-            'Display On': this.details.display.toString(),
-            'Child Lock': this.details.child_lock.toString(),
-            'Display Set On': this.details.screen_switch.toString(),
-            'Light Detection Enabled': this.details.light_detection_switch.toString(),
-            'Environment Light State': this.details.environment_light_state.toString()
+            'Display On': this.details.display?.toString() ?? 'false',
+            'Child Lock': (this.details.child_lock ?? false).toString(),
+            'Night Light': (this.details.night_light ?? '').toString(),
+            'Display Set On': (this.details.screen_switch ?? false).toString(),
+            'Light Detection Enabled': (this.details.light_detection_switch ?? false).toString(),
+            'Environment Light State': (this.details.environment_light_state ?? false).toString()
         };
 
         if (this.hasFeature('air_quality')) {
@@ -1780,7 +1780,7 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
 
         for (const [key, value] of Object.entries(everestKeys)) {
             if (key in this.details) {
-                details[value] = this.details[key].toString();
+                details[value] = this.details[key]?.toString() ?? '';
             }
         }
 
@@ -1820,7 +1820,6 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
  */
 export class VeSyncTowerFan extends VeSyncAirBaseV2 {
     protected readonly towerModes = ['normal', 'advancedSleep', 'off'] as const;
-    protected readonly speeds = Array.from({length: 12}, (_, i) => i + 1);
 
     constructor(details: Record<string, any>, manager: VeSync) {
         super(details, manager);
@@ -1899,8 +1898,6 @@ export class VeSyncTowerFan extends VeSyncAirBaseV2 {
             screenSwitch: deviceData.screenSwitch,
             oscillationState: deviceData.oscillationState,
             oscillationSwitch: deviceData.oscillationSwitch,
-            muteState: deviceData.muteState,
-            muteSwitch: deviceData.muteSwitch,
             timerRemain: deviceData.timerRemain,
             temperature: deviceData.temperature || 0,
             humidity: deviceData.humidity || 0,
@@ -1966,13 +1963,12 @@ export class VeSyncTowerFan extends VeSyncAirBaseV2 {
      * Set tower fan mode
      */
     async mode_toggle(mode: string): Promise<boolean> {
-        const validModes = this.towerModes.map(m => m.toLowerCase());
-        if (!validModes.includes(mode.toLowerCase())) {
-            logger.debug(`Invalid tower fan mode used - ${mode}`);
+        if (!this.towerModes.includes(mode as any)) {
+            logger.debug(`Invalid mode: ${mode}. Must be one of: ${this.towerModes.join(', ')}`);
             return false;
         }
 
-        if (mode.toLowerCase() === 'off') {
+        if (mode === 'off') {
             return this.turnOff();
         }
 
@@ -1993,7 +1989,7 @@ export class VeSyncTowerFan extends VeSyncAirBaseV2 {
         if (success) {
             this.details.workMode = mode;
         } else {
-            logger.debug('Error setting tower fan mode');
+            logger.error(`Failed to set ${mode} mode for device: ${this.deviceName}`);
         }
         return success;
     }
@@ -2002,8 +1998,9 @@ export class VeSyncTowerFan extends VeSyncAirBaseV2 {
      * Change fan speed
      */
     async changeFanSpeed(speed: number): Promise<boolean> {
-        if (!this.speeds.includes(speed)) {
-            logger.debug(`Invalid speed: ${speed}. Must be one of: ${this.speeds.join(', ')}`);
+        const speeds = this.config.levels ?? [];
+        if (!speeds.includes(speed)) {
+            logger.debug(`Invalid speed: ${speed}. Must be one of: ${speeds.join(', ')}`);
             return false;
         }
 

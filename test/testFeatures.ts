@@ -175,7 +175,10 @@ class DeviceFeatureTest {
                     break;
 
                 case 'change_fan_speed':
-                    const speeds = device.deviceType.match(/Core|LAP|LTF|LV/) ? [1, 2, 3, 4, 5] : [1, 2, 3];
+                    // Get the correct speed range from fanConfig
+                    const { fanConfig } = require('../src/lib/vesyncFan');
+                    const deviceConfig = fanConfig[device.deviceType];
+                    const speeds = deviceConfig?.levels ?? [1, 2, 3];  // Default to [1,2,3] if no config found
                     for (const speed of speeds) {
                         await method.call(device, speed);
                     }
