@@ -257,11 +257,11 @@ export class VeSyncAirBypass extends VeSyncFan {
      * Change fan speed
      */
     async changeFanSpeed(speed: number): Promise<boolean> {
-        const speeds = this.config.levels ?? [];
-        if (!speeds.includes(speed)) {
-            logger.error(`Invalid speed: ${speed}. Must be one of: ${speeds.join(', ')} for device: ${this.deviceName}`);
-            return false;
-        }
+        // const speeds = this.config.levels ?? [];
+        // if (!speeds.includes(speed)) {
+        //     logger.error(`Invalid speed: ${speed}. Must be one of: ${speeds.join(', ')} for device: ${this.deviceName}`);
+        //     return false;
+        // }
 
         logger.info(`Changing fan speed to ${speed} for device: ${this.deviceName}`);
         const [response, status] = await this.callApi(
@@ -1469,11 +1469,11 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
      * Change fan speed
      */
     async changeFanSpeed(speed: number): Promise<boolean> {
-        const speeds = this.config.levels ?? [];
-        if (!speeds.includes(speed)) {
-            logger.error(`Invalid speed: ${speed}. Must be one of: ${speeds.join(', ')} for device: ${this.deviceName}`);
-            return false;
-        }
+        // const speeds = this.config.levels ?? [];
+        // if (!speeds.includes(speed)) {
+        //     logger.error(`Invalid speed: ${speed}. Must be one of: ${speeds.join(', ')} for device: ${this.deviceName}`);
+        //     return false;
+        // }
 
         logger.info(`Changing fan speed to ${speed} for device: ${this.deviceName}`);
         const [response, status] = await this.callApi(
@@ -1998,11 +1998,11 @@ export class VeSyncTowerFan extends VeSyncAirBaseV2 {
      * Change fan speed
      */
     async changeFanSpeed(speed: number): Promise<boolean> {
-        const speeds = this.config.levels ?? [];
-        if (!speeds.includes(speed)) {
-            logger.debug(`Invalid speed: ${speed}. Must be one of: ${speeds.join(', ')}`);
-            return false;
-        }
+        // const speeds = this.config.levels ?? [];
+        // if (!speeds.includes(speed)) {
+        //     logger.debug(`Invalid speed: ${speed}. Must be one of: ${speeds.join(', ')}`);
+        //     return false;
+        // }
 
         const [head, body] = this.buildApiDict('setLevel');
         body.payload.data = {
