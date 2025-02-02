@@ -803,7 +803,7 @@ export class VeSyncHumidifier extends VeSyncFan {
                     data: {
                         mode
                     },
-                    method: 'setHumidifierMode',
+                    method: 'setHumidityMode',
                     source: 'APP'
                 }
             },
@@ -811,7 +811,9 @@ export class VeSyncHumidifier extends VeSyncFan {
         );
 
         const success = this.checkResponse([response, status], 'setMode');
-        if (!success) {
+        if (success) {
+            this.details.mode = mode;
+        } else {
             logger.error(`Failed to set mode to ${mode} for device: ${this.deviceName}`);
         }
         return success;
@@ -1135,7 +1137,7 @@ export class VeSyncWarmHumidifier extends VeSyncHumidifier {
                     data: {
                         mode
                     },
-                    method: 'setHumidifierMode',
+                    method: 'setHumidityMode',
                     source: 'APP'
                 }
             },
