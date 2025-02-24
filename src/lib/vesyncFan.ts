@@ -19,7 +19,7 @@ export const fanConfig: FanConfig = {
     // Core Series
     'Core200S': {
         module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer'],
+        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode'],
         levels: [1, 2, 3]
     },
     'Core300S': {
@@ -318,7 +318,7 @@ export abstract class VeSyncFan extends VeSyncBaseDevice {
         mode?: string;
         speed?: number;
         filter_life?: number;
-        screen_status?: string;
+        screen_status?: 'on' | 'off';
         child_lock?: boolean;
         air_quality?: string;
         humidity?: number;
@@ -377,8 +377,8 @@ export abstract class VeSyncFan extends VeSyncBaseDevice {
     /**
      * Get screen status
      */
-    get screenStatus(): string {
-        return this.details.screen_status ?? '';
+    get screenStatus(): 'on' | 'off' {
+        return this.details.screen_status ?? 'off';
     }
 
     /**
@@ -519,4 +519,4 @@ export abstract class VeSyncFan extends VeSyncBaseDevice {
     abstract turnOff(): Promise<boolean>;
     abstract changeFanSpeed(speed: number): Promise<boolean>;
     abstract setMode(mode: string): Promise<boolean>;
-} 
+}

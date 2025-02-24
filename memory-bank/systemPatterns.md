@@ -37,19 +37,62 @@ flowchart TD
     
     OutletBase --> OutletImpl[VeSyncOutletImpl]
     BulbBase --> BulbImpl[VeSyncBulbImpl]
-    FanBase --> FanImpl[VeSyncFanImpl]
     SwitchBase --> SwitchImpl[VeSyncSwitchImpl]
+    
+    FanBase --> AirBypass[VeSyncAirBypass]
+    AirBypass --> AirBaseV2[VeSyncAirBaseV2]
+    AirBaseV2 --> TowerFan[VeSyncTowerFan]
+    
+    FanBase --> Humidifier[VeSyncHumidifier]
+    Humidifier --> WarmHumidifier[VeSyncWarmHumidifier]
+    WarmHumidifier --> Humid200300S[VeSyncHumid200300S]
 ```
 
-### 3. Factory Pattern
+### 3. Fan Implementation Organization
+```mermaid
+flowchart TD
+    FansDir[src/lib/fans/] --> Index[index.ts]
+    FansDir --> AirBypass[airBypass.ts]
+    FansDir --> AirBaseV2[airBaseV2.ts]
+    FansDir --> TowerFan[towerFan.ts]
+    FansDir --> Humidifier[humidifier.ts]
+    FansDir --> WarmHumidifier[warmHumidifier.ts]
+    FansDir --> Humid200300S[humid200300S.ts]
+    
+    Index --> Exports[Re-exports all classes]
+    Index --> FanModules[fanModules mapping]
+```
+
+### 4. Factory Pattern
 - Device discovery system
 - Dynamic class instantiation
 - Model-specific implementations
 
-### 4. Specification Pattern
+### 5. Specification Pattern
 - YAML-driven implementation
 - Strict conformance checking
 - Validation-first development
+- Device-specific feature configuration:
+  * Features defined in fanConfig
+  * Inherited through class hierarchy
+  * Protected from API response overwrites
+  * Used for runtime feature detection
+
+### 6. Configuration Pattern
+```mermaid
+flowchart TD
+    Config[Fan Configuration] --> Features[Feature List]
+    Config --> Levels[Speed Levels]
+    Config --> Module[Module Type]
+    
+    Features --> Runtime[Runtime Feature Detection]
+    Features --> Validation[Method Validation]
+    Features --> Display[Status Display]
+    
+    Runtime --> Methods[Method Availability]
+    Runtime --> UI[UI Elements]
+    Runtime --> Tests[Test Selection]
+```
 
 ## Key Technical Patterns
 
@@ -79,6 +122,11 @@ sequenceDiagram
 - Strict null checking
 - Comprehensive type definitions
 - Generic type constraints
+- String literal types for status values:
+  * 'on' | 'off' for screen status
+  * Consistent across inheritance chain
+  * Type-safe state management
+  * Improved test coverage
 
 ## Implementation Rules
 
@@ -87,18 +135,41 @@ sequenceDiagram
 - Identical request structure
 - Matching response handling
 - Header conformance
+- Field mapping verification
+  * Check both request and response fields
+  * Verify virtual vs actual field usage
+  * Validate configuration field access
+
+### 2. Feature Support Verification
+- Check YAML spec for supported features
+- Verify through API response codes
+- Remove unsupported features from implementation
+- Document feature limitations per model
+- Configuration-based feature detection:
+  * Features defined in static config
+  * Protected from runtime overwrites
+  * Used for method validation
+  * Drives test behavior
 
 ### 2. Type Safety
 - No type assertions
 - Complete interface coverage
 - Strict null checks
 - Generic constraints
+- String literal types for status values
+- Consistent type handling in inheritance
 
 ### 3. Error Management
 - Consistent error types
 - Proper error propagation
 - Detailed error context
 - Recovery patterns
+
+### 4. Code Organization
+- One class per file
+- Clear file naming
+- Logical directory structure
+- Separation of concerns
 
 ## Testing Patterns
 
@@ -125,3 +196,8 @@ flowchart TD
 - Error scenarios
 - Recovery testing
 - Performance validation
+- Feature support validation
+  * Test for unsupported features
+  * Verify error codes (e.g. 11000000)
+  * Check field mapping correctness
+  * Validate configuration usage

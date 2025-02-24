@@ -73,15 +73,46 @@
   - Device-specific endpoints
   - Required parameters
 
-### 2. Implementation Requirements
+### 3. Implementation Requirements
 - Pure TypeScript/JavaScript
 - No external runtime dependencies
 - ESM module format
+- One class per file
+- Clear file organization
 
-### 3. Type System
+### 4. Type System
 - No `any` types allowed
 - Strict null checks
 - Complete type coverage
+- Interface-first design
+
+## Project Structure
+
+### Directory Organization
+```
+/
+├── api/                    # YAML specifications (READ ONLY)
+│   ├── vesyncbulb/        # Bulb device specs
+│   ├── vesyncfan/         # Air purifier specs
+│   ├── vesyncoutlet/      # Outlet device specs
+│   └── vesyncswitch/      # Switch device specs
+├── src/
+│   ├── lib/               # Core implementation
+│   │   ├── fans/          # Fan implementations
+│   │   │   ├── index.ts   # Fan exports & mapping
+│   │   │   ├── airBypass.ts
+│   │   │   ├── airBaseV2.ts
+│   │   │   ├── towerFan.ts
+│   │   │   ├── humidifier.ts
+│   │   │   ├── warmHumidifier.ts
+│   │   │   └── humid200300S.ts
+│   │   ├── vesync.ts      # Main VeSync class
+│   │   ├── vesyncFan.ts   # Fan base class
+│   │   └── vesyncFanImpl.ts # Fan implementation exports
+│   └── index.ts           # Main entry point
+├── test/                  # Test files
+└── docs/                  # Documentation
+```
 
 ## Development Environment
 
@@ -126,6 +157,66 @@ flowchart TD
 - Command structure
 - Response handling
 - Error management
+- Field mapping patterns:
+  * Virtual vs actual fields (e.g. mist_virtual_level)
+  * Configuration field access (e.g. auto_target_humidity)
+  * Response field verification
+  * State tracking and updates
+
+### 4. Feature Support
+- YAML spec verification
+- API error code validation (e.g. 11000000)
+- Feature removal for unsupported capabilities
+- Model-specific feature documentation
+- Feature configuration:
+  * Static configuration in fanConfig
+  * Device-specific feature lists
+  * Protected from runtime overwrites
+  * Used for feature detection and validation
+
+## Code Organization
+
+### 1. File Structure
+- One class per file
+- Clear file naming
+- Logical directory structure
+- Separation of concerns
+
+### 2. Module Organization
+- Feature-based directories
+- Index files for exports
+- Clear dependency paths
+- Backward compatibility
+
+### 3. Implementation Patterns
+- Base classes in root
+- Implementations in subdirectories
+- Shared utilities separate
+- Clear inheritance chains
+- Configuration inheritance:
+  * Static feature config in fanConfig
+  * Protected from runtime overwrites
+  * Inherited through class hierarchy
+  * Used for feature detection
+- Feature support verification:
+  * Check YAML spec for supported features
+  * Validate through API response codes
+  * Remove unsupported features from implementation
+  * Document feature limitations per model
+- Field mapping patterns:
+  * Use virtual fields when specified in YAML
+  * Access configuration fields for device settings
+  * Track both actual and virtual state
+  * Update all relevant fields on changes
+
+### 4. Device-Specific Patterns
+- Core200S Implementation:
+  * Feature configuration in fanConfig
+  * Support for fan_speed and auto_mode
+  * Display control with 'on'|'off' status
+  * State restoration capability
+  * Mode control (auto, manual, sleep)
+  * Fan speed levels (1-3)
 
 ## Security Considerations
 

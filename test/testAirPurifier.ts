@@ -1,5 +1,5 @@
 /**
- * Special test for VeSync Humidifier
+ * Special test for VeSync Air Purifier
  * Uses credentials from .env file in test directory
  */
 
@@ -11,7 +11,7 @@ dotenv.config({ path: '.env' });
 
 // Now import the rest of the modules
 import { VeSync } from '../src/lib/vesync';
-import { VeSyncHumid200300S } from '../src/lib/vesyncFanImpl';
+import { VeSyncAirBaseV2 } from '../src/lib/vesyncFanImpl';
 import { logger } from '../src/lib/logger';
 
 let manager: VeSync;
@@ -68,9 +68,9 @@ function printTestResults() {
 }
 
 /**
- * Print detailed humidifier status
+ * Print detailed air purifier status
  */
-async function printHumidifierStatus(device: VeSyncHumid200300S) {
+async function printAirPurifierStatus(device: VeSyncAirBaseV2) {
     console.log(`\n${device.deviceName} Status:`);
     console.log('-'.repeat(device.deviceName.length + 8));
     
@@ -88,14 +88,11 @@ async function printHumidifierStatus(device: VeSyncHumid200300S) {
     // Get latest device details
     await device.getDetails();
 
-    // Humidifier-specific details
-    console.log('\nHumidifier Settings:');
+    // Air purifier-specific details
+    console.log('\nAir Purifier Settings:');
     console.log('-------------------');
     console.log('Mode:', device.mode);
-    console.log('Humidity:', device.humidity ? `${device.humidity}%` : 'Not available');
-    console.log('Mist Level:', device.mistLevel);
-    console.log('Warm Mist:', device.warmMistEnabled ? 'Enabled' : 'Disabled');
-    console.log('Warm Level:', device.warmLevel);
+    console.log('Fan Speed:', device.speed);
     console.log('Display:', device.screenStatus);
     console.log('Timer:', device.timer ? JSON.stringify(device.timer) : 'Not set');
 
@@ -103,9 +100,7 @@ async function printHumidifierStatus(device: VeSyncHumid200300S) {
     console.log('\nAvailable Features:');
     console.log('------------------');
     console.log('Display Control:', device.hasFeature('display'));
-    console.log('Humidity Control:', device.hasFeature('humidity'));
-    console.log('Mist Control:', device.hasFeature('mist'));
-    console.log('Warm Mist:', device.hasFeature('warm'));
+    console.log('Fan Speed Control:', device.hasFeature('fan_speed'));
     console.log('Timer:', device.hasFeature('timer'));
     console.log('Auto Mode:', device.hasFeature('auto_mode'));
 
@@ -116,12 +111,14 @@ async function printHumidifierStatus(device: VeSyncHumid200300S) {
 }
 
 async function verifyChange(
-    humidifier: VeSyncHumid200300S,
+    purifier: VeSyncAirBaseV2,
     feature: string,
     test: string,
     action: () => Promise<boolean>,
     getValue: () => any,
     expectedValue: any,
+    retries = 3,
+    delayMs = 1000
 ): Promise<boolean> {
     console.log(`\nTesting: ${test}`);
     console.log('Current Value:', getValue());
@@ -138,18 +135,13 @@ async function verifyChange(
                 code: number;
                 result?: {
                     enabled: boolean;
-                    mist_level: number;
-                    mist_virtual_level: number;
-                    warm_level: number;
                     mode: string;
-                    humidity: number;
+                    level: number;
                     display: boolean;
-                    night_light_brightness: number;
                     msg?: string;
                     configuration?: {
-                        auto_target_humidity: number;
                         display: boolean;
-                        automatic_stop: boolean;
+                        timer: any;
                     };
                 };
             };
@@ -159,11 +151,11 @@ async function verifyChange(
         let actionResponse: [ApiResponse, number] | undefined;
         let getDetailsPayload: any;
         let getDetailsResponse: [ApiResponse, number] | undefined;
-        const originalCallApi = (humidifier as any).callApi;
-        (humidifier as any).callApi = async (...args: any[]) => {
+        const originalCallApi = (purifier as any).callApi;
+        (purifier as any).callApi = async (...args: any[]) => {
             const payload = args[2];
-            const response = await originalCallApi.apply(humidifier, args);
-            if (payload?.payload?.method === 'getHumidifierStatus') {
+            const response = await originalCallApi.apply(purifier, args);
+            if (payload?.payload?.method === 'getPurifierStatus') {
                 getDetailsPayload = payload;
                 getDetailsResponse = response;
             } else {
@@ -184,7 +176,7 @@ async function verifyChange(
         }
         
         // Restore original callApi
-        (humidifier as any).callApi = originalCallApi;
+        (purifier as any).callApi = originalCallApi;
 
         if (!success) {
             addTestResult(feature, test, false, expectedValue, getValue(), 'Action failed', {
@@ -197,7 +189,7 @@ async function verifyChange(
         // Check if the action was successful
         if (actionResponse?.[0]?.result?.code === 0) {
             // Get the latest state
-            await humidifier.getDetails();
+            await purifier.getDetails();
             
             // Get the response data
             const responseData = getDetailsResponse?.[0]?.result?.result;
@@ -229,40 +221,11 @@ async function verifyChange(
                 return false;
             }
 
-            // Check for mode-specific restrictions
-            if (test.includes('Humidity') && responseData.mode === 'manual') {
-                console.log('Cannot set humidity in manual mode');
-                addTestResult(feature, test, false, expectedValue, getValue(), 'Cannot set humidity in manual mode', {
-                    request: actionPayload,
-                    response: actionResponse,
-                    getDetailsResponse: getDetailsResponse
-                });
-                return false;
-            }
-
-            if (test.includes('Display') && responseData.mode === 'sleep') {
-                console.log('Cannot set display in sleep mode');
-                addTestResult(feature, test, false, expectedValue, getValue(), 'Cannot set display in sleep mode', {
-                    request: actionPayload,
-                    response: actionResponse,
-                    getDetailsResponse: getDetailsResponse
-                });
-                return false;
-            }
-
-            // Check for mode-specific restrictions before making changes
-            if (test.includes('Humidity') && responseData.mode === 'manual') {
-                // Need to switch to auto mode first
-                await humidifier.setMode('auto');
-                await new Promise(resolve => setTimeout(resolve, 5000));
-                await humidifier.getDetails();
-            }
-
             // Add delay to allow device to update
             await new Promise(resolve => setTimeout(resolve, 5000));
 
             // Get latest state
-            await humidifier.getDetails();
+            await purifier.getDetails();
 
             // Check if value is already at expected value
             const currentValue = getValue();
@@ -288,20 +251,16 @@ async function verifyChange(
             await new Promise(resolve => setTimeout(resolve, 5000));
 
             // Get latest state again
-            await humidifier.getDetails();
+            await purifier.getDetails();
 
             // Verify based on test type
             let success = false;
-            if (test.includes('Mist Level')) {
-                success = responseData.mist_virtual_level === expectedValue;
-            } else if (test.includes('Warm Level')) {
-                success = responseData.warm_level === expectedValue;
+            if (test.includes('Fan Speed')) {
+                success = responseData.level === expectedValue;
             } else if (test.includes('Display')) {
-                success = responseData.display === expectedValue;
+                success = (responseData.display ? 'on' : 'off') === expectedValue;
             } else if (test.includes('Mode')) {
                 success = responseData.mode === expectedValue;
-            } else if (test.includes('Humidity')) {
-                success = responseData.configuration?.auto_target_humidity === parseInt(expectedValue);
             } else if (test.includes('Power')) {
                 success = responseData.enabled === (expectedValue === 'on');
             } else {
@@ -333,24 +292,21 @@ async function verifyChange(
 interface DeviceState {
     power: string;
     mode: string;
-    mistLevel: number;
-    humidity: string;
-    screenStatus: boolean;
+    speed: number;
+    display: 'on' | 'off';
 }
 
-async function captureDeviceState(device: VeSyncHumid200300S): Promise<DeviceState> {
+async function captureDeviceState(device: VeSyncAirBaseV2): Promise<DeviceState> {
     await device.getDetails();
-    const config = device.configuration;
     return {
         power: device.deviceStatus,
         mode: device.mode,
-        mistLevel: device.mistLevel,
-        humidity: (config.auto_target_humidity || device.humidity || '0').toString(),
-        screenStatus: !!device.screenStatus
+        speed: device.speed,
+        display: device.screenStatus as 'on' | 'off'
     };
 }
 
-async function restoreDeviceState(device: VeSyncHumid200300S, state: DeviceState) {
+async function restoreDeviceState(device: VeSyncAirBaseV2, state: DeviceState) {
     console.log('\nRestoring device to original state:');
     console.log('--------------------------------');
     console.log('Original State:', state);
@@ -381,41 +337,27 @@ async function restoreDeviceState(device: VeSyncHumid200300S, state: DeviceState
             );
         }
 
-        // Mist Level
-        if (device.mistLevel !== state.mistLevel) {
+        // Fan Speed
+        if (device.speed !== state.speed) {
             await verifyChange(
                 device,
                 'Cleanup',
-                'Restore Mist Level',
-                () => device.setMistLevel(state.mistLevel),
-                () => device.mistLevel,
-                state.mistLevel
-            );
-        }
-
-        // Humidity
-        const currentHumidity = device.humidity || '0';
-        if (currentHumidity !== state.humidity) {
-            await verifyChange(
-                device,
-                'Cleanup',
-                'Restore Humidity',
-                () => device.setHumidity(parseInt(state.humidity)),
-                () => device.humidity || '0',
-                state.humidity
+                'Restore Fan Speed',
+                () => device.changeFanSpeed(state.speed),
+                () => device.speed,
+                state.speed
             );
         }
 
         // Display
-        const currentDisplay = !!device.screenStatus;
-        if (currentDisplay !== state.screenStatus) {
+        if (device.screenStatus !== state.display) {
             await verifyChange(
                 device,
                 'Cleanup',
                 'Restore Display State',
-                () => state.screenStatus ? device.turnOnDisplay() : device.turnOffDisplay(),
-                () => !!device.screenStatus,
-                state.screenStatus
+                () => device.setDisplay(state.display === 'on'),
+                () => device.screenStatus,
+                state.display
             );
         }
     }
@@ -459,164 +401,132 @@ async function runTest() {
         process.exit(0);
     }
 
-    // Find a compatible humidifier (LUH or LEH series)
-    const device = manager.devices.find(d => 
-        d.deviceType.startsWith('LUH-') || d.deviceType.startsWith('LEH-')
-    );
+    // List all available devices
+    console.log('\nAvailable devices:');
+    manager.devices.forEach(d => {
+        console.log(`- ${d.deviceName} (${d.deviceType})`);
+    });
+
+    // Find the Office Air Purifier
+    const device = manager.devices.find(d => d.deviceName.trim() === 'Office Air Purifier');
     if (!device) {
-        console.log('Compatible humidifier (LUH/LEH series) not found');
+        console.log('\nOffice Air Purifier not found');
         process.exit(0);
     }
 
-    // Cast device to VeSyncHumid200300S
-    const humidifier = device as VeSyncHumid200300S;
-    console.log(`Found compatible device: ${humidifier.deviceType}`);
+    // Cast device to VeSyncAirBaseV2
+    const purifier = device as VeSyncAirBaseV2;
+    console.log(`Found compatible device: ${purifier.deviceType}`);
 
     // Capture initial state
     console.log('\nCapturing initial device state...');
-    const initialState = await captureDeviceState(humidifier);
+    const initialState = await captureDeviceState(purifier);
     console.log('Initial State:', initialState);
 
     // Print initial status
     console.log('\nInitial Device Status:');
-    await printHumidifierStatus(humidifier);
+    await printAirPurifierStatus(purifier);
 
     // Test power control
     await verifyChange(
-        humidifier,
+        purifier,
         'Power Control',
         'Turn Off',
-        () => humidifier.turnOff(),
-        () => humidifier.deviceStatus,
+        () => purifier.turnOff(),
+        () => purifier.deviceStatus,
         'off'
     );
 
     await verifyChange(
-        humidifier,
+        purifier,
         'Power Control',
         'Turn On',
-        () => humidifier.turnOn(),
-        () => humidifier.deviceStatus,
+        () => purifier.turnOn(),
+        () => purifier.deviceStatus,
         'on'
     );
 
     // Test mode changes
     await verifyChange(
-        humidifier,
-        'Mode Control',
-        'Set Sleep Mode',
-        () => humidifier.setMode('sleep'),
-        () => humidifier.mode,
-        'sleep'
-    );
-
-    await verifyChange(
-        humidifier,
-        'Mode Control',
-        'Set Auto Mode',
-        () => humidifier.setMode('auto'),
-        () => humidifier.mode,
-        'auto'
-    );
-
-    await verifyChange(
-        humidifier,
+        purifier,
         'Mode Control',
         'Set Manual Mode',
-        () => humidifier.setMode('manual'),
-        () => humidifier.mode,
+        () => purifier.setMode('manual'),
+        () => purifier.mode,
         'manual'
     );
 
-    // Test mist levels (supports 1-9)
-    let mistTestFailed = false;
-    for (let level = 1; level <= 9; level++) {
-        if (mistTestFailed) break;
+    // Test fan speeds (supports 1-3)
+    let fanSpeedTestFailed = false;
+    for (let level = 1; level <= 3; level++) {
+        if (fanSpeedTestFailed) break;
         const success = await verifyChange(
-            humidifier,
-            'Mist Control',
-            `Set Mist Level ${level}`,
-            () => humidifier.setMistLevel(level),
-            () => humidifier.mistLevel,
+            purifier,
+            'Fan Speed Control',
+            `Set Fan Speed ${level}`,
+            () => purifier.changeFanSpeed(level),
+            () => purifier.speed,
             level
         );
-        if (!success) mistTestFailed = true;
+        if (!success) fanSpeedTestFailed = true;
     }
+
+    // Test auto mode
+    await verifyChange(
+        purifier,
+        'Mode Control',
+        'Set Auto Mode',
+        () => purifier.setMode('auto'),
+        () => purifier.mode,
+        'auto'
+    );
 
     // Test sleep mode
     await verifyChange(
-        humidifier,
+        purifier,
         'Mode Control',
         'Set Sleep Mode',
-        () => humidifier.setMode('sleep'),
-        () => humidifier.mode,
+        () => purifier.setMode('sleep'),
+        () => purifier.mode,
         'sleep'
     );
 
-    // Test humidity settings (must be in auto mode)
+    // Test display control
     await verifyChange(
-        humidifier,
-        'Mode Control',
-        'Set Auto Mode for Humidity Test',
-        () => humidifier.setMode('auto'),
-        () => humidifier.mode,
-        'auto'
-    );
-
-    await verifyChange(
-        humidifier,
-        'Humidity Control',
-        'Set Target Humidity',
-        () => humidifier.setHumidity(55), // Use the auto_target_humidity value
-        () => humidifier.humidity,
-        '55'
-    );
-
-    // Test display control (must be in manual mode)
-    await verifyChange(
-        humidifier,
-        'Mode Control',
-        'Set Manual Mode for Display Test',
-        () => humidifier.setMode('manual'),
-        () => humidifier.mode,
-        'manual'
-    );
-
-    await verifyChange(
-        humidifier,
+        purifier,
         'Display Control',
         'Turn Display Off',
-        () => humidifier.turnOffDisplay(),
-        () => humidifier.screenStatus,
-        false
+        () => purifier.setDisplay(false),
+        () => purifier.screenStatus,
+        'off'
     );
 
     await verifyChange(
-        humidifier,
+        purifier,
         'Display Control',
         'Turn Display On',
-        () => humidifier.turnOnDisplay(),
-        () => humidifier.screenStatus,
-        true
+        () => purifier.setDisplay(true),
+        () => purifier.screenStatus,
+        'on'
     );
 
     // Print final status
     console.log('\nFinal Device Status:');
-    await printHumidifierStatus(humidifier);
+    await printAirPurifierStatus(purifier);
 
     // Print test results summary
     printTestResults();
 
     // Restore original state
     console.log('\nRestoring device to original state...');
-    await restoreDeviceState(humidifier, initialState);
+    await restoreDeviceState(purifier, initialState);
 
     // Print final verification
     console.log('\nFinal Device Status (After Restoration):');
-    await printHumidifierStatus(humidifier);
+    await printAirPurifierStatus(purifier);
 
     // Add restoration results to test summary
-    const finalState = await captureDeviceState(humidifier);
+    const finalState = await captureDeviceState(purifier);
     const allRestored = Object.entries(initialState).every(([key, value]) => 
         finalState[key as keyof DeviceState] === value
     );
@@ -633,16 +543,16 @@ async function runTest() {
     if (!allRestored) {
         console.log('\nState restoration failed - setting device to auto mode for safety');
         await verifyChange(
-            humidifier,
+            purifier,
             'Safety Fallback',
             'Set Auto Mode',
-            () => humidifier.setMode('auto'),
-            () => humidifier.mode,
+            () => purifier.setMode('auto'),
+            () => purifier.mode,
             'auto'
         );
         
         // Get final state after auto mode
-        const safetyState = await captureDeviceState(humidifier);
+        const safetyState = await captureDeviceState(purifier);
         console.log('Final device state (Auto Mode):', safetyState);
     }
 
