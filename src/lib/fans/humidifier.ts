@@ -475,4 +475,36 @@ export class VeSyncHumidifier extends VeSyncFan {
     get currentHumidity(): number {
         return this.details.humidity || 0;
     }
+
+    /**
+     * Check if water tank is empty
+     * Returns true if water tank is empty and needs to be refilled
+     */
+    get waterLacks(): boolean {
+        return this.details.water_lacks || false;
+    }
+
+    /**
+     * Check if water tank is lifted
+     * Returns true if water tank is lifted/removed from the device
+     */
+    get waterTankLifted(): boolean {
+        return this.details.water_tank_lifted || false;
+    }
+
+    /**
+     * Check if humidity is higher than target
+     * Returns true if current humidity is higher than target humidity
+     */
+    get humidityHigh(): boolean {
+        return this.details.humidity_high || false;
+    }
+
+    /**
+     * Check if automatic stop is active
+     * Returns true if automatic stop is currently active
+     */
+    get automaticStop(): boolean {
+        return this.details.automatic_stop || false;
+    }
 }

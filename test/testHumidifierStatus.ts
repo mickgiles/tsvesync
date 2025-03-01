@@ -67,17 +67,16 @@ async function printHumidifierStatus(device: VeSyncHumid200300S) {
     
     console.log('Timer:', device.timer ? JSON.stringify(device.timer) : 'Not set');
 
-    // Status indicators - these might not be in the displayJSON output
-    // We'll add a note that these are not directly accessible
-    console.log('\n🚨 Status Indicators (estimated):');
+    // Status indicators
+    console.log('\n🚨 Status Indicators:');
     console.log('------------------');
-    console.log('Note: These values are estimated and may not be accurate');
-    console.log('Water Lacks:', 'Unknown (not in public API)');
-    console.log('Humidity High:', 'Unknown (not in public API)');
-    console.log('Water Tank Lifted:', 'Unknown (not in public API)');
+    console.log('Water Lacks:', device.waterLacks ? 'Yes - Tank Empty' : 'No - Tank has water');
+    console.log('Water Tank Lifted:', device.waterTankLifted ? 'Yes - Tank removed' : 'No - Tank properly seated');
+    console.log('Humidity High:', device.humidityHigh ? 'Yes' : 'No');
     
-    // Automatic stop is available in the configuration
-    console.log('Automatic Stop:', device.automaticStopConfigured ? 'Enabled' : 'Disabled');
+    // Automatic stop status
+    console.log('Automatic Stop Active:', device.automaticStop ? 'Yes' : 'No');
+    console.log('Automatic Stop Configured:', device.automaticStopConfigured ? 'Yes' : 'No');
     
     // Configuration
     console.log('\n🔧 Configuration:');
