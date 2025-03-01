@@ -44,3 +44,4 @@ ENV/
 docs/
 .pytest_cached/
 package-lock.json
+memory-bank
