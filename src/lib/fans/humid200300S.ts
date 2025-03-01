@@ -48,7 +48,7 @@ export class VeSyncHumid200300S extends VeSyncHumidifier {
             this.details = {
                 mode: result.mode || '',
                 humidity: result.humidity || 0,  // Current humidity
-                target_humidity: result.target_humidity || result.humidity || 0,  // Target humidity
+                target_humidity: result.configuration?.auto_target_humidity || result.target_humidity || 0,  // Target humidity from configuration
                 mist_level: result.mist_level || 0,
                 mist_virtual_level: result.mist_virtual_level || 0,
                 water_lacks: result.water_lacks || false,
@@ -141,6 +141,14 @@ export class VeSyncHumid200300S extends VeSyncHumidifier {
     }
 
     /**
+     * Get current humidity
+     * Provides access to the current humidity reading
+     */
+    get currentHumidity(): number {
+        return this.details.humidity || 0;
+    }
+
+    /**
      * Get automatic stop configuration
      */
     get automaticStopConfigured(): boolean {
@@ -152,6 +160,25 @@ export class VeSyncHumid200300S extends VeSyncHumidifier {
      */
     get nightLightBrightness(): number {
         return this.details.night_light_brightness || 0;
+    }
+
+    /**
+     * Return JSON details for humidifier
+     * Override to include current humidity and target humidity
+     */
+    displayJSON(): string {
+        const baseInfo = JSON.parse(super.displayJSON());
+        
+        // Add current humidity from details
+        baseInfo['Humidity'] = this.details.humidity?.toString() || '0';
+        
+        // Add target humidity from configuration
+        baseInfo['Target Humidity'] = this.details.auto_target_humidity?.toString() || '0';
+        
+        // Add mist virtual level
+        baseInfo['Mist Virtual Level'] = this.details.mist_virtual_level?.toString() || '0';
+        
+        return JSON.stringify(baseInfo, null, 4);
     }
 
     /**

@@ -43,12 +43,12 @@ async function printHumidifierStatus(device: VeSyncHumid200300S) {
     console.log('-------------------');
     console.log('Mode:', device.mode);
     
-    // We can't directly access current humidity as it's in the protected details
-    // Instead we'll use the displayJSON method to get all details
-    const deviceDetails = JSON.parse(device.displayJSON());
+    // Use the new currentHumidity getter to access the current humidity directly
+    console.log('Current Humidity:', device.currentHumidity ? `${device.currentHumidity}%` : 'Not available');
     
-    console.log('Current Humidity:', deviceDetails['Humidity'] ? `${deviceDetails['Humidity']}%` : 'Not available');
-    console.log('Target Humidity:', device.humidity ? `${device.humidity}%` : 'Not available');
+    // Get target humidity from configuration
+    const targetHumidity = device.configuration?.auto_target_humidity || device.humidity;
+    console.log('Target Humidity:', targetHumidity ? `${targetHumidity}%` : 'Not available');
     
     // Display configuration values if available
     if (device.configuration) {
@@ -57,15 +57,13 @@ async function printHumidifierStatus(device: VeSyncHumid200300S) {
     console.log('Mist Level:', device.mistLevel);
     
     // For properties without direct getters, we'll check if they exist in the JSON
-    console.log('Mist Virtual Level:', deviceDetails['Mist Virtual Level'] || 'Not available');
+    console.log('Mist Virtual Level:', device.mistLevel || 'Not available');
     
     // Night light brightness
     console.log('Night Light Brightness:', device.nightLightBrightness || 'Not available');
     
-    // For display status, use the screenStatus getter but also check the raw JSON
-    // since there seems to be a discrepancy
-    const displayStatus = device.screenStatus === 'on' || deviceDetails['Screen Status'] === 'on';
-    console.log('Display:', displayStatus ? 'On' : 'Off');
+    // For display status, use the screenStatus getter
+    console.log('Display:', device.screenStatus === 'on' ? 'On' : 'Off');
     
     console.log('Timer:', device.timer ? JSON.stringify(device.timer) : 'Not set');
 

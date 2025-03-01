@@ -467,4 +467,12 @@ export class VeSyncHumidifier extends VeSyncFan {
         }
         return success;
     }
+
+    /**
+     * Get current humidity
+     * Provides access to the current humidity reading
+     */
+    get currentHumidity(): number {
+        return this.details.humidity || 0;
+    }
 }

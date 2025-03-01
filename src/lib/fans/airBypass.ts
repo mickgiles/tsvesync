@@ -261,6 +261,53 @@ export class VeSyncAirBypass extends VeSyncFan {
         // }
 
         logger.info(`Changing fan speed to ${speed} for device: ${this.deviceName}`);
+
+        // Special handling for LV series
+        if (this.deviceType.startsWith('LV-')) {
+            // Check if device is in manual mode
+            if (this.details.mode !== 'manual') {
+                logger.debug(`${this.deviceName} not in manual mode, cannot change speed`);
+                return false;
+            }
+
+            // Validate speed for LV series (1-3)
+            if (speed < 1 || speed > 3) {
+                logger.error(`Invalid fan speed: ${speed}. Must be between 1 and 3 for device: ${this.deviceName}`);
+                return false;
+            }
+
+            const [response, status] = await this.callApi(
+                '/131airPurifier/v1/device/updateSpeed',
+                'put',
+                {
+                    acceptLanguage: 'en',
+                    accountID: this.manager.accountId!,
+                    level: speed,
+                    timeZone: this.manager.timeZone!,
+                    token: this.manager.token!,
+                    uuid: this.uuid
+                },
+                {
+                    'accept-language': 'en',
+                    'accountId': this.manager.accountId!,
+                    'appVersion': '2.8.6',
+                    'content-type': 'application/json',
+                    'tk': this.manager.token!,
+                    'tz': this.manager.timeZone!
+                }
+            );
+
+            const success = this.checkResponse([response, status], 'changeFanSpeed');
+            if (success) {
+                this.details.speed = speed;
+                return true;
+            } else {
+                logger.error(`Failed to change fan speed to ${speed} for device: ${this.deviceName}`);
+                return false;
+            }
+        }
+
+        // Standard implementation for other devices
         const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -300,6 +347,48 @@ export class VeSyncAirBypass extends VeSyncFan {
         }
 
         logger.debug(`Setting mode to ${mode} for device: ${this.deviceName}`);
+
+        // Special handling for LV series
+        if (this.deviceType.startsWith('LV-')) {
+            const payload: Record<string, any> = {
+                acceptLanguage: 'en',
+                accountID: this.manager.accountId!,
+                mode: mode,
+                timeZone: this.manager.timeZone!,
+                token: this.manager.token!,
+                uuid: this.uuid
+            };
+
+            // For manual mode, we need to set the level
+            if (mode === 'manual') {
+                payload.level = this.details.speed || 1;
+            }
+
+            const [response, status] = await this.callApi(
+                '/131airPurifier/v1/device/updateMode',
+                'put',
+                payload,
+                {
+                    'accept-language': 'en',
+                    'accountId': this.manager.accountId!,
+                    'appVersion': '2.8.6',
+                    'content-type': 'application/json',
+                    'tk': this.manager.token!,
+                    'tz': this.manager.timeZone!
+                }
+            );
+
+            const success = this.checkResponse([response, status], 'setMode');
+            if (success) {
+                this.details.mode = mode;
+                return true;
+            } else {
+                logger.error(`Failed to set mode to ${mode} for device: ${this.deviceName}`);
+                return false;
+            }
+        }
+
+        // Standard implementation for other devices
         const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -336,6 +425,41 @@ export class VeSyncAirBypass extends VeSyncFan {
         }
 
         logger.debug(`Setting display to ${enabled ? 'on' : 'off'} for device: ${this.deviceName}`);
+
+        // Special handling for LV series
+        if (this.deviceType.startsWith('LV-')) {
+            const [response, status] = await this.callApi(
+                '/131airPurifier/v1/device/updateScreen',
+                'put',
+                {
+                    acceptLanguage: 'en',
+                    accountID: this.manager.accountId!,
+                    status: enabled ? 'on' : 'off',
+                    timeZone: this.manager.timeZone!,
+                    token: this.manager.token!,
+                    uuid: this.uuid
+                },
+                {
+                    'accept-language': 'en',
+                    'accountId': this.manager.accountId!,
+                    'appVersion': '2.8.6',
+                    'content-type': 'application/json',
+                    'tk': this.manager.token!,
+                    'tz': this.manager.timeZone!
+                }
+            );
+
+            const success = this.checkResponse([response, status], 'setDisplay');
+            if (success) {
+                this.details.screenStatus = enabled ? 'on' : 'off';
+                return true;
+            } else {
+                logger.error(`Failed to set display to ${enabled ? 'on' : 'off'} for device: ${this.deviceName}`);
+                return false;
+            }
+        }
+
+        // Standard implementation for other devices
         const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -374,6 +498,41 @@ export class VeSyncAirBypass extends VeSyncFan {
         }
 
         logger.debug(`Setting child lock to ${enabled ? 'on' : 'off'} for device: ${this.deviceName}`);
+
+        // Special handling for LV series
+        if (this.deviceType.startsWith('LV-')) {
+            const [response, status] = await this.callApi(
+                '/131airPurifier/v1/device/updateChildLock',
+                'put',
+                {
+                    acceptLanguage: 'en',
+                    accountID: this.manager.accountId!,
+                    status: enabled ? 'on' : 'off',
+                    timeZone: this.manager.timeZone!,
+                    token: this.manager.token!,
+                    uuid: this.uuid
+                },
+                {
+                    'accept-language': 'en',
+                    'accountId': this.manager.accountId!,
+                    'appVersion': '2.8.6',
+                    'content-type': 'application/json',
+                    'tk': this.manager.token!,
+                    'tz': this.manager.timeZone!
+                }
+            );
+
+            const success = this.checkResponse([response, status], 'setChildLock');
+            if (success) {
+                this.details.childLock = enabled;
+                return true;
+            } else {
+                logger.error(`Failed to set child lock to ${enabled ? 'on' : 'off'} for device: ${this.deviceName}`);
+                return false;
+            }
+        }
+
+        // Standard implementation for other devices
         const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -412,6 +571,39 @@ export class VeSyncAirBypass extends VeSyncFan {
         }
 
         logger.debug(`Setting timer to ${hours} hours for device: ${this.deviceName}`);
+
+        // Special handling for LV series
+        if (this.deviceType.startsWith('LV-')) {
+            const [response, status] = await this.callApi(
+                '/131airPurifier/v1/device/updateTimer',
+                'put',
+                {
+                    acceptLanguage: 'en',
+                    accountID: this.manager.accountId!,
+                    action: 'off',
+                    duration: hours,
+                    timeZone: this.manager.timeZone!,
+                    token: this.manager.token!,
+                    uuid: this.uuid
+                },
+                {
+                    'accept-language': 'en',
+                    'accountId': this.manager.accountId!,
+                    'appVersion': '2.8.6',
+                    'content-type': 'application/json',
+                    'tk': this.manager.token!,
+                    'tz': this.manager.timeZone!
+                }
+            );
+
+            const success = this.checkResponse([response, status], 'setTimer');
+            if (!success) {
+                logger.error(`Failed to set timer to ${hours} hours for device: ${this.deviceName}`);
+            }
+            return success;
+        }
+
+        // Standard implementation for other devices
         const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
@@ -449,6 +641,37 @@ export class VeSyncAirBypass extends VeSyncFan {
         }
 
         logger.debug(`Clearing timer for device: ${this.deviceName}`);
+
+        // Special handling for LV series
+        if (this.deviceType.startsWith('LV-')) {
+            const [response, status] = await this.callApi(
+                '/131airPurifier/v1/device/cancelTimer',
+                'put',
+                {
+                    acceptLanguage: 'en',
+                    accountID: this.manager.accountId!,
+                    timeZone: this.manager.timeZone!,
+                    token: this.manager.token!,
+                    uuid: this.uuid
+                },
+                {
+                    'accept-language': 'en',
+                    'accountId': this.manager.accountId!,
+                    'appVersion': '2.8.6',
+                    'content-type': 'application/json',
+                    'tk': this.manager.token!,
+                    'tz': this.manager.timeZone!
+                }
+            );
+
+            const success = this.checkResponse([response, status], 'clearTimer');
+            if (!success) {
+                logger.error(`Failed to clear timer for device: ${this.deviceName}`);
+            }
+            return success;
+        }
+
+        // Standard implementation for other devices
         const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
             'post',
