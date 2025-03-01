@@ -8,7 +8,7 @@ import { logger } from './logger';
 
 interface FanConfig {
     [key: string]: {
-        module: 'VeSyncAirBypass' | 'VeSyncHumidifier' | 'VeSyncWarmHumidifier' | 'VeSyncTowerFan' | 'VeSyncAirBaseV2';
+        module: 'VeSyncAirBypass' | 'VeSyncHumidifier' | 'VeSyncWarmHumidifier' | 'VeSyncTowerFan' | 'VeSyncAirBaseV2' | 'VeSyncSuperior6000S' | 'VeSyncHumid1000S' | 'VeSyncHumid200S';
         features: string[];
         levels?: number[];
     };
@@ -203,8 +203,9 @@ export const fanConfig: FanConfig = {
         features: ['display', 'humidity', 'mist', 'timer', 'auto_mode']
     },
     'Classic200S': {
-        module: 'VeSyncHumidifier',
-        features: ['display', 'humidity', 'mist', 'timer', 'auto_mode']
+        module: 'VeSyncHumid200S',
+        features: ['display', 'humidity', 'mist', 'timer', 'auto_mode'],
+        levels: [1, 2, 3]
     },
     
     // Dual Series
@@ -279,22 +280,26 @@ export const fanConfig: FanConfig = {
         features: ['display', 'humidity', 'mist', 'warm', 'timer', 'auto_mode']
     },
     'LUH-M101S-WUS': {
-        module: 'VeSyncWarmHumidifier',
-        features: ['display', 'humidity', 'mist', 'warm', 'timer', 'auto_mode']
+        module: 'VeSyncHumid1000S',
+        features: ['display', 'humidity', 'mist', 'timer', 'auto_mode', 'night_light'],
+        levels: [1, 2, 3, 4, 5, 6, 7, 8, 9]
     },
     'LUH-M101S-WEUR': {
-        module: 'VeSyncWarmHumidifier',
-        features: ['display', 'humidity', 'mist', 'warm', 'timer', 'auto_mode']
+        module: 'VeSyncHumid1000S',
+        features: ['display', 'humidity', 'mist', 'timer', 'auto_mode', 'night_light'],
+        levels: [1, 2, 3, 4, 5, 6, 7, 8, 9]
     },
     
-    // LEH Series
+    // LEH Series - Superior 6000S
     'LEH-S601S-WUS': {
-        module: 'VeSyncWarmHumidifier',
-        features: ['display', 'humidity', 'mist', 'warm', 'timer', 'auto_mode', 'drying']
+        module: 'VeSyncSuperior6000S',
+        features: ['display', 'humidity', 'mist', 'timer', 'auto_mode', 'drying', 'temperature'],
+        levels: [1, 2, 3, 4, 5, 6, 7, 8, 9]
     },
     'LEH-S601S-WUSR': {
-        module: 'VeSyncWarmHumidifier',
-        features: ['display', 'humidity', 'mist', 'warm', 'timer', 'auto_mode', 'drying']
+        module: 'VeSyncSuperior6000S',
+        features: ['display', 'humidity', 'mist', 'timer', 'auto_mode', 'drying', 'temperature'],
+        levels: [1, 2, 3, 4, 5, 6, 7, 8, 9]
     },
     
     // LV Series
@@ -331,7 +336,7 @@ export abstract class VeSyncFan extends VeSyncBaseDevice {
     protected speed_dict: Record<string, any> = {};
     protected _timer: number | { duration: number; action: string } | null = null;
     protected config: {
-        module: 'VeSyncAirBypass' | 'VeSyncHumidifier' | 'VeSyncWarmHumidifier' | 'VeSyncTowerFan' | 'VeSyncAirBaseV2';
+        module: 'VeSyncAirBypass' | 'VeSyncHumidifier' | 'VeSyncWarmHumidifier' | 'VeSyncTowerFan' | 'VeSyncAirBaseV2' | 'VeSyncSuperior6000S' | 'VeSyncHumid1000S' | 'VeSyncHumid200S';
         features: string[];
         levels?: number[];
     };

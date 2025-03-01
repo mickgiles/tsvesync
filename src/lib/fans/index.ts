@@ -4,6 +4,9 @@ import { VeSyncTowerFan } from './towerFan';
 import { VeSyncHumidifier } from './humidifier';
 import { VeSyncWarmHumidifier } from './warmHumidifier';
 import { VeSyncHumid200300S } from './humid200300S';
+import { VeSyncSuperior6000S } from './superior6000S';
+import { VeSyncHumid1000S } from './humid1000S';
+import { VeSyncHumid200S } from './humid200S';
 import { VeSyncFan } from '../vesyncFan';
 import { VeSync } from '../vesync';
 
@@ -14,6 +17,9 @@ export { VeSyncTowerFan } from './towerFan';
 export { VeSyncHumidifier } from './humidifier';
 export { VeSyncWarmHumidifier } from './warmHumidifier';
 export { VeSyncHumid200300S } from './humid200300S';
+export { VeSyncSuperior6000S } from './superior6000S';
+export { VeSyncHumid1000S } from './humid1000S';
+export { VeSyncHumid200S } from './humid200S';
 
 // Export fan modules dictionary
 export const fanModules: Record<string, new (details: Record<string, any>, manager: VeSync) => VeSyncFan> = {
@@ -66,7 +72,7 @@ export const fanModules: Record<string, new (details: Record<string, any>, manag
     
     // Classic Series
     'Classic300S': VeSyncHumidifier,
-    'Classic200S': VeSyncHumidifier,
+    'Classic200S': VeSyncHumid200S,
     
     // Dual Series
     'Dual200S': VeSyncHumidifier,
@@ -88,12 +94,12 @@ export const fanModules: Record<string, new (details: Record<string, any>, manag
     'LUH-O451S-WUSR': VeSyncHumid200300S,
     'LUH-O601S-WUS': VeSyncHumid200300S,
     'LUH-O601S-KUS': VeSyncHumid200300S,
-    'LUH-M101S-WUS': VeSyncHumid200300S,
-    'LUH-M101S-WEUR': VeSyncHumid200300S,
+    'LUH-M101S-WUS': VeSyncHumid1000S,
+    'LUH-M101S-WEUR': VeSyncHumid1000S,
     
-    // LEH Series
-    'LEH-S601S-WUS': VeSyncHumid200300S,
-    'LEH-S601S-WUSR': VeSyncHumid200300S,
+    // LEH Series - Superior 6000S
+    'LEH-S601S-WUS': VeSyncSuperior6000S,
+    'LEH-S601S-WUSR': VeSyncSuperior6000S,
     
     // LV Series
     'LV-PUR131S': VeSyncAirBypass,
