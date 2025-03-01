@@ -93,9 +93,20 @@ async function printHumidifierStatus(device: VeSyncHumid200300S) {
     console.log('-------------------');
     console.log('Mode:', device.mode);
     console.log('Humidity:', device.humidity ? `${device.humidity}%` : 'Not available');
+    
+    // Display configuration values if available
+    if (device.configuration) {
+        console.log('Auto Target Humidity:', device.configuration.auto_target_humidity ? `${device.configuration.auto_target_humidity}%` : 'Not available');
+        console.log('Automatic Stop:', device.configuration.automatic_stop ? 'Enabled' : 'Disabled');
+    }
     console.log('Mist Level:', device.mistLevel);
-    console.log('Warm Mist:', device.warmMistEnabled ? 'Enabled' : 'Disabled');
-    console.log('Warm Level:', device.warmLevel);
+    // Check if device supports warm mist
+    if (device.hasFeature('warm')) {
+        // Use any type to access properties that might not be available on all models
+        const warmDevice = device as any;
+        console.log('Warm Mist:', warmDevice.warmMistEnabled ? 'Enabled' : 'Disabled');
+        console.log('Warm Level:', warmDevice.warmLevel || 'Not available');
+    }
     console.log('Display:', device.screenStatus);
     console.log('Timer:', device.timer ? JSON.stringify(device.timer) : 'Not set');
 
@@ -105,7 +116,7 @@ async function printHumidifierStatus(device: VeSyncHumid200300S) {
     console.log('Display Control:', device.hasFeature('display'));
     console.log('Humidity Control:', device.hasFeature('humidity'));
     console.log('Mist Control:', device.hasFeature('mist'));
-    console.log('Warm Mist:', device.hasFeature('warm'));
+    console.log('Warm Mist:', device.hasFeature('warm') ? 'Yes' : 'No');
     console.log('Timer:', device.hasFeature('timer'));
     console.log('Auto Mode:', device.hasFeature('auto_mode'));
 
@@ -294,7 +305,7 @@ async function verifyChange(
             let success = false;
             if (test.includes('Mist Level')) {
                 success = responseData.mist_virtual_level === expectedValue;
-            } else if (test.includes('Warm Level')) {
+            } else if (test.includes('Warm Level') && humidifier.hasFeature('warm')) {
                 success = responseData.warm_level === expectedValue;
             } else if (test.includes('Display')) {
                 success = responseData.display === expectedValue;

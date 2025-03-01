@@ -49,19 +49,21 @@ async function printHumidifierStatus(device: VeSyncHumid200300S) {
     
     console.log('Current Humidity:', deviceDetails['Humidity'] ? `${deviceDetails['Humidity']}%` : 'Not available');
     console.log('Target Humidity:', device.humidity ? `${device.humidity}%` : 'Not available');
+    
+    // Display configuration values if available
+    if (device.configuration) {
+        console.log('Auto Target Humidity:', device.configuration.auto_target_humidity ? `${device.configuration.auto_target_humidity}%` : 'Not available');
+    }
     console.log('Mist Level:', device.mistLevel);
     
     // For properties without direct getters, we'll check if they exist in the JSON
     console.log('Mist Virtual Level:', deviceDetails['Mist Virtual Level'] || 'Not available');
-    console.log('Warm Mist:', device.warmMistEnabled ? 'Enabled' : 'Disabled');
-    console.log('Warm Level:', device.warmLevel);
     
     // For display status, use the screenStatus getter but also check the raw JSON
     // since there seems to be a discrepancy
     const displayStatus = device.screenStatus === 'on' || deviceDetails['Screen Status'] === 'on';
     console.log('Display:', displayStatus ? 'On' : 'Off');
     
-    console.log('Night Light Brightness:', device.nightLightBrightness || 'Not available');
     console.log('Timer:', device.timer ? JSON.stringify(device.timer) : 'Not set');
 
     // Status indicators - these might not be in the displayJSON output
@@ -74,8 +76,7 @@ async function printHumidifierStatus(device: VeSyncHumid200300S) {
     console.log('Water Tank Lifted:', 'Unknown (not in public API)');
     
     // Automatic stop is available in the configuration
-    const autoStop = device.configuration?.automatic_stop;
-    console.log('Automatic Stop:', autoStop ? 'Enabled' : 'Disabled');
+    console.log('Automatic Stop:', device.automaticStopConfigured ? 'Enabled' : 'Disabled');
     
     // Configuration
     console.log('\n🔧 Configuration:');
@@ -105,10 +106,12 @@ async function printHumidifierStatus(device: VeSyncHumid200300S) {
         console.log('\n🔄 Drying Mode Details:');
         console.log('------------------');
         try {
-            console.log('Drying Mode Enabled:', (device as any).dryingModeEnabled ? 'Yes' : 'No');
-            console.log('Drying Mode State:', (device as any).dryingModeState || 'Not available');
-            console.log('Drying Mode Level:', (device as any).dryingModeLevel || 'Not available');
-            console.log('Drying Mode Seconds Remaining:', (device as any).dryingModeSecondsRemaining || 'Not available');
+            // Use any type to access properties that might not be available on all models
+            const dryingDevice = device as any;
+            console.log('Drying Mode Enabled:', dryingDevice.dryingModeEnabled ? 'Yes' : 'No');
+            console.log('Drying Mode State:', dryingDevice.dryingModeState || 'Not available');
+            console.log('Drying Mode Level:', dryingDevice.dryingModeLevel || 'Not available');
+            console.log('Drying Mode Seconds Remaining:', dryingDevice.dryingModeSecondsRemaining || 'Not available');
         } catch (error) {
             console.log('Unable to retrieve drying mode details');
         }
