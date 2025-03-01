@@ -8,7 +8,7 @@ import { logger } from '../logger';
  */
 export class VeSyncHumid200300S extends VeSyncHumidifier {
     protected readonly modes = ['auto', 'manual', 'sleep'] as const;
-    protected readonly features = ['humidity', 'mist', 'display', 'timer', 'auto_mode'];
+    protected readonly features = ['humidity', 'mist', 'display', 'timer', 'auto_mode', 'night_light'];
     protected readonly mistLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9];
     protected readonly humidityRange = { min: 30, max: 80 };
 
@@ -59,7 +59,8 @@ export class VeSyncHumid200300S extends VeSyncHumidifier {
                 automatic_stop_configured: result.configuration?.automatic_stop || false,
                 auto_target_humidity: result.configuration?.auto_target_humidity || 0,
                 configuration: result.configuration || {},
-                connection_status: result.connection_status || null
+                connection_status: result.connection_status || null,
+                night_light_brightness: result.night_light_brightness || 0
             };
 
             // Log raw response for debugging
@@ -144,5 +145,59 @@ export class VeSyncHumid200300S extends VeSyncHumidifier {
      */
     get automaticStopConfigured(): boolean {
         return this.details.automatic_stop_configured || false;
+    }
+
+    /**
+     * Get night light brightness
+     */
+    get nightLightBrightness(): number {
+        return this.details.night_light_brightness || 0;
+    }
+
+    /**
+     * Set night light brightness
+     */
+    async setNightLightBrightness(brightness: number): Promise<boolean> {
+        if (brightness < 0 || brightness > 100) {
+            const error = `Invalid brightness: ${brightness}. Must be between 0 and 100`;
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
+        }
+
+        logger.debug(`Setting night light brightness to ${brightness} for device: ${this.deviceName}`);
+        const [response, status] = await this.callApi(
+            '/cloud/v2/deviceManaged/bypassV2',
+            'post',
+            {
+                ...Helpers.reqBody(this.manager, 'bypassV2'),
+                cid: this.cid,
+                configModule: this.configModule,
+                payload: {
+                    data: {
+                        brightness
+                    },
+                    method: 'setNightLight',
+                    source: 'APP'
+                }
+            },
+            Helpers.reqHeaderBypass()
+        );
+
+        // Check for error code 11000000 which indicates feature not supported
+        if (response?.result?.code === 11000000) {
+            logger.warn(`Night light control not supported by device: ${this.deviceName} (${this.deviceType})`);
+            return false;
+        }
+
+        const success = this.checkResponse([response, status], 'setNightLightBrightness');
+        if (success) {
+            this.details.night_light_brightness = brightness;
+            // Get latest state and log it
+            await this.getDetails();
+            logger.debug(`Device state after night light brightness change: ${JSON.stringify(this.details)}`);
+        } else {
+            logger.error(`Failed to set night light brightness to ${brightness} for device: ${this.deviceName}`);
+        }
+        return success;
     }
 }

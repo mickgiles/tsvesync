@@ -59,6 +59,9 @@ async function printHumidifierStatus(device: VeSyncHumid200300S) {
     // For properties without direct getters, we'll check if they exist in the JSON
     console.log('Mist Virtual Level:', deviceDetails['Mist Virtual Level'] || 'Not available');
     
+    // Night light brightness
+    console.log('Night Light Brightness:', device.nightLightBrightness || 'Not available');
+    
     // For display status, use the screenStatus getter but also check the raw JSON
     // since there seems to be a discrepancy
     const displayStatus = device.screenStatus === 'on' || deviceDetails['Screen Status'] === 'on';
@@ -97,6 +100,7 @@ async function printHumidifierStatus(device: VeSyncHumid200300S) {
     console.log('Humidity Control:', device.hasFeature('humidity') ? 'Yes' : 'No');
     console.log('Mist Control:', device.hasFeature('mist') ? 'Yes' : 'No');
     console.log('Warm Mist:', device.hasFeature('warm') ? 'Yes' : 'No');
+    console.log('Night Light:', device.hasFeature('night_light') ? 'Yes' : 'No');
     console.log('Timer:', device.hasFeature('timer') ? 'Yes' : 'No');
     console.log('Auto Mode:', device.hasFeature('auto_mode') ? 'Yes' : 'No');
     console.log('Drying Mode:', device.hasFeature('drying') ? 'Yes' : 'No');

@@ -216,7 +216,7 @@ export const fanConfig: FanConfig = {
     // LUH Series
     'LUH-A601S-WUSB': {
         module: 'VeSyncWarmHumidifier',
-        features: ['display', 'humidity', 'mist', 'warm', 'timer', 'auto_mode']
+        features: ['display', 'humidity', 'mist', 'timer', 'auto_mode', 'night_light']
     },
     'LUH-A601S-AUSW': {
         module: 'VeSyncWarmHumidifier',
