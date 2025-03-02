@@ -39,9 +39,11 @@
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {
+    "@types/inquirer": "^9.0.7",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.10.2",
     "dotenv": "^16.4.7",
+    "inquirer": "^12.4.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.2"
   },
