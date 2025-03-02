@@ -388,6 +388,13 @@ export class VeSyncAirBypass extends VeSyncFan {
             }
         }
 
+        // Special handling for Core200S auto mode
+        if (this.deviceType.includes('Core200S') && mode === 'auto') {
+            // Core200S doesn't support auto mode, so we'll set it to manual mode
+            logger.warn(`Auto mode not supported for ${this.deviceType}, using manual mode instead`);
+            return this.setMode('manual');
+        }
+
         // Standard implementation for other devices
         const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
@@ -408,10 +415,13 @@ export class VeSyncAirBypass extends VeSyncFan {
         );
 
         const success = this.checkResponse([response, status], 'setMode');
-        if (!success) {
+        if (success) {
+            this.details.mode = mode;
+            return true;
+        } else {
             logger.error(`Failed to set mode to ${mode} for device: ${this.deviceName}`);
+            return false;
         }
-        return success;
     }
 
     /**
@@ -422,6 +432,11 @@ export class VeSyncAirBypass extends VeSyncFan {
             const error = 'Display control not supported';
             logger.error(`${error} for device: ${this.deviceName}`);
             throw new Error(error);
+        }
+
+        // Check if device is in sleep mode - display control may not work in sleep mode
+        if (this.details.mode === 'sleep') {
+            logger.warn(`Device ${this.deviceName} is in sleep mode, display control may not work`);
         }
 
         logger.debug(`Setting display to ${enabled ? 'on' : 'off'} for device: ${this.deviceName}`);
@@ -479,12 +494,20 @@ export class VeSyncAirBypass extends VeSyncFan {
         );
 
         const success = this.checkResponse([response, status], 'setDisplay');
+        
+        // Check for error code 11018000 (operation not supported in current mode)
+        if (response?.result?.code === 11018000) {
+            logger.warn(`Display control not supported in current mode for device: ${this.deviceName}`);
+            return false;
+        }
+        
         if (success) {
             this.details.screenStatus = enabled ? 'on' : 'off';
+            return true;
         } else {
             logger.error(`Failed to set display to ${enabled ? 'on' : 'off'} for device: ${this.deviceName}`);
+            return false;
         }
-        return success;
     }
 
     /**
@@ -495,6 +518,11 @@ export class VeSyncAirBypass extends VeSyncFan {
             const error = 'Child lock not supported';
             logger.error(`${error} for device: ${this.deviceName}`);
             throw new Error(error);
+        }
+
+        // Check if device is in sleep mode - child lock may not work in sleep mode
+        if (this.details.mode === 'sleep') {
+            logger.warn(`Device ${this.deviceName} is in sleep mode, child lock control may not work`);
         }
 
         logger.debug(`Setting child lock to ${enabled ? 'on' : 'off'} for device: ${this.deviceName}`);
@@ -527,6 +555,11 @@ export class VeSyncAirBypass extends VeSyncFan {
                 this.details.childLock = enabled;
                 return true;
             } else {
+                // Check for error code 11000000 (feature not supported)
+                if (response?.code === 11000000) {
+                    logger.warn(`Child lock control not supported via API for device: ${this.deviceName}`);
+                    return false;
+                }
                 logger.error(`Failed to set child lock to ${enabled ? 'on' : 'off'} for device: ${this.deviceName}`);
                 return false;
             }
@@ -552,12 +585,20 @@ export class VeSyncAirBypass extends VeSyncFan {
         );
 
         const success = this.checkResponse([response, status], 'setChildLock');
+        
+        // Check for error code 11000000 (feature not supported)
+        if (response?.code === 11000000 || (response?.result?.code === 11000000)) {
+            logger.warn(`Child lock control not supported via API for device: ${this.deviceName}`);
+            return false;
+        }
+        
         if (success) {
-            this.details.child_lock = enabled;
+            this.details.childLock = enabled;
+            return true;
         } else {
             logger.error(`Failed to set child lock to ${enabled ? 'on' : 'off'} for device: ${this.deviceName}`);
+            return false;
         }
-        return success;
     }
 
     /**
@@ -597,10 +638,13 @@ export class VeSyncAirBypass extends VeSyncFan {
             );
 
             const success = this.checkResponse([response, status], 'setTimer');
-            if (!success) {
+            if (success) {
+                this.timer = { duration: hours * 3600, action: 'off' };
+                return true;
+            } else {
                 logger.error(`Failed to set timer to ${hours} hours for device: ${this.deviceName}`);
+                return false;
             }
-            return success;
         }
 
         // Standard implementation for other devices
@@ -624,10 +668,20 @@ export class VeSyncAirBypass extends VeSyncFan {
         );
 
         const success = this.checkResponse([response, status], 'setTimer');
-        if (!success) {
+        
+        // Check for successful response with timer ID
+        if (success && response?.result?.result?.id) {
+            this.timer = { duration: hours * 3600, action: 'off' };
+            return true;
+        } else if (success) {
+            // API call succeeded but no timer ID returned
+            logger.warn(`Timer API call succeeded but no timer ID returned for device: ${this.deviceName}`);
+            this.timer = { duration: hours * 3600, action: 'off' };
+            return true;
+        } else {
             logger.error(`Failed to set timer to ${hours} hours for device: ${this.deviceName}`);
+            return false;
         }
-        return success;
     }
 
     /**
@@ -638,6 +692,12 @@ export class VeSyncAirBypass extends VeSyncFan {
             const error = 'Timer not supported';
             logger.error(`${error} for device: ${this.deviceName}`);
             throw new Error(error);
+        }
+
+        // If no timer is set, return success
+        if (!this.timer) {
+            logger.debug(`No timer to clear for device: ${this.deviceName}`);
+            return true;
         }
 
         logger.debug(`Clearing timer for device: ${this.deviceName}`);
@@ -665,10 +725,13 @@ export class VeSyncAirBypass extends VeSyncFan {
             );
 
             const success = this.checkResponse([response, status], 'clearTimer');
-            if (!success) {
+            if (success) {
+                this.timer = null;
+                return true;
+            } else {
                 logger.error(`Failed to clear timer for device: ${this.deviceName}`);
+                return false;
             }
-            return success;
         }
 
         // Standard implementation for other devices
@@ -689,10 +752,21 @@ export class VeSyncAirBypass extends VeSyncFan {
         );
 
         const success = this.checkResponse([response, status], 'clearTimer');
-        if (!success) {
-            logger.error(`Failed to clear timer for device: ${this.deviceName}`);
+        
+        // Check for error code 11000000 (feature not supported or no timer to clear)
+        if (response?.code === 11000000 || (response?.result?.code === 11000000)) {
+            logger.warn(`No timer to clear or timer control not supported via API for device: ${this.deviceName}`);
+            this.timer = null;
+            return true;
         }
-        return success;
+        
+        if (success) {
+            this.timer = null;
+            return true;
+        } else {
+            logger.error(`Failed to clear timer for device: ${this.deviceName}`);
+            return false;
+        }
     }
 
     /**

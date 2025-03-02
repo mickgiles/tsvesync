@@ -359,6 +359,47 @@ export abstract class VeSyncFan extends VeSyncBaseDevice {
     }
 
     /**
+     * Check if feature is supported in current mode
+     */
+    isFeatureSupportedInCurrentMode(feature: string): boolean {
+        // First check if the feature is supported at all
+        if (!this.hasFeature(feature)) {
+            return false;
+        }
+
+        // Check mode-specific restrictions
+        const currentMode = this.mode;
+
+        // Some features are not supported in sleep mode
+        if (currentMode === 'sleep') {
+            // Display and child lock are not supported in sleep mode
+            if (feature === 'display' || feature === 'child_lock') {
+                return false;
+            }
+        }
+
+        // Fan speed is only supported in manual mode for some devices
+        if (feature === 'fan_speed' && this.deviceType.startsWith('LV-')) {
+            return currentMode === 'manual';
+        }
+
+        // Auto mode is not supported on Core200S
+        if (feature === 'auto_mode' && this.deviceType.includes('Core200S')) {
+            return false;
+        }
+
+        // Feature is supported in current mode
+        return true;
+    }
+
+    /**
+     * Get maximum fan speed level
+     */
+    getMaxFanSpeed(): number {
+        return this.config.levels ? Math.max(...this.config.levels) : 3;
+    }
+
+    /**
      * Get current mode
      */
     get mode(): string {

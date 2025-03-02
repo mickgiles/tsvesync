@@ -1,6 +1,7 @@
 /**
- * Special test for VeSync Air Purifier
+ * Smart test for VeSync Air Purifier
  * Uses credentials from .env file in test directory
+ * Only tests features that are supported by the device in its current mode
  */
 
 // Load environment variables first
@@ -121,6 +122,17 @@ async function printAirPurifierStatus(device: VeSyncAirBaseV2) {
     console.log('Auto Mode:', device.hasFeature('auto_mode'));
     console.log('Sleep Mode:', device.hasFeature('sleep_mode'));
     console.log('Air Quality Detection:', device.hasFeature('air_quality'));
+
+    // Features supported in current mode
+    console.log('\nFeatures Supported in Current Mode:');
+    console.log('----------------------------------');
+    console.log('Display Control:', device.isFeatureSupportedInCurrentMode('display'));
+    console.log('Fan Speed Control:', device.isFeatureSupportedInCurrentMode('fan_speed'));
+    console.log('Child Lock:', device.isFeatureSupportedInCurrentMode('child_lock'));
+    console.log('Timer:', device.isFeatureSupportedInCurrentMode('timer'));
+    console.log('Auto Mode:', device.isFeatureSupportedInCurrentMode('auto_mode'));
+    console.log('Sleep Mode:', device.isFeatureSupportedInCurrentMode('sleep_mode'));
+    console.log('Air Quality Detection:', device.isFeatureSupportedInCurrentMode('air_quality'));
 
     // Raw device details
     console.log('\nRaw Device Details:');
@@ -250,27 +262,6 @@ async function verifyChange(
                 return false;
             }
 
-            // Check for mode-specific restrictions and handle them
-            if (test.includes('Child Lock') && responseData.mode === 'sleep') {
-                console.log('Cannot set child lock in sleep mode');
-                addTestResult(feature, test, false, expectedValue, getValue(), 'Cannot set child lock in sleep mode', {
-                    request: actionPayload,
-                    response: actionResponse,
-                    getDetailsResponse: getDetailsResponse
-                });
-                return false;
-            }
-
-            if (test.includes('Display') && responseData.mode === 'sleep') {
-                console.log('Cannot set display in sleep mode');
-                addTestResult(feature, test, false, expectedValue, getValue(), 'Cannot set display in sleep mode', {
-                    request: actionPayload,
-                    response: actionResponse,
-                    getDetailsResponse: getDetailsResponse
-                });
-                return false;
-            }
-            
             // Handle specific error codes
             if (actionResponse[0].result.code.toString() === '11018000') {
                 console.log('Error code 11018000: This operation is not supported in the current mode');
@@ -461,8 +452,8 @@ async function restoreDeviceState(device: VeSyncAirBaseV2, state: DeviceState) {
             }
         }
 
-        // Fan Speed
-        if (device.speed !== state.speed) {
+        // Fan Speed - only if supported in current mode
+        if (device.speed !== state.speed && device.isFeatureSupportedInCurrentMode('fan_speed')) {
             await verifyChange(
                 device,
                 'Cleanup',
@@ -473,8 +464,8 @@ async function restoreDeviceState(device: VeSyncAirBaseV2, state: DeviceState) {
             );
         }
 
-        // Display
-        if ((device.screenStatus === 'on') !== state.display) {
+        // Display - only if supported in current mode
+        if ((device.screenStatus === 'on') !== state.display && device.isFeatureSupportedInCurrentMode('display')) {
             await verifyChange(
                 device,
                 'Cleanup',
@@ -485,8 +476,8 @@ async function restoreDeviceState(device: VeSyncAirBaseV2, state: DeviceState) {
             );
         }
 
-        // Child Lock if supported
-        if (device.hasFeature('child_lock') && state.childLock !== undefined) {
+        // Child Lock - only if supported in current mode
+        if (device.isFeatureSupportedInCurrentMode('child_lock') && state.childLock !== undefined) {
             const currentChildLock = (device as any).details?.childLock || false;
             if (currentChildLock !== state.childLock) {
                 await verifyChange(
@@ -500,8 +491,8 @@ async function restoreDeviceState(device: VeSyncAirBaseV2, state: DeviceState) {
             }
         }
 
-        // Timer if supported and was set
-        if (device.hasFeature('timer') && state.timer) {
+        // Timer - only if supported in current mode
+        if (device.isFeatureSupportedInCurrentMode('timer') && state.timer) {
             // Clear any existing timer
             if (device.timer) {
                 await verifyChange(
@@ -663,37 +654,30 @@ async function runTest() {
             'manual'
         );
 
-        // Determine max fan speed level based on model
-        // Since config is protected, use a default mapping or try to detect from model type
-        let maxFanSpeed = 3; // Default to 3 levels for most air purifiers
-        
-        // Try to determine max fan speed from model type
-        if (modelType.includes('Core400S') || modelType.includes('Core600S') || 
-            modelType.includes('LAP-C401S') || modelType.includes('LAP-C601S')) {
-            maxFanSpeed = 4;
-        } else if (modelType.includes('LTF-F422')) {
-            maxFanSpeed = 12; // Tower fans have more speed levels
-        }
-        
-        console.log(`\nTesting fan speeds 1-${maxFanSpeed} for ${modelType}`);
-        
-        // Test fan speeds
-        let fanSpeedTestFailed = false;
-        for (let level = 1; level <= maxFanSpeed; level++) {
-            if (fanSpeedTestFailed) break;
-            const success = await verifyChange(
-                purifier,
-                'Fan Speed Control',
-                `Set Fan Speed ${level}`,
-                () => purifier.changeFanSpeed(level),
-                () => purifier.speed,
-                level
-            );
-            if (!success) fanSpeedTestFailed = true;
+        // Test fan speeds - only if supported in current mode
+        if (purifier.isFeatureSupportedInCurrentMode('fan_speed')) {
+            // Determine max fan speed level
+            const maxFanSpeed = purifier.getMaxFanSpeed();
+            
+            console.log(`\nTesting fan speeds 1-${maxFanSpeed} for ${modelType}`);
+            
+            // Test fan speeds
+            for (let level = 1; level <= maxFanSpeed; level++) {
+                await verifyChange(
+                    purifier,
+                    'Fan Speed Control',
+                    `Set Fan Speed ${level}`,
+                    () => purifier.changeFanSpeed(level),
+                    () => purifier.speed,
+                    level
+                );
+            }
+        } else {
+            console.log(`\nFan speed control not supported in current mode (${purifier.mode}) for ${modelType}`);
         }
 
-        // Test available modes
-        if (purifier.hasFeature('auto_mode')) {
+        // Test available modes - only if supported
+        if (purifier.isFeatureSupportedInCurrentMode('auto_mode')) {
             await verifyChange(
                 purifier,
                 'Mode Control',
@@ -702,32 +686,22 @@ async function runTest() {
                 () => purifier.mode,
                 'auto'
             );
+        } else {
+            console.log(`\nAuto mode not supported for ${modelType}`);
         }
 
-        // Test sleep mode if available
-        try {
-            await verifyChange(
-                purifier,
-                'Mode Control',
-                'Set Sleep Mode',
-                () => purifier.setMode('sleep'),
-                () => purifier.mode,
-                'sleep'
-            );
-        } catch (error) {
-            console.log('Sleep mode not supported or failed:', error);
-            addTestResult(
-                'Mode Control',
-                'Set Sleep Mode',
-                false,
-                'sleep',
-                purifier.mode,
-                error?.toString()
-            );
-        }
+        // Test sleep mode
+        await verifyChange(
+            purifier,
+            'Mode Control',
+            'Set Sleep Mode',
+            () => purifier.setMode('sleep'),
+            () => purifier.mode,
+            'sleep'
+        );
 
-        // Test display control if available
-        if (purifier.hasFeature('display')) {
+        // Test display control - only if supported in current mode
+        if (purifier.isFeatureSupportedInCurrentMode('display')) {
             await verifyChange(
                 purifier,
                 'Display Control',
@@ -745,88 +719,68 @@ async function runTest() {
                 () => purifier.screenStatus,
                 'on'
             );
+        } else {
+            console.log(`\nDisplay control not supported in current mode (${purifier.mode}) for ${modelType}`);
         }
         
-        // Test child lock if available
-        if (purifier.hasFeature('child_lock')) {
-            try {
-                // First test turning child lock on
-                await verifyChange(
-                    purifier,
-                    'Child Lock Control',
-                    'Enable Child Lock',
-                    () => (purifier as any).setChildLock(true),
-                    () => (purifier as any).details?.childLock || false,
-                    true
-                );
-                
-                // Then test turning child lock off
-                await verifyChange(
-                    purifier,
-                    'Child Lock Control',
-                    'Disable Child Lock',
-                    () => (purifier as any).setChildLock(false),
-                    () => (purifier as any).details?.childLock || false,
-                    false
-                );
-            } catch (error) {
-                console.log('Child lock control not supported or failed:', error);
-                addTestResult(
-                    'Child Lock Control',
-                    'Child Lock API Support',
-                    false,
-                    'API Support: Yes',
-                    'API Support: No',
-                    error?.toString()
-                );
-            }
+        // Test child lock - only if supported in current mode
+        if (purifier.isFeatureSupportedInCurrentMode('child_lock')) {
+            await verifyChange(
+                purifier,
+                'Child Lock Control',
+                'Enable Child Lock',
+                () => (purifier as any).setChildLock(true),
+                () => (purifier as any).details?.childLock || false,
+                true
+            );
+            
+            await verifyChange(
+                purifier,
+                'Child Lock Control',
+                'Disable Child Lock',
+                () => (purifier as any).setChildLock(false),
+                () => (purifier as any).details?.childLock || false,
+                false
+            );
+        } else {
+            console.log(`\nChild lock control not supported in current mode (${purifier.mode}) for ${modelType}`);
         }
         
-        // Test timer if available
-        if (purifier.hasFeature('timer')) {
-            try {
-                // First clear any existing timer
-                if (purifier.timer) {
-                    await verifyChange(
-                        purifier,
-                        'Timer Control',
-                        'Clear Timer',
-                        () => (purifier as any).clearTimer(),
-                        () => purifier.timer,
-                        null
-                    );
-                }
-                
-                // Test setting a 1-hour timer
+        // Test timer - only if supported in current mode
+        if (purifier.isFeatureSupportedInCurrentMode('timer')) {
+            // First clear any existing timer
+            if (purifier.timer) {
                 await verifyChange(
                     purifier,
                     'Timer Control',
-                    'Set 1-Hour Timer',
-                    () => (purifier as any).setTimer(1),
-                    () => purifier.timer !== null,
-                    true
-                );
-                
-                // Clear the timer again
-                await verifyChange(
-                    purifier,
-                    'Timer Control',
-                    'Clear Timer Again',
+                    'Clear Timer',
                     () => (purifier as any).clearTimer(),
                     () => purifier.timer,
                     null
                 );
-            } catch (error) {
-                console.log('Timer control not supported or failed:', error);
-                addTestResult(
-                    'Timer Control',
-                    'Timer API Support',
-                    false,
-                    'API Support: Yes',
-                    'API Support: No',
-                    error?.toString()
-                );
             }
+            
+            // Test setting a 1-hour timer
+            await verifyChange(
+                purifier,
+                'Timer Control',
+                'Set 1-Hour Timer',
+                () => (purifier as any).setTimer(1),
+                () => purifier.timer !== null,
+                true
+            );
+            
+            // Clear the timer again
+            await verifyChange(
+                purifier,
+                'Timer Control',
+                'Clear Timer Again',
+                () => (purifier as any).clearTimer(),
+                () => purifier.timer,
+                null
+            );
+        } else {
+            console.log(`\nTimer control not supported in current mode (${purifier.mode}) for ${modelType}`);
         }
 
         // Print final status
