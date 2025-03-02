@@ -1,5 +1,6 @@
 import { VeSyncAirBypass } from './airBypass';
 import { VeSyncAirBaseV2 } from './airBaseV2';
+import { VeSyncAir131 } from './air131';
 import { VeSyncTowerFan } from './towerFan';
 import { VeSyncHumidifier } from './humidifier';
 import { VeSyncWarmHumidifier } from './warmHumidifier';
@@ -13,6 +14,7 @@ import { VeSync } from '../vesync';
 // Re-export all classes
 export { VeSyncAirBypass } from './airBypass';
 export { VeSyncAirBaseV2 } from './airBaseV2';
+export { VeSyncAir131 } from './air131';
 export { VeSyncTowerFan } from './towerFan';
 export { VeSyncHumidifier } from './humidifier';
 export { VeSyncWarmHumidifier } from './warmHumidifier';
@@ -102,6 +104,6 @@ export const fanModules: Record<string, new (details: Record<string, any>, manag
     'LEH-S601S-WUSR': VeSyncSuperior6000S,
     
     // LV Series
-    'LV-PUR131S': VeSyncAirBypass,
-    'LV-RH131S': VeSyncAirBypass
+    'LV-PUR131S': VeSyncAir131,
+    'LV-RH131S': VeSyncAir131
 };

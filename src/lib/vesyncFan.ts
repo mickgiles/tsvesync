@@ -8,7 +8,7 @@ import { logger } from './logger';
 
 interface FanConfig {
     [key: string]: {
-        module: 'VeSyncAirBypass' | 'VeSyncHumidifier' | 'VeSyncWarmHumidifier' | 'VeSyncTowerFan' | 'VeSyncAirBaseV2' | 'VeSyncSuperior6000S' | 'VeSyncHumid1000S' | 'VeSyncHumid200S';
+        module: 'VeSyncAirBypass' | 'VeSyncHumidifier' | 'VeSyncWarmHumidifier' | 'VeSyncTowerFan' | 'VeSyncAirBaseV2' | 'VeSyncSuperior6000S' | 'VeSyncHumid1000S' | 'VeSyncHumid200S' | 'VeSyncAir131';
         features: string[];
         levels?: number[];
     };
@@ -304,12 +304,12 @@ export const fanConfig: FanConfig = {
     
     // LV Series
     'LV-PUR131S': {
-        module: 'VeSyncAirBypass',
+        module: 'VeSyncAir131',
         features: ['air_quality', 'display', 'child_lock', 'night_light', 'timer', 'fan_speed'],
         levels: [1, 2, 3]
     },
     'LV-RH131S': {
-        module: 'VeSyncAirBypass',
+        module: 'VeSyncAir131',
         features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed'],
         levels: [1, 2, 3]
     }
@@ -336,7 +336,7 @@ export abstract class VeSyncFan extends VeSyncBaseDevice {
     protected speed_dict: Record<string, any> = {};
     protected _timer: number | { duration: number; action: string } | null = null;
     protected config: {
-        module: 'VeSyncAirBypass' | 'VeSyncHumidifier' | 'VeSyncWarmHumidifier' | 'VeSyncTowerFan' | 'VeSyncAirBaseV2' | 'VeSyncSuperior6000S' | 'VeSyncHumid1000S' | 'VeSyncHumid200S';
+        module: 'VeSyncAirBypass' | 'VeSyncHumidifier' | 'VeSyncWarmHumidifier' | 'VeSyncTowerFan' | 'VeSyncAirBaseV2' | 'VeSyncSuperior6000S' | 'VeSyncHumid1000S' | 'VeSyncHumid200S' | 'VeSyncAir131';
         features: string[];
         levels?: number[];
     };
