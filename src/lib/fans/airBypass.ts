@@ -148,11 +148,11 @@ export class VeSyncAirBypass extends VeSyncFan {
      * Change fan speed
      */
     async changeFanSpeed(speed: number): Promise<boolean> {
-        // const speeds = this.config.levels ?? [];
-        // if (!speeds.includes(speed)) {
-        //     logger.error(`Invalid speed: ${speed}. Must be one of: ${speeds.join(', ')} for device: ${this.deviceName}`);
-        //     return false;
-        // }
+        const speeds = this.config.levels ?? [];
+        if (!speeds.includes(speed)) {
+            logger.error(`Invalid speed: ${speed}. Must be one of: ${speeds.join(', ')} for device: ${this.deviceName}`);
+            return false;
+        }
 
         logger.info(`Changing fan speed to ${speed} for device: ${this.deviceName}`);
 
@@ -346,6 +346,12 @@ export class VeSyncAirBypass extends VeSyncFan {
             throw new Error(error);
         }
 
+        // Check if device is on - timer can only be set when device is on
+        if (this.deviceStatus !== 'on') {
+            logger.debug(`Cannot set timer when device is off: ${this.deviceName}`);
+            return false;
+        }
+
         logger.debug(`Setting timer to ${hours} hours for device: ${this.deviceName}`);
 
         const [response, status] = await this.callApi(
@@ -500,6 +506,12 @@ export class VeSyncAirBypass extends VeSyncFan {
      * Set auto mode
      */
     async autoMode(): Promise<boolean> {
+        // Check if auto mode is supported
+        if (!this.hasFeature('auto_mode')) {
+            logger.debug(`Auto mode not supported for device: ${this.deviceName}`);
+            return false;
+        }
+        
         logger.debug(`Setting auto mode for device: ${this.deviceName}`);
         const success = await this.setMode('auto');
         if (!success) {
@@ -554,5 +566,12 @@ export class VeSyncAirBypass extends VeSyncFan {
             logger.error(`Failed to turn on display for device: ${this.deviceName}`);
         }
         return success;
+    }
+
+    /**
+     * Get night light state
+     */
+    get nightLight(): string {
+        return this.details.night_light || 'off';
     }
 }

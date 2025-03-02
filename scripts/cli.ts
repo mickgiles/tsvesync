@@ -10,7 +10,6 @@ import * as dotenv from 'dotenv';
 import { VeSync } from '../src/lib/vesync';
 import { VeSyncBaseDevice } from '../src/lib/vesyncBaseDevice';
 import { VeSyncFan } from '../src/lib/vesyncFan';
-import { logger } from '../src/lib/logger';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -240,8 +239,9 @@ async function selectAndControlDevice() {
     value: index
   }));
   
-  // Add back option
+  // Add back and quit options
   deviceChoices.push({ name: 'Back to main menu', value: -1 });
+  deviceChoices.push({ name: 'Quit', value: -2 });
   
   // Prompt for device selection
   const { deviceIndex } = await inquirer.prompt([
@@ -255,6 +255,9 @@ async function selectAndControlDevice() {
   
   if (deviceIndex === -1) {
     return;
+  } else if (deviceIndex === -2) {
+    console.log(`\n${colors.fg.green}Goodbye!${colors.reset}`);
+    process.exit(0);
   }
   
   const selectedDevice = manager.devices[deviceIndex];
@@ -278,8 +281,9 @@ async function controlDevice(device: VeSyncBaseDevice) {
   // Get actions based on device category
   const actions = getDeviceActions(device, deviceCategory);
   
-  // Add back option
+  // Add back and quit options
   actions.push({ name: 'Back to device selection', value: 'back' });
+  actions.push({ name: 'Quit', value: 'quit' });
   
   // Prompt for action
   const { action } = await inquirer.prompt([
@@ -293,6 +297,9 @@ async function controlDevice(device: VeSyncBaseDevice) {
   
   if (action === 'back') {
     return;
+  } else if (action === 'quit') {
+    console.log(`\n${colors.fg.green}Goodbye!${colors.reset}`);
+    process.exit(0);
   }
   
   // Execute action
@@ -592,7 +599,13 @@ function displayDeviceDetails(device: VeSyncBaseDevice, category: string) {
  */
 async function handleSetMode(device: VeSyncFan) {
   // Get available modes
-  const modes = ['manual', 'auto', 'sleep'];
+  const modeChoices = [
+    { name: 'Manual', value: 'manual' },
+    { name: 'Auto', value: 'auto' },
+    { name: 'Sleep', value: 'sleep' },
+    { name: 'Back', value: 'back' },
+    { name: 'Quit', value: 'quit' }
+  ];
   
   // Prompt for mode
   const { mode } = await inquirer.prompt([
@@ -600,9 +613,17 @@ async function handleSetMode(device: VeSyncFan) {
       type: 'list',
       name: 'mode',
       message: 'Select a mode:',
-      choices: modes
+      choices: modeChoices
     }
   ]);
+  
+  // Handle back or quit
+  if (mode === 'back') {
+    return;
+  } else if (mode === 'quit') {
+    console.log(`\n${colors.fg.green}Goodbye!${colors.reset}`);
+    process.exit(0);
+  }
   
   // Set mode
   await device.setMode(mode);
@@ -622,6 +643,10 @@ async function handleChangeFanSpeed(device: VeSyncFan) {
     value: i + 1
   }));
   
+  // Add back and quit options
+  speedChoices.push({ name: 'Back', value: -1 });
+  speedChoices.push({ name: 'Quit', value: -2 });
+  
   // Prompt for speed
   const { speed } = await inquirer.prompt([
     {
@@ -631,6 +656,14 @@ async function handleChangeFanSpeed(device: VeSyncFan) {
       choices: speedChoices
     }
   ]);
+  
+  // Handle back or quit
+  if (speed === -1) {
+    return;
+  } else if (speed === -2) {
+    console.log(`\n${colors.fg.green}Goodbye!${colors.reset}`);
+    process.exit(0);
+  }
   
   // Set fan speed
   await device.changeFanSpeed(speed);
@@ -648,16 +681,29 @@ async function handleSetDisplay(device: VeSyncFan) {
       name: 'state',
       message: 'Select display state:',
       choices: [
-        { name: 'On', value: true },
-        { name: 'Off', value: false }
+        { name: 'On', value: 'on' },
+        { name: 'Off', value: 'off' },
+        { name: 'Back', value: 'back' },
+        { name: 'Quit', value: 'quit' }
       ]
     }
   ]);
   
+  // Handle back or quit
+  if (state === 'back') {
+    return;
+  } else if (state === 'quit') {
+    console.log(`\n${colors.fg.green}Goodbye!${colors.reset}`);
+    process.exit(0);
+  }
+  
+  // Convert string to boolean
+  const displayState = state === 'on';
+  
   // Set display
   if (typeof (device as any).setDisplay === 'function') {
-    await (device as any).setDisplay(state);
-    console.log(`${colors.fg.green}Display set to ${state ? 'on' : 'off'}.${colors.reset}`);
+    await (device as any).setDisplay(displayState);
+    console.log(`${colors.fg.green}Display set to ${displayState ? 'on' : 'off'}.${colors.reset}`);
   } else {
     console.log(`${colors.fg.red}Display control not supported for this device.${colors.reset}`);
   }
@@ -674,16 +720,29 @@ async function handleSetChildLock(device: VeSyncFan) {
       name: 'state',
       message: 'Select child lock state:',
       choices: [
-        { name: 'On', value: true },
-        { name: 'Off', value: false }
+        { name: 'On', value: 'on' },
+        { name: 'Off', value: 'off' },
+        { name: 'Back', value: 'back' },
+        { name: 'Quit', value: 'quit' }
       ]
     }
   ]);
   
+  // Handle back or quit
+  if (state === 'back') {
+    return;
+  } else if (state === 'quit') {
+    console.log(`\n${colors.fg.green}Goodbye!${colors.reset}`);
+    process.exit(0);
+  }
+  
+  // Convert string to boolean
+  const childLockState = state === 'on';
+  
   // Set child lock
   if (typeof (device as any).setChildLock === 'function') {
-    await (device as any).setChildLock(state);
-    console.log(`${colors.fg.green}Child lock set to ${state ? 'on' : 'off'}.${colors.reset}`);
+    await (device as any).setChildLock(childLockState);
+    console.log(`${colors.fg.green}Child lock set to ${childLockState ? 'on' : 'off'}.${colors.reset}`);
   } else {
     console.log(`${colors.fg.red}Child lock not supported for this device.${colors.reset}`);
   }
@@ -693,6 +752,28 @@ async function handleSetChildLock(device: VeSyncFan) {
  * Handle set timer action
  */
 async function handleSetTimer(device: VeSyncFan) {
+  // Prompt for timer action
+  const { action } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'action',
+      message: 'Timer options:',
+      choices: [
+        { name: 'Set Timer', value: 'set' },
+        { name: 'Back', value: 'back' },
+        { name: 'Quit', value: 'quit' }
+      ]
+    }
+  ]);
+  
+  // Handle back or quit
+  if (action === 'back') {
+    return;
+  } else if (action === 'quit') {
+    console.log(`\n${colors.fg.green}Goodbye!${colors.reset}`);
+    process.exit(0);
+  }
+  
   // Prompt for timer hours
   const { hours } = await inquirer.prompt([
     {

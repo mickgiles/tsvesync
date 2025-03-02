@@ -57,7 +57,8 @@ export class VeSyncAir131 extends VeSyncFan {
                 filterLife: response.result?.result?.filterLife || 0,
                 screenStatus: response.result?.result?.display ? 'on' : 'off',
                 childLock: response.result?.result?.childLock || false,
-                airQuality: response.result?.result?.airQuality || 0
+                airQuality: response.result?.result?.airQuality || 0,
+                active_time: response.result?.result?.activeTime || 0
             };
             return true;
         }
@@ -482,5 +483,51 @@ export class VeSyncAir131 extends VeSyncFan {
             logger.error(`Failed to turn on display for device: ${this.deviceName}`);
         }
         return success;
+    }
+
+    /**
+     * Get active time in minutes
+     */
+    get activeTime(): number {
+        return this.details.active_time || 0;
+    }
+
+    /**
+     * Display device info
+     */
+    override display(): void {
+        super.display();
+        const info = [
+            ['Mode: ', this.mode],
+            ['Speed: ', this.speed],
+            ['Filter Life: ', this.filterLife, '%'],
+            ['Screen Status: ', this.screenStatus],
+            ['Child Lock: ', this.childLock ? 'Enabled' : 'Disabled'],
+            ['Air Quality: ', this.airQuality],
+            ['Active Time: ', this.activeTime, 'minutes']
+        ];
+
+        for (const [key, value, unit = ''] of info) {
+            logger.info(`${key.toString().padEnd(30, '.')} ${value}${unit}`);
+        }
+    }
+
+    /**
+     * Return JSON details for device
+     */
+    override displayJSON(): string {
+        const baseInfo = JSON.parse(super.displayJSON());
+        const details: Record<string, string> = {
+            ...baseInfo,
+            'Mode': this.mode,
+            'Speed': this.speed.toString(),
+            'Filter Life': this.filterLife.toString(),
+            'Screen Status': this.screenStatus,
+            'Child Lock': this.childLock ? 'Enabled' : 'Disabled',
+            'Air Quality': this.airQuality,
+            'Active Time': this.activeTime.toString()
+        };
+
+        return JSON.stringify(details, null, 4);
     }
 }

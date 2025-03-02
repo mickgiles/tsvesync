@@ -73,11 +73,11 @@ export const fanModules: Record<string, new (details: Record<string, any>, manag
     'LTF-F422S-WUS': VeSyncTowerFan,
     
     // Classic Series
-    'Classic300S': VeSyncHumidifier,
+    'Classic300S': VeSyncHumid200300S,
     'Classic200S': VeSyncHumid200S,
     
     // Dual Series
-    'Dual200S': VeSyncHumidifier,
+    'Dual200S': VeSyncHumid200300S,
     
     // LUH Series
     'LUH-A601S-WUSB': VeSyncHumid200300S,
