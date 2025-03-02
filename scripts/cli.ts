@@ -637,10 +637,27 @@ async function handleChangeFanSpeed(device: VeSyncFan) {
   // Get max fan speed
   const maxSpeed = device.getMaxFanSpeed ? device.getMaxFanSpeed() : 3;
   
-  // Create speed choices
-  const speedChoices = Array.from({ length: maxSpeed }, (_, i) => ({
-    name: `Speed ${i + 1}`,
-    value: i + 1
+  // For Core air purifiers, we know they support specific levels
+  let supportedLevels: number[] = [];
+  
+  // Check device type to determine supported levels
+  if (device.deviceType.includes('Core') || 
+      device.deviceType.includes('LV-PUR131S') || 
+      device.deviceType.includes('LV-RH131S')) {
+    // All Core air devices and LV series support levels 1, 2, 3
+    supportedLevels = [1, 2, 3];
+  } else if (device.deviceType.includes('LAP-C')) {
+    // LAP-C series support levels 1, 2, 3, 4
+    supportedLevels = [1, 2, 3, 4];
+  } else {
+    // Default: create array from 1 to maxSpeed
+    supportedLevels = Array.from({ length: maxSpeed }, (_, i) => i + 1);
+  }
+  
+  // Create speed choices from supported levels
+  const speedChoices = supportedLevels.map(level => ({
+    name: `Speed ${level}`,
+    value: level
   }));
   
   // Add back and quit options
