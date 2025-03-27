@@ -68,6 +68,36 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
             head
         );
 
+        // Check if this is a Vital series device (LAP-V102S or LAP-V201S)
+        const isVitalSeries = this.deviceType.includes('LAP-V102S') || this.deviceType.includes('LAP-V201S');
+        
+        // First check the outer response
+        if (!response || status !== 200) {
+            logger.debug(`Error getting purifier details for ${this.deviceName}: Invalid response`);
+            this.connectionStatus = 'offline';
+            return false;
+        }
+
+        // For Vital series, we need special handling as they return inner code -1 for details
+        // but still provide valid status information
+        if (isVitalSeries && response.result) {
+            // Check if we have a valid getPurifierStatus response
+            if (response.code === 0 && response.result?.result) {
+                const statusResponse = response.result.result;
+                
+                // If we have valid status data, use it regardless of inner result code
+                logger.debug(`Using status data for Vital series device: ${this.deviceName}`);
+                this.buildPurifierDict(statusResponse);
+                if (statusResponse.configuration) {
+                    this.buildConfigDict(statusResponse.configuration);
+                }
+                // Keep device online since we have valid status
+                this.connectionStatus = 'online';
+                return true;
+            }
+        }
+        
+        // Standard processing for non-Vital devices or when no status data is available
         if (!this.checkResponse([response, status], 'getDetails') || !response?.result) {
             logger.debug('Error getting purifier details');
             this.connectionStatus = 'offline';
