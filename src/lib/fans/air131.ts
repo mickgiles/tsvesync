@@ -24,7 +24,7 @@ export class VeSyncAir131 extends VeSyncFan {
         logger.debug(`Getting details for device: ${this.deviceName}`);
 
         const [response, status] = await this.callApi(
-            '/131airPurifier/v1/device/devicedetail',
+            '/131airPurifier/v1/device/deviceDetail',
             'post',
             {
                 acceptLanguage: 'en',
@@ -36,6 +36,7 @@ export class VeSyncAir131 extends VeSyncFan {
                 phoneOS: 'Android',
                 timeZone: this.manager.timeZone!,
                 token: this.manager.token!,
+                traceId: new Date().getTime().toString(),
                 uuid: this.uuid
             },
             {
@@ -139,10 +140,22 @@ export class VeSyncAir131 extends VeSyncFan {
     async changeFanSpeed(speed: number): Promise<boolean> {
         logger.info(`Changing fan speed to ${speed} for device: ${this.deviceName}`);
 
+        // Get fresh device details first to ensure we have the current mode
+        await this.getDetails();
+
         // Check if device is in manual mode
         if (this.details.mode !== 'manual') {
-            logger.debug(`${this.deviceName} not in manual mode, cannot change speed`);
-            return false;
+            logger.debug(`${this.deviceName} not in manual mode (current mode: ${this.details.mode}), switching to manual mode first`);
+            
+            // Switch to manual mode first
+            const modeSuccess = await this.manualMode();
+            if (!modeSuccess) {
+                logger.error(`Failed to switch to manual mode for device: ${this.deviceName}`);
+                return false;
+            }
+            
+            // Wait a bit for the mode change to take effect
+            await new Promise(resolve => setTimeout(resolve, 1000));
         }
 
         // Validate speed for LV series (1-3)
