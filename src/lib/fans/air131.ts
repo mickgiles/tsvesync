@@ -63,6 +63,14 @@ export class VeSyncAir131 extends VeSyncFan {
             };
             return true;
         }
+        
+        // Log additional details on failure
+        if (!success && response?.code) {
+            logger.error(`${this.deviceName}: getDetails failed with code ${response.code} - ${response.msg || 'Unknown error'}`);
+            if (response.traceId) {
+                logger.error(`${this.deviceName}: TraceId for debugging: ${response.traceId}`);
+            }
+        }
         return false;
     }
 
@@ -70,6 +78,12 @@ export class VeSyncAir131 extends VeSyncFan {
      * Turn device on
      */
     async turnOn(): Promise<boolean> {
+        // Check if device is already on
+        if (this.deviceStatus === 'on') {
+            logger.debug(`Device ${this.deviceName} is already on`);
+            return false;  // Return false to match pyvesync behavior
+        }
+
         logger.info(`Turning on device: ${this.deviceName}`);
 
         const [response, status] = await this.callApi(
@@ -94,7 +108,10 @@ export class VeSyncAir131 extends VeSyncFan {
         );
 
         const success = this.checkResponse([response, status], 'turnOn');
-        if (!success) {
+        if (success) {
+            // Update device status immediately
+            this.deviceStatus = 'on';
+        } else {
             logger.error(`Failed to turn on device: ${this.deviceName}`);
         }
         return success;
@@ -104,6 +121,12 @@ export class VeSyncAir131 extends VeSyncFan {
      * Turn device off
      */
     async turnOff(): Promise<boolean> {
+        // Check if device is already off
+        if (this.deviceStatus !== 'on') {
+            logger.debug(`Device ${this.deviceName} is already off`);
+            return true;
+        }
+
         logger.info(`Turning off device: ${this.deviceName}`);
 
         const [response, status] = await this.callApi(
@@ -128,7 +151,10 @@ export class VeSyncAir131 extends VeSyncFan {
         );
 
         const success = this.checkResponse([response, status], 'turnOff');
-        if (!success) {
+        if (success) {
+            // Update device status immediately
+            this.deviceStatus = 'off';
+        } else {
             logger.error(`Failed to turn off device: ${this.deviceName}`);
         }
         return success;
@@ -140,22 +166,10 @@ export class VeSyncAir131 extends VeSyncFan {
     async changeFanSpeed(speed: number): Promise<boolean> {
         logger.info(`Changing fan speed to ${speed} for device: ${this.deviceName}`);
 
-        // Get fresh device details first to ensure we have the current mode
-        await this.getDetails();
-
         // Check if device is in manual mode
         if (this.details.mode !== 'manual') {
-            logger.debug(`${this.deviceName} not in manual mode (current mode: ${this.details.mode}), switching to manual mode first`);
-            
-            // Switch to manual mode first
-            const modeSuccess = await this.manualMode();
-            if (!modeSuccess) {
-                logger.error(`Failed to switch to manual mode for device: ${this.deviceName}`);
-                return false;
-            }
-            
-            // Wait a bit for the mode change to take effect
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            logger.error(`${this.deviceName}: Cannot change fan speed - device is in ${this.details.mode} mode, manual mode required`);
+            return false;
         }
 
         // Validate speed for LV series (1-3)
