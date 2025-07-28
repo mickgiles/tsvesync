@@ -1,6 +1,6 @@
 {
   "name": "tsvesync",
-  "version": "1.0.82",
+  "version": "1.0.83",
   "description": "A TypeScript library for interacting with VeSync smart home devices",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -32,7 +32,7 @@
   },
   "homepage": "https://github.com/mickgiles/tsvesync#readme",
   "engines": {
-    "node": ">=14.0.0"
+    "node": "^18.20.4 || ^20.15.1 || ^22"
   },
   "dependencies": {
     "axios": "^1.7.9",
