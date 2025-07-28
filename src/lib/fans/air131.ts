@@ -51,16 +51,21 @@ export class VeSyncAir131 extends VeSyncFan {
 
         const success = this.checkResponse([response, status], 'getDetails');
         if (success && response) {
-            this.deviceStatus = response.result?.result?.deviceStatus === 'on' ? 'on' : 'off';
+            // Check if data is in response.result or directly in response
+            const data = response.result || response;
+            
+            this.deviceStatus = data.deviceStatus === 'on' ? 'on' : 'off';
             this.details = {
-                mode: response.result?.result?.mode || '',
-                speed: response.result?.result?.level || 0,
-                filterLife: response.result?.result?.filterLife || 0,
-                screenStatus: response.result?.result?.display ? 'on' : 'off',
-                childLock: response.result?.result?.childLock || false,
-                airQuality: response.result?.result?.airQuality || 0,
-                active_time: response.result?.result?.activeTime || 0
+                mode: data.mode || 'manual',  // Default to manual if not specified
+                speed: data.level || 0,
+                filterLife: data.filterLife || 0,
+                screenStatus: data.screenStatus || 'off',
+                childLock: data.childLock || false,
+                airQuality: data.airQuality || 'unknown',
+                active_time: data.activeTime || 0
             };
+            
+            logger.debug(`${this.deviceName}: Updated details - mode: ${this.details.mode}, speed: ${this.details.speed}, status: ${this.deviceStatus}`);
             return true;
         }
         
