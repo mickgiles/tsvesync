@@ -116,6 +116,10 @@ export class VeSyncAir131 extends VeSyncFan {
         if (success) {
             // Update device status immediately
             this.deviceStatus = 'on';
+            
+            // Fetch device details to get current speed and other settings
+            logger.debug(`${this.deviceName}: Fetching device details after turning on`);
+            await this.getDetails();
         } else {
             logger.error(`Failed to turn on device: ${this.deviceName}`);
         }
