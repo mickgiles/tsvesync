@@ -21,7 +21,7 @@ export function setApiBaseUrl(url: string): void {
 export const API_RATE_LIMIT = 30;
 export const API_TIMEOUT = 15000;
 
-export const APP_VERSION = '2.8.6';
+export const APP_VERSION = '5.6.53';
 export const PHONE_BRAND = 'SM N9005';
 export const PHONE_OS = 'Android';
 export const USER_TYPE = '1';
