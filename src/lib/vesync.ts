@@ -2,7 +2,7 @@
  * VeSync API Device Library
  */
 
-import { Helpers, API_RATE_LIMIT, DEFAULT_TZ, setApiBaseUrl } from './helpers';
+import { Helpers, API_RATE_LIMIT, DEFAULT_TZ, setApiBaseUrl, setRegionalEndpoint, getApiBaseUrl } from './helpers';
 import { VeSyncBaseDevice } from './vesyncBaseDevice';
 import { fanModules } from './vesyncFanImpl';
 import { outletModules } from './vesyncOutletImpl';
@@ -227,16 +227,7 @@ export class VeSync {
             bulbs: this.bulbs
         };
 
-        // Set custom API URL if provided
-        if (apiUrl) {
-            setApiBaseUrl(apiUrl);
-        }
-
-        // Set custom logger if provided
-        if (customLogger) {
-            setLogger(customLogger);
-        }
-
+        // Set timezone first
         if (typeof timeZone === 'string' && timeZone) {
             const regTest = /[^a-zA-Z/_]/;
             if (regTest.test(timeZone)) {
@@ -248,6 +239,19 @@ export class VeSync {
         } else {
             this.timeZone = DEFAULT_TZ;
             logger.debug('Time zone is not a string');
+        }
+
+        // Set custom API URL if provided, otherwise use regional endpoint
+        if (apiUrl) {
+            setApiBaseUrl(apiUrl);
+        } else {
+            // Automatically set regional endpoint based on timezone
+            setRegionalEndpoint(this.timeZone);
+        }
+
+        // Set custom logger if provided
+        if (customLogger) {
+            setLogger(customLogger);
         }
 
         if (debug) {
@@ -506,13 +510,16 @@ export class VeSync {
      */
     async login(retryAttempts: number = 3, initialDelayMs: number = 1000): Promise<boolean> {
         const body = Helpers.reqBody(this, 'login');
-        logger.debug('Login request:', {
-            url: `${process.env.VESYNC_API_URL}/cloud/v1/user/login`,
-            body
-        });
-
+        
         for (let attempt = 0; attempt < retryAttempts; attempt++) {
             try {
+                logger.debug('Login attempt', {
+                    attempt: attempt + 1,
+                    apiUrl: getApiBaseUrl(),
+                    timeZone: this.timeZone,
+                    appVersion: body.appVersion
+                });
+
                 const [response, status] = await Helpers.callApi(
                     '/cloud/v1/user/login',
                     'post',
@@ -523,11 +530,30 @@ export class VeSync {
 
                 logger.debug('Login response:', { status, response });
 
+                // Handle specific error codes
+                if (response && response.code) {
+                    switch (response.code) {
+                        case -11012022:
+                            logger.error('App version too low error. Current version:', body.appVersion);
+                            logger.error('This typically indicates a regional API compatibility issue.');
+                            break;
+                        case -11003:
+                            logger.error('Authentication failed - check credentials');
+                            break;
+                        case -11001:
+                            logger.error('Invalid request format');
+                            break;
+                        default:
+                            logger.error('API error code:', response.code, 'message:', response.msg);
+                    }
+                }
+
                 if (response?.result?.token) {
                     this.token = response.result.token;
                     this.accountId = response.result.accountID;
                     this.countryCode = response.result.countryCode;
                     this.enabled = true;
+                    logger.debug('Login successful for region:', this.countryCode);
                     return true;
                 }
 
