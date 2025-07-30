@@ -11,10 +11,19 @@ export class VeSyncAir131 extends VeSyncFan {
     protected readonly modes = ['auto', 'manual', 'sleep'] as const;
     protected readonly displayModes = ['on', 'off'] as const;
     protected readonly childLockModes = ['on', 'off'] as const;
+    private lastKnownSpeed: number = 1;
 
     constructor(details: Record<string, any>, manager: VeSync) {
         super(details, manager);
-        logger.debug(`Initialized VeSyncAir131 device: ${this.deviceName}`);
+        
+        // Initialize last known speed from device details if available
+        if (details.speed && details.speed > 0) {
+            this.lastKnownSpeed = details.speed;
+        } else if (details.level && details.level > 0) {
+            this.lastKnownSpeed = details.level;
+        }
+        
+        logger.debug(`Initialized VeSyncAir131 device: ${this.deviceName}, lastKnownSpeed: ${this.lastKnownSpeed}`);
     }
 
     /**
@@ -64,6 +73,11 @@ export class VeSyncAir131 extends VeSyncFan {
                 airQuality: data.airQuality || 'unknown',
                 active_time: data.activeTime || 0
             };
+            
+            // Store last known speed when device is on and has a valid speed
+            if (this.deviceStatus === 'on' && this.details.speed && this.details.speed > 0) {
+                this.lastKnownSpeed = this.details.speed;
+            }
             
             logger.debug(`${this.deviceName}: Updated details - mode: ${this.details.mode}, speed: ${this.details.speed}, status: ${this.deviceStatus}`);
             return true;
@@ -119,7 +133,20 @@ export class VeSyncAir131 extends VeSyncFan {
             
             // Fetch device details to get current speed and other settings
             logger.debug(`${this.deviceName}: Fetching device details after turning on`);
-            await this.getDetails();
+            let detailsSuccess = await this.getDetails();
+            
+            // If getDetails failed or returned 0 speed, retry once after a short delay
+            if (!detailsSuccess || this.details.speed === 0) {
+                logger.debug(`${this.deviceName}: First getDetails attempt failed or returned 0 speed, retrying in 2 seconds...`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                detailsSuccess = await this.getDetails();
+            }
+            
+            // If still no speed, use last known speed
+            if (!detailsSuccess || this.details.speed === 0) {
+                logger.debug(`${this.deviceName}: getDetails still failed or returned 0 speed after retry, using last known speed: ${this.lastKnownSpeed}`);
+                this.details.speed = this.lastKnownSpeed;
+            }
         } else {
             logger.error(`Failed to turn on device: ${this.deviceName}`);
         }
@@ -211,6 +238,7 @@ export class VeSyncAir131 extends VeSyncFan {
         const success = this.checkResponse([response, status], 'changeFanSpeed');
         if (success) {
             this.details.speed = speed;
+            this.lastKnownSpeed = speed;  // Update last known speed
             return true;
         } else {
             logger.error(`Failed to change fan speed to ${speed} for device: ${this.deviceName}`);
