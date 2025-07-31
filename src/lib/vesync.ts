@@ -2,7 +2,7 @@
  * VeSync API Device Library
  */
 
-import { Helpers, API_RATE_LIMIT, DEFAULT_TZ, setApiBaseUrl, setRegionalEndpoint, getApiBaseUrl } from './helpers';
+import { Helpers, API_RATE_LIMIT, DEFAULT_TZ, setApiBaseUrl, getApiBaseUrl } from './helpers';
 import { VeSyncBaseDevice } from './vesyncBaseDevice';
 import { fanModules } from './vesyncFanImpl';
 import { outletModules } from './vesyncOutletImpl';
@@ -180,7 +180,7 @@ export class VeSync {
      * Initialize VeSync Manager
      * @param username - VeSync account username
      * @param password - VeSync account password
-     * @param timeZone - Optional timezone (defaults to America/New_York)
+     * @param timeZone - Optional timezone for device operations (defaults to America/New_York)
      * @param debug - Optional debug mode flag
      * @param redact - Optional redact mode flag
      * @param apiUrl - Optional API base URL override
@@ -241,12 +241,12 @@ export class VeSync {
             logger.debug('Time zone is not a string');
         }
 
-        // Set custom API URL if provided, otherwise use regional endpoint
+        // Set custom API URL if provided, otherwise use default US endpoint
         if (apiUrl) {
             setApiBaseUrl(apiUrl);
         } else {
-            // Automatically set regional endpoint based on timezone
-            setRegionalEndpoint(this.timeZone);
+            // Always use US endpoint
+            setApiBaseUrl('https://smartapi.vesync.com');
         }
 
         // Set custom logger if provided
@@ -535,7 +535,7 @@ export class VeSync {
                     switch (response.code) {
                         case -11012022:
                             logger.error('App version too low error. Current version:', body.appVersion);
-                            logger.error('This typically indicates a regional API compatibility issue.');
+                            logger.error('This typically indicates an API version compatibility issue.');
                             break;
                         case -11003:
                             logger.error('Authentication failed - check credentials');

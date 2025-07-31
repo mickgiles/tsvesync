@@ -7,156 +7,8 @@ import crypto from 'crypto';
 import { VeSync } from './vesync';
 import { logger } from './logger';
 
-// API configuration
+// API configuration - Always use US endpoint
 let _apiBaseUrl = 'https://smartapi.vesync.com';
-
-// Regional API endpoints
-export const REGIONAL_ENDPOINTS = {
-    US: 'https://smartapi.vesync.com',
-    EU: 'https://smartapi.vesync.eu',
-    ASIA: 'https://smartapi.vesync.com.cn'
-} as const;
-
-// Timezone to region mapping for API endpoint detection
-const TIMEZONE_REGION_MAP: Record<string, keyof typeof REGIONAL_ENDPOINTS> = {
-    // European timezones - Western Europe
-    'Europe/Berlin': 'EU',
-    'Europe/London': 'EU',
-    'Europe/Paris': 'EU',
-    'Europe/Rome': 'EU',
-    'Europe/Madrid': 'EU',
-    'Europe/Amsterdam': 'EU',
-    'Europe/Vienna': 'EU',
-    'Europe/Brussels': 'EU',
-    'Europe/Copenhagen': 'EU',
-    'Europe/Dublin': 'EU',
-    'Europe/Helsinki': 'EU',
-    'Europe/Lisbon': 'EU',
-    'Europe/Luxembourg': 'EU',
-    'Europe/Oslo': 'EU',
-    'Europe/Prague': 'EU',
-    'Europe/Stockholm': 'EU',
-    'Europe/Warsaw': 'EU',
-    'Europe/Zurich': 'EU',
-    
-    // European timezones - Eastern Europe
-    'Europe/Athens': 'EU',
-    'Europe/Budapest': 'EU',
-    'Europe/Bucharest': 'EU',
-    'Europe/Sofia': 'EU',
-    'Europe/Kiev': 'EU',
-    'Europe/Riga': 'EU',
-    'Europe/Vilnius': 'EU',
-    'Europe/Tallinn': 'EU',
-    'Europe/Zagreb': 'EU',
-    'Europe/Ljubljana': 'EU',
-    'Europe/Bratislava': 'EU',
-    'Europe/Belgrade': 'EU',
-    'Europe/Sarajevo': 'EU',
-    'Europe/Podgorica': 'EU',
-    'Europe/Skopje': 'EU',
-    'Europe/Tirane': 'EU',
-    
-    // European timezones - Nordic/Baltic
-    'Europe/Reykjavik': 'EU',
-    'Europe/Moscow': 'EU',
-    'Europe/Kaliningrad': 'EU',
-    'Europe/Minsk': 'EU',
-    
-    // European timezones - Other
-    'Europe/Malta': 'EU',
-    'Europe/Monaco': 'EU',
-    'Europe/Vatican': 'EU',
-    'Europe/San_Marino': 'EU',
-    'Europe/Andorra': 'EU',
-    'Europe/Gibraltar': 'EU',
-    'Europe/Isle_of_Man': 'EU',
-    'Europe/Jersey': 'EU',
-    'Europe/Guernsey': 'EU',
-    
-    // Asian timezones - East Asia
-    'Asia/Shanghai': 'ASIA',
-    'Asia/Beijing': 'ASIA',
-    'Asia/Hong_Kong': 'ASIA',
-    'Asia/Tokyo': 'ASIA',
-    'Asia/Seoul': 'ASIA',
-    'Asia/Singapore': 'ASIA',
-    'Asia/Taipei': 'ASIA',
-    'Asia/Macau': 'ASIA',
-    
-    // Asian timezones - Southeast Asia
-    'Asia/Bangkok': 'ASIA',
-    'Asia/Jakarta': 'ASIA',
-    'Asia/Manila': 'ASIA',
-    'Asia/Ho_Chi_Minh': 'ASIA',
-    'Asia/Kuala_Lumpur': 'ASIA',
-    'Asia/Phnom_Penh': 'ASIA',
-    'Asia/Vientiane': 'ASIA',
-    'Asia/Yangon': 'ASIA',
-    'Asia/Brunei': 'ASIA',
-    
-    // Asian timezones - South Asia
-    'Asia/Mumbai': 'ASIA',
-    'Asia/Delhi': 'ASIA',
-    'Asia/Kolkata': 'ASIA',
-    'Asia/Dhaka': 'ASIA',
-    'Asia/Karachi': 'ASIA',
-    'Asia/Colombo': 'ASIA',
-    'Asia/Kathmandu': 'ASIA',
-    'Asia/Thimphu': 'ASIA',
-    
-    // Asian timezones - Central Asia
-    'Asia/Almaty': 'ASIA',
-    'Asia/Bishkek': 'ASIA',
-    'Asia/Dushanbe': 'ASIA',
-    'Asia/Tashkent': 'ASIA',
-    'Asia/Ashgabat': 'ASIA',
-    
-    // Asian timezones - West Asia / Middle East
-    'Asia/Dubai': 'ASIA',
-    'Asia/Riyadh': 'ASIA',
-    'Asia/Tehran': 'ASIA',
-    'Asia/Baghdad': 'ASIA',
-    'Asia/Kuwait': 'ASIA',
-    'Asia/Qatar': 'ASIA',
-    'Asia/Bahrain': 'ASIA',
-    'Asia/Muscat': 'ASIA',
-    'Asia/Baku': 'ASIA',
-    'Asia/Yerevan': 'ASIA',
-    'Asia/Tbilisi': 'ASIA',
-    
-    // Oceania (using ASIA endpoint for now)
-    'Australia/Sydney': 'ASIA',
-    'Australia/Melbourne': 'ASIA',
-    'Australia/Brisbane': 'ASIA',
-    'Australia/Perth': 'ASIA',
-    'Australia/Adelaide': 'ASIA',
-    'Australia/Hobart': 'ASIA',
-    'Australia/Darwin': 'ASIA',
-    'Australia/Canberra': 'ASIA',
-    'Pacific/Auckland': 'ASIA',
-    'Pacific/Wellington': 'ASIA',
-    'Pacific/Fiji': 'ASIA',
-    'Pacific/Honolulu': 'US',
-    
-    // North America (Canada)
-    'America/Toronto': 'US',
-    'America/Montreal': 'US',
-    'America/Vancouver': 'US',
-    'America/Calgary': 'US',
-    'America/Edmonton': 'US',
-    'America/Winnipeg': 'US',
-    'America/Halifax': 'US',
-    'America/St_Johns': 'US',
-    
-    // North America (Mexico)
-    'America/Mexico_City': 'US',
-    'America/Tijuana': 'US',
-    'America/Cancun': 'US',
-    'America/Merida': 'US',
-    'America/Monterrey': 'US'
-    // US and other timezones default to US endpoint
-};
 
 export function getApiBaseUrl(): string {
     return _apiBaseUrl;
@@ -166,24 +18,6 @@ export function setApiBaseUrl(url: string): void {
     _apiBaseUrl = url;
 }
 
-/**
- * Get regional API endpoint based on timezone
- */
-export function getRegionalEndpoint(timeZone: string): string {
-    const region = TIMEZONE_REGION_MAP[timeZone] || 'US';
-    return REGIONAL_ENDPOINTS[region];
-}
-
-/**
- * Set API endpoint based on timezone if not explicitly set
- */
-export function setRegionalEndpoint(timeZone: string): void {
-    const regionalUrl = getRegionalEndpoint(timeZone);
-    if (_apiBaseUrl === REGIONAL_ENDPOINTS.US && regionalUrl !== REGIONAL_ENDPOINTS.US) {
-        logger.debug(`Setting regional API endpoint for ${timeZone}: ${regionalUrl}`);
-        setApiBaseUrl(regionalUrl);
-    }
-}
 
 export const API_RATE_LIMIT = 30;
 export const API_TIMEOUT = 15000;
@@ -375,8 +209,8 @@ export class Helpers {
         try {
             // Ensure API base URL is properly set
             if (!_apiBaseUrl || _apiBaseUrl === 'undefined') {
-                logger.error('API base URL is not properly configured. Setting regional endpoint...');
-                setRegionalEndpoint(manager.timeZone);
+                logger.error('API base URL is not properly configured. Setting to default US endpoint...');
+                setApiBaseUrl('https://smartapi.vesync.com');
             }
             
             const url = _apiBaseUrl + endpoint;

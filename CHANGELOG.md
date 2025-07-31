@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.90] - 2025-07-31
+
+### Removed
+- **Breaking Change**: Removed all regional API endpoint functionality
+- Removed `REGIONAL_ENDPOINTS` constants and `TIMEZONE_REGION_MAP`
+- Removed `getRegionalEndpoint()` and `setRegionalEndpoint()` functions
+- All users now use the US endpoint (`https://smartapi.vesync.com`) only
+- Timezone parameter is kept for backward compatibility but no longer affects API endpoint selection
+
+### Changed
+- Simplified API configuration to always use US endpoint
+- Updated error messages to remove references to regional API issues
+
 ## [1.0.89] - 2025-07-30
 
 ### Fixed
