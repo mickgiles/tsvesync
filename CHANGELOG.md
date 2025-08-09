@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.96] - 2025-08-09
+
+### Changed
+- Version synchronization release to align with homebridge-tsvesync v1.0.96
+- No functional changes in this release
+
 ## [1.0.95] - 2025-08-09
 
 ### Added
