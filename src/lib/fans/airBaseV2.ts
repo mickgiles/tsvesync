@@ -163,9 +163,24 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
         this.speed = devDict.fanSpeedLevel ?? 0;
         this.setSpeedLevel = devDict.manualSpeedLevel ?? 1;
         
+        // Parse filter life with proper fallback handling and logging
+        let filterLife = 0;
+        if (devDict.filterLifePercent !== undefined) {
+            filterLife = devDict.filterLifePercent;
+            logger.debug(`${this.deviceName}: Parsed filter life from filterLifePercent: ${filterLife}%`);
+        } else if (devDict.filter_life !== undefined) {
+            filterLife = devDict.filter_life;
+            logger.debug(`${this.deviceName}: Parsed filter life from filter_life fallback: ${filterLife}%`);
+        } else {
+            logger.debug(`${this.deviceName}: No filter life data found in API response`);
+            if (logger.getLevel && logger.getLevel() !== undefined && logger.getLevel()! <= 0) {
+                logger.debug(`${this.deviceName}: Device dict structure:`, JSON.stringify(devDict, null, 2));
+            }
+        }
+        
         this.details = {
             ...this.details,
-            filter_life: devDict.filterLifePercent ?? 0,
+            filter_life: filterLife,
             child_lock: Boolean(devDict.childLockSwitch ?? 0),
             display: Boolean(devDict.screenState ?? 0),
             light_detection_switch: Boolean(devDict.lightDetectionSwitch ?? 0),

@@ -61,14 +61,36 @@ export class VeSyncAirBypass extends VeSyncFan {
             const result = response?.result?.result;
             if (result) {
                 this.deviceStatus = result.enabled ? 'on' : 'off';
+                
+                // Parse filter life with fallback handling
+                let filterLife = 0;
+                if (result.filterLifePercent !== undefined) {
+                    filterLife = result.filterLifePercent;
+                    logger.debug(`${this.deviceName}: Parsed filter life from filterLifePercent: ${filterLife}%`);
+                } else if (result.filter_life !== undefined) {
+                    filterLife = result.filter_life;
+                    logger.debug(`${this.deviceName}: Parsed filter life from filter_life: ${filterLife}%`);
+                } else {
+                    logger.debug(`${this.deviceName}: No filter life data found in API response`);
+                    if (logger.getLevel && logger.getLevel() !== undefined && logger.getLevel()! <= 0) {
+                        logger.debug(`${this.deviceName}: API response structure:`, JSON.stringify(result, null, 2));
+                    }
+                }
+
                 this.details = {
                     mode: result.mode || '',
                     speed: result.level || 0,
-                    filterLife: result.filter_life || 0,
-                    screenStatus: result.display ? 'on' : 'off',
-                    childLock: result.child_lock || false,
-                    airQuality: result.air_quality || 0
+                    filter_life: filterLife,
+                    screen_status: result.display ? 'on' : 'off',
+                    child_lock: result.child_lock || false,
+                    air_quality: result.air_quality || 0,
+                    air_quality_value: result.air_quality_value || 0
                 };
+
+                // Capture additional air quality properties if available
+                if ('PM1' in result) this.details.pm1 = result.PM1;
+                if ('PM10' in result) this.details.pm10 = result.PM10;
+                if ('AQPercent' in result) this.details.aq_percent = result.AQPercent;
 
                 // Don't overwrite config as it contains features array
                 if (result.configuration) {

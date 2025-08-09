@@ -64,13 +64,38 @@ export class VeSyncAir131 extends VeSyncFan {
             const data = response.result || response;
             
             this.deviceStatus = data.deviceStatus === 'on' ? 'on' : 'off';
+            
+            // Parse filter life with proper object/value handling
+            let filterLife: number | { percent: number } = 0;
+            if (data.filterLife !== undefined) {
+                if (typeof data.filterLife === 'object' && data.filterLife !== null) {
+                    // API returns object like {percent: 85}
+                    filterLife = data.filterLife;
+                    logger.debug(`${this.deviceName}: Parsed filter life from filterLife object: ${JSON.stringify(data.filterLife)}`);
+                } else if (typeof data.filterLife === 'number') {
+                    // API returns direct number
+                    filterLife = data.filterLife;
+                    logger.debug(`${this.deviceName}: Parsed filter life from filterLife number: ${data.filterLife}%`);
+                }
+            } else if (data.filter_life !== undefined) {
+                // Fallback to filter_life field
+                filterLife = data.filter_life;
+                logger.debug(`${this.deviceName}: Parsed filter life from filter_life fallback: ${data.filter_life}%`);
+            } else {
+                logger.debug(`${this.deviceName}: No filter life data found in API response`);
+                if (logger.getLevel && logger.getLevel() !== undefined && logger.getLevel()! <= 0) {
+                    logger.debug(`${this.deviceName}: API response structure:`, JSON.stringify(data, null, 2));
+                }
+            }
+
             this.details = {
                 mode: data.mode || 'manual',  // Default to manual if not specified
                 speed: data.level || 0,
-                filterLife: data.filterLife || 0,
-                screenStatus: data.screenStatus || 'off',
-                childLock: data.childLock || false,
-                airQuality: data.airQuality || 'unknown',
+                filter_life: filterLife,
+                screen_status: data.screenStatus || 'off',
+                child_lock: data.childLock || false,
+                air_quality: data.airQuality || 'unknown',
+                air_quality_value: data.air_quality_value || 0,
                 active_time: data.activeTime || 0
             };
             
