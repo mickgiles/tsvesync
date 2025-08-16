@@ -5,6 +5,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.97] - 2025-08-16
+
+### Added
+- **Enhanced Authentication Flow**: Implemented new two-step VeSync authentication system
+  - Added support for authorize code and bizToken authentication flow
+  - Implemented automatic fallback to legacy authentication for backward compatibility
+  - Added comprehensive cross-region authentication error handling
+- **Regional API Support**: Full support for regional VeSync API endpoints
+  - Added automatic US/EU endpoint detection based on user country codes
+  - Implemented cross-region error handling with automatic region switching
+  - Enhanced regional API routing for improved global user experience
+- **Authentication Test Suite**: Added comprehensive authentication testing framework
+  - Created `test/test-auth.ts` with multiple authentication flow validation
+  - Added support for testing new authentication flow, legacy flow, and EU region detection
+  - Enhanced debugging capabilities for authentication troubleshooting
+
+### Changed
+- **API Version Compatibility**: Updated APP_VERSION to 5.6.60 for latest VeSync API compatibility
+- **Authentication Architecture**: Redesigned authentication system for improved reliability
+  - Enhanced VeSync class constructor with automatic region detection
+  - Improved login method with multi-attempt retry logic and intelligent fallback
+  - Added session-unique APP_ID generation for improved authentication security
+- **Regional Support**: Enhanced regional API handling throughout the library
+  - Added country code to region mapping for automatic endpoint selection
+  - Improved API base URL management with regional endpoint support
+  - Enhanced error handling for cross-region authentication scenarios
+- **Documentation**: Updated README.md with recent authentication and regional improvements
+
+### Fixed
+- **Authentication Reliability**: Resolved authentication issues across different regions
+  - Fixed "app version is too low" errors with updated API version
+  - Improved handling of authentication failures with intelligent retry mechanisms
+  - Enhanced token and account ID validation and error recovery
+- **Cross-Region Support**: Fixed authentication issues for international users
+  - Resolved cross-region authentication errors with automatic region switching
+  - Improved EU region support with proper endpoint routing
+  - Enhanced error code handling for regional API compatibility
+
+### Technical Details
+- Added comprehensive helper functions for new authentication flow in `helpers.ts`
+- Implemented session-unique APP_ID generation for enhanced authentication security
+- Enhanced VeSync class with regional support and improved authentication logic
+- Added extensive logging and debugging capabilities for authentication troubleshooting
+- Improved error handling with specific error code recognition and response
+
 ## [1.0.96] - 2025-08-09
 
 ### Changed
