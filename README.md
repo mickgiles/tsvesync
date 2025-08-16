@@ -2,6 +2,13 @@
 
 A TypeScript library for interacting with VeSync smart home devices. This library provides a modern, type-safe interface for controlling VeSync devices including air purifiers, outlets, and switches.
 
+## 🆕 Recent Updates
+
+- **Enhanced Authentication**: Now supports the new VeSync authentication flow (pyvesync PR #340) with automatic fallback to legacy authentication
+- **Regional API Support**: Automatic detection and routing for US (`smartapi.vesync.com`) and EU (`smartapi.vesync.eu`) endpoints
+- **Improved Error Handling**: Better recovery from API changes and authentication errors
+- **Cross-Region Support**: Handles cross-region authentication errors automatically
+
 ## Features
 
 - Full TypeScript support with type definitions

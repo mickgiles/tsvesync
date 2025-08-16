@@ -2,7 +2,7 @@
  * VeSync API Device Library
  */
 
-import { Helpers, API_RATE_LIMIT, DEFAULT_TZ, setApiBaseUrl, getApiBaseUrl } from './helpers';
+import { Helpers, API_RATE_LIMIT, DEFAULT_TZ, setApiBaseUrl, getApiBaseUrl, generateAppId, getRegionFromCountryCode, setCurrentRegion, getCurrentRegion, REGION_ENDPOINTS } from './helpers';
 import { VeSyncBaseDevice } from './vesyncBaseDevice';
 import { fanModules } from './vesyncFanImpl';
 import { outletModules } from './vesyncOutletImpl';
@@ -159,6 +159,8 @@ export class VeSync {
     private _lastUpdateTs: number | null;
     private _inProcess: boolean;
     private _excludeConfig: ExcludeConfig | null;
+    private _appId: string;
+    private _region: string;
 
     username: string;
     password: string;
@@ -204,6 +206,8 @@ export class VeSync {
         this._lastUpdateTs = null;
         this._inProcess = false;
         this._excludeConfig = excludeConfig || null;
+        this._appId = generateAppId();
+        this._region = 'US';
 
         this.username = username;
         this.password = password;
@@ -245,8 +249,9 @@ export class VeSync {
         if (apiUrl) {
             setApiBaseUrl(apiUrl);
         } else {
-            // Always use US endpoint
+            // Start with US endpoint as default
             setApiBaseUrl('https://smartapi.vesync.com');
+            setCurrentRegion('US');
         }
 
         // Set custom logger if provided
@@ -296,6 +301,30 @@ export class VeSync {
     set energyUpdateInterval(interval: number) {
         if (interval > 0) {
             this._energyUpdateInterval = interval;
+        }
+    }
+
+    /**
+     * Get current App ID
+     */
+    get appId(): string {
+        return this._appId;
+    }
+
+    /**
+     * Get current region
+     */
+    get region(): string {
+        return this._region;
+    }
+
+    /**
+     * Set region and update API endpoint
+     */
+    set region(region: string) {
+        if (region in REGION_ENDPOINTS) {
+            this._region = region;
+            setCurrentRegion(region);
         }
     }
 
@@ -506,75 +535,82 @@ export class VeSync {
     }
 
     /**
-     * Login to VeSync server
+     * Login to VeSync server with new authentication flow and backwards compatibility
      */
     async login(retryAttempts: number = 3, initialDelayMs: number = 1000): Promise<boolean> {
-        const body = Helpers.reqBody(this, 'login');
-        
+        logger.debug('Starting VeSync authentication...', {
+            username: this.username,
+            appId: this._appId,
+            region: this._region
+        });
+
         for (let attempt = 0; attempt < retryAttempts; attempt++) {
             try {
-                logger.debug('Login attempt', {
-                    attempt: attempt + 1,
-                    apiUrl: getApiBaseUrl(),
-                    timeZone: this.timeZone,
-                    appVersion: body.appVersion
-                });
+                logger.debug(`Authentication attempt ${attempt + 1} of ${retryAttempts}`);
 
-                const [response, status] = await Helpers.callApi(
-                    '/cloud/v1/user/login',
-                    'post',
-                    body,
-                    {},
-                    this
-                );
+                // Try new authentication flow first
+                let [success, token, accountId, countryCode] = await Helpers.authNewFlow(this, this._appId, this._region);
 
-                logger.debug('Login response:', { status, response });
+                if (!success) {
+                    // Check if we need to try a different region
+                    if (countryCode === 'cross_region') {
+                        logger.debug('Cross-region error detected, trying EU region...');
+                        this._region = 'EU';
+                        setCurrentRegion('EU');
+                        [success, token, accountId, countryCode] = await Helpers.authNewFlow(this, this._appId, 'EU');
+                    }
 
-                // Handle specific error codes
-                if (response && response.code) {
-                    switch (response.code) {
-                        case -11012022:
-                            logger.error('App version too low error. Current version:', body.appVersion);
-                            logger.error('This typically indicates an API version compatibility issue.');
-                            break;
-                        case -11003:
-                            logger.error('Authentication failed - check credentials');
-                            break;
-                        case -11001:
-                            logger.error('Invalid request format');
-                            break;
-                        default:
-                            logger.error('API error code:', response.code, 'message:', response.msg);
+                    // If new flow still fails, try legacy authentication as fallback
+                    if (!success) {
+                        logger.debug('New authentication flow failed, trying legacy flow...');
+                        [success, token, accountId, countryCode] = await Helpers.authLegacyFlow(this);
                     }
                 }
 
-                if (response?.result?.token) {
-                    this.token = response.result.token;
-                    this.accountId = response.result.accountID;
-                    this.countryCode = response.result.countryCode;
+                if (success && token && accountId) {
+                    this.token = token;
+                    this.accountId = accountId;
+                    this.countryCode = countryCode;
                     this.enabled = true;
-                    logger.debug('Login successful for region:', this.countryCode);
+
+                    // Set region based on country code if we got one
+                    if (countryCode) {
+                        const detectedRegion = getRegionFromCountryCode(countryCode);
+                        if (detectedRegion !== this._region) {
+                            logger.debug(`Updating region from ${this._region} to ${detectedRegion} based on country code: ${countryCode}`);
+                            this._region = detectedRegion;
+                            setCurrentRegion(detectedRegion);
+                        }
+                    }
+
+                    logger.debug('Authentication successful!', {
+                        region: this._region,
+                        countryCode: countryCode,
+                        endpoint: getApiBaseUrl()
+                    });
                     return true;
                 }
 
-                // If we reach here, login failed but didn't throw an error
+                // If we reach here, authentication failed
                 const delay = initialDelayMs * Math.pow(2, attempt);
-                logger.debug(`Login attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
+                logger.debug(`Authentication attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
                 await new Promise(resolve => setTimeout(resolve, delay));
-                
+
             } catch (error) {
+                logger.error(`Authentication attempt ${attempt + 1} error:`, error);
+                
                 if (attempt === retryAttempts - 1) {
-                    logger.error('Login error after all retry attempts:', error);
+                    logger.error('Authentication failed after all retry attempts');
                     return false;
                 }
-                
+
                 const delay = initialDelayMs * Math.pow(2, attempt);
-                logger.debug(`Login attempt ${attempt + 1} failed with error, retrying in ${delay}ms...`, error);
+                logger.debug(`Retrying authentication in ${delay}ms...`);
                 await new Promise(resolve => setTimeout(resolve, delay));
             }
         }
 
-        logger.error('Unable to login with supplied credentials after all retry attempts');
+        logger.error('Unable to authenticate with supplied credentials after all retry attempts');
         return false;
     }
 
