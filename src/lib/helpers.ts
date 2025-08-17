@@ -54,6 +54,7 @@ export const API_TIMEOUT = 15000;
 export const APP_VERSION = '5.6.60';
 export const PHONE_BRAND = 'SM N9005';
 export const PHONE_OS = 'Android';
+export const CLIENT_INFO = 'SM N9005';
 export const USER_TYPE = '1';
 export const DEFAULT_TZ = 'America/New_York';
 export const DEFAULT_REGION = 'US';
@@ -79,6 +80,16 @@ export function generateAppId(): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let result = '';
     for (let i = 0; i < 8; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
+
+// Generate unique terminal ID for authentication
+export function generateTerminalId(): string {
+    const chars = 'abcdef0123456789';
+    let result = '';
+    for (let i = 0; i < 16; i++) {
         result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return result;
@@ -227,38 +238,52 @@ export class Helpers {
     /**
      * Build request body for initial authentication step
      */
-    static reqBodyAuthStep1(manager: VeSync, appId: string): Record<string, any> {
+    static reqBodyAuthStep1(manager: VeSync, appId: string, terminalId: string): Record<string, any> {
         return {
             'email': manager.username,
+            'method': 'authByPWDOrOTM',
             'password': this.hashPassword(manager.password),
-            'timeZone': manager.timeZone,
             'acceptLanguage': 'en',
-            'appVersion': APP_VERSION,
-            'phoneBrand': PHONE_BRAND,
-            'phoneOS': PHONE_OS,
-            'traceId': Date.now().toString(),
-            'authProtocolType': 'pwd',
-            'clientType': 'android',
-            'sourceAppID': 'vesync_android',
+            'accountID': '',
+            'authProtocolType': 'generic',
+            'clientInfo': CLIENT_INFO,
+            'clientType': 'vesyncApp',
+            'clientVersion': CLIENT_VERSION,
+            'debugMode': false,
+            'osInfo': PHONE_OS,
+            'terminalId': terminalId,
+            'timeZone': manager.timeZone || DEFAULT_TZ,
+            'token': '',
+            'userCountryCode': 'US',
             'appID': appId,
-            'clientVersion': CLIENT_VERSION
+            'sourceAppID': appId,
+            'traceId': `APP${appId}${Math.floor(Date.now() / 1000)}`
         };
     }
 
     /**
      * Build request body for second authentication step (login with authorize code)
      */
-    static reqBodyAuthStep2(authorizeCode: string, bizToken: string, appId: string, userCountryCode?: string): Record<string, any> {
+    static reqBodyAuthStep2(authorizeCode: string, bizToken: string | null, appId: string, terminalId: string, userCountryCode?: string): Record<string, any> {
         const body: Record<string, any> = {
+            'method': 'loginByAuthorizeCode4Vesync',
             'authorizeCode': authorizeCode,
-            'bizToken': bizToken,
-            'appID': appId,
+            'acceptLanguage': 'en',
+            'clientInfo': CLIENT_INFO,
+            'clientType': 'vesyncApp',
             'clientVersion': CLIENT_VERSION,
-            'acceptLanguage': 'en'
+            'debugMode': false,
+            'emailSubscriptions': false,
+            'osInfo': PHONE_OS,
+            'terminalId': terminalId,
+            'timeZone': DEFAULT_TZ,
+            'userCountryCode': userCountryCode || 'US',
+            'traceId': `APP${appId}${Math.floor(Date.now() / 1000)}`
         };
 
-        if (userCountryCode) {
-            body.userCountryCode = userCountryCode;
+        // Only include bizToken if it's not null
+        if (bizToken) {
+            body.bizToken = bizToken;
         }
 
         return body;
@@ -470,8 +495,11 @@ export class Helpers {
      */
     static async authNewFlow(manager: VeSync, appId: string, region: string = 'US'): Promise<[boolean, string | null, string | null, string | null]> {
         try {
+            // Generate terminal ID to be used in both steps
+            const terminalId = generateTerminalId();
+            
             // Step 1: Get authorization code
-            const step1Body = this.reqBodyAuthStep1(manager, appId);
+            const step1Body = this.reqBodyAuthStep1(manager, appId, terminalId);
             const step1Headers = this.reqHeaderAuth();
             
             // Set the correct regional endpoint
@@ -516,8 +544,8 @@ export class Helpers {
 
             const { authorizeCode, bizToken, userCountryCode } = authResponse.result || {};
             
-            if (!authorizeCode || !bizToken) {
-                logger.error('Missing required fields in step 1 response:', authResponse.result);
+            if (!authorizeCode) {
+                logger.error('Missing authorization code in step 1 response:', authResponse.result);
                 setApiBaseUrl(originalUrl); // Restore original URL
                 return [false, null, null, null];
             }
@@ -525,7 +553,7 @@ export class Helpers {
             logger.debug('Step 1 successful, got authorization code');
 
             // Step 2: Login with authorization code
-            const step2Body = this.reqBodyAuthStep2(authorizeCode, bizToken, appId, userCountryCode);
+            const step2Body = this.reqBodyAuthStep2(authorizeCode, bizToken, appId, terminalId, userCountryCode);
             
             logger.debug('Step 2: Logging in with authorization code...');
 
