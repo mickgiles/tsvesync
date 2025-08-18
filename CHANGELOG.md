@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.99] - 2025-08-18
+
+### Fixed
+- **Cross-Region Authentication**: Enhanced authentication flow with automatic cross-region retry logic (matches pyvesync PR #340)
+  - Added cross-region error handling in `authNewFlow()` method with automatic retry using region change tokens
+  - Improved authentication reliability for international users experiencing cross-region errors
+  - Enhanced Step 2 authentication with `regionChange` parameter support for seamless region switching
+  - Added comprehensive logging for cross-region authentication debugging and troubleshooting
+
 ## [1.0.98] - 2025-08-17
 
 ### Fixed

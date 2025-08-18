@@ -264,7 +264,7 @@ export class Helpers {
     /**
      * Build request body for second authentication step (login with authorize code)
      */
-    static reqBodyAuthStep2(authorizeCode: string, bizToken: string | null, appId: string, terminalId: string, userCountryCode?: string): Record<string, any> {
+    static reqBodyAuthStep2(authorizeCode: string, bizToken: string | null, appId: string, terminalId: string, userCountryCode?: string, regionChange?: string): Record<string, any> {
         const body: Record<string, any> = {
             'method': 'loginByAuthorizeCode4Vesync',
             'authorizeCode': authorizeCode,
@@ -284,6 +284,11 @@ export class Helpers {
         // Only include bizToken if it's not null
         if (bizToken) {
             body.bizToken = bizToken;
+        }
+        
+        // Only include regionChange if provided
+        if (regionChange) {
+            body.regionChange = regionChange;
         }
 
         return body;
@@ -573,6 +578,43 @@ export class Helpers {
             }
 
             if (loginResponse.code !== 0) {
+                // Handle cross-region error with retry (like pyvesync PR #340)
+                if (loginResponse.code === CROSS_REGION_ERROR_CODE) {
+                    logger.debug('Cross-region error detected in Step 2, retrying with region change token...');
+                    
+                    const { bizToken: regionChangeToken, countryCode: newCountryCode } = loginResponse.result || {};
+                    
+                    if (regionChangeToken) {
+                        // Retry Step 2 with region change token
+                        const retryBody = {
+                            ...step2Body,
+                            bizToken: regionChangeToken,
+                            regionChange: 'last_region',
+                            userCountryCode: newCountryCode || userCountryCode
+                        };
+                        
+                        logger.debug('Retrying Step 2 with region change token...');
+                        
+                        const [retryResponse, retryStatus] = await this.callApi(
+                            '/user/api/accountManage/v1/loginByAuthorizeCode4Vesync',
+                            'post',
+                            retryBody,
+                            step1Headers,
+                            manager
+                        );
+                        
+                        if (retryResponse && retryResponse.code === 0) {
+                            const { token, accountID, countryCode } = retryResponse.result || {};
+                            if (token && accountID) {
+                                logger.debug('Step 2 retry successful with region change');
+                                return [true, token, accountID, countryCode || newCountryCode];
+                            }
+                        }
+                        
+                        logger.error('Step 2 retry failed:', retryResponse);
+                    }
+                }
+                
                 logger.error('Step 2 error code:', loginResponse.code, 'message:', loginResponse.msg);
                 return [false, null, null, null];
             }
