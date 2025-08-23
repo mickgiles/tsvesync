@@ -570,10 +570,9 @@ export class Helpers {
                 manager
             );
 
-            setApiBaseUrl(originalUrl); // Restore original URL
-
             if (!loginResponse || loginStatus !== 200) {
                 logger.error('Step 2 failed:', loginResponse);
+                setApiBaseUrl(originalUrl); // Restore original URL on failure
                 return [false, null, null, null];
             }
 
@@ -593,7 +592,10 @@ export class Helpers {
                             userCountryCode: newCountryCode || userCountryCode
                         };
                         
-                        logger.debug('Retrying Step 2 with region change token...');
+                        logger.debug('Retrying Step 2 with region change token...', {
+                            newCountryCode,
+                            hasRegionChangeToken: true
+                        });
                         
                         const [retryResponse, retryStatus] = await this.callApi(
                             '/user/api/accountManage/v1/loginByAuthorizeCode4Vesync',
@@ -602,6 +604,8 @@ export class Helpers {
                             step1Headers,
                             manager
                         );
+                        
+                        setApiBaseUrl(originalUrl); // Restore original URL after retry
                         
                         if (retryResponse && retryResponse.code === 0) {
                             const { token, accountID, countryCode } = retryResponse.result || {};
@@ -612,12 +616,18 @@ export class Helpers {
                         }
                         
                         logger.error('Step 2 retry failed:', retryResponse);
+                        return [false, null, null, null];
+                    } else {
+                        logger.error('No region change token in cross-region error response');
                     }
                 }
                 
                 logger.error('Step 2 error code:', loginResponse.code, 'message:', loginResponse.msg);
+                setApiBaseUrl(originalUrl); // Restore original URL on error
                 return [false, null, null, null];
             }
+
+            setApiBaseUrl(originalUrl); // Restore original URL on success
 
             const { token, accountID, countryCode } = loginResponse.result || {};
             

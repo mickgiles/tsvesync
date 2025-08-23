@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.100] - 2025-08-23
+
+### Fixed
+- **Cross-Region Authentication Retry Logic**: Fixed critical timing issue in authentication flow retry mechanism
+  - Fixed setApiBaseUrl() restoration timing - was being called too early preventing successful retry attempts
+  - Now properly restores API base URL only after all retry attempts complete for both success and failure cases
+  - Enhanced debug logging for cross-region retry attempts with additional context information
+  - Resolves authentication failures for EU accounts where retry mechanism was not working despite script indicating success
+
 ## [1.0.99] - 2025-08-18
 
 ### Fixed
