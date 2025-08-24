@@ -583,18 +583,30 @@ export class Helpers {
                     
                     const { bizToken: regionChangeToken, countryCode: newCountryCode } = loginResponse.result || {};
                     
-                    if (regionChangeToken) {
-                        // Retry Step 2 with region change token
+                    if (regionChangeToken && newCountryCode) {
+                        // Retry Step 2 with region change token on the SAME endpoint
+                        // The region change token tells the server to handle the cross-region authentication
                         const retryBody = {
-                            ...step2Body,
+                            method: 'loginByAuthorizeCode4Vesync',
+                            authorizeCode: authorizeCode,
+                            acceptLanguage: 'en',
+                            clientInfo: CLIENT_INFO,
+                            clientType: 'vesyncApp',
+                            clientVersion: CLIENT_VERSION,
+                            debugMode: false,
+                            emailSubscriptions: false,
+                            osInfo: PHONE_OS,
+                            terminalId: terminalId,
+                            timeZone: DEFAULT_TZ,
+                            userCountryCode: newCountryCode,
+                            traceId: `APP${appId}${Math.floor(Date.now() / 1000)}`,
                             bizToken: regionChangeToken,
-                            regionChange: 'last_region',
-                            userCountryCode: newCountryCode || userCountryCode
+                            regionChange: 'last_region'
                         };
                         
                         logger.debug('Retrying Step 2 with region change token...', {
                             newCountryCode,
-                            hasRegionChangeToken: true
+                            currentEndpoint: getApiBaseUrl()
                         });
                         
                         const [retryResponse, retryStatus] = await this.callApi(
@@ -605,17 +617,17 @@ export class Helpers {
                             manager
                         );
                         
-                        setApiBaseUrl(originalUrl); // Restore original URL after retry
-                        
                         if (retryResponse && retryResponse.code === 0) {
                             const { token, accountID, countryCode } = retryResponse.result || {};
                             if (token && accountID) {
                                 logger.debug('Step 2 retry successful with region change');
+                                setApiBaseUrl(originalUrl); // Restore original URL on success
                                 return [true, token, accountID, countryCode || newCountryCode];
                             }
                         }
                         
                         logger.error('Step 2 retry failed:', retryResponse);
+                        setApiBaseUrl(originalUrl); // Restore original URL on failure
                         return [false, null, null, null];
                     } else {
                         logger.error('No region change token in cross-region error response');

@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.101] - 2025-08-24
+
+### Fixed
+- **Critical Cross-Region Authentication Bug**: Fixed timing issue in authentication retry logic
+  - Fixed `setApiBaseUrl()` restoration happening before retry attempts instead of after
+  - Resolves `-11261022 "access region conflict error"` for EU and international accounts
+  - Ensures retry attempts happen on the same endpoint before URL restoration
+  - Significantly improves authentication success rates for non-US new accounts
+  - Enhanced retry mechanism with proper request body structure for region change tokens
+
 ## [1.0.100] - 2025-08-23
 
 ### Fixed
