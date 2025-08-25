@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.102] - 2025-08-25
+
+### Fixed
+- **EU Authentication Resolution**: Complete fix for EU accounts using correct regional endpoint and country code
+  - EU accounts now authenticate successfully using smartapi.vesync.eu endpoint with proper 'DE' country code
+  - Fixed Step 2 authentication for EU accounts - was using incorrect 'US' country code instead of 'DE'
+  - Resolves authentication failures for European users who were getting cross-region conflicts
+  - Enhanced authentication flow tracking to identify which method (legacy vs new) was used for debugging
+- **Enhanced Authentication Compatibility**: Full compatibility with pyvesync PR #340 and dev-2.0 branch
+  - Improved cross-region authentication error handling with proper country code mapping
+  - Added support for constructor options object pattern with region parameter for better flexibility
+  - Enhanced API endpoint management for regional authentication scenarios
+  - Better debugging capabilities for authentication flow troubleshooting
+
+### Changed
+- **Constructor Options Enhancement**: Added support for options object pattern in VeSync constructor
+  - New constructor signature supports `new VeSync(username, password, timezone, options)` with region parameter
+  - Maintains backward compatibility with existing constructor patterns
+  - Options object allows setting region, debugMode, redact, and other configuration parameters
+- **Regional Authentication**: Improved region detection and endpoint management
+  - Enhanced country code to region mapping for automatic endpoint selection
+  - Better tracking of authentication flow used (legacy vs new) for debugging purposes
+  - Improved API base URL management with regional endpoint support
+
+### Added
+- **Authentication Test Suite**: Comprehensive test files for validation
+  - Added `test/test-multi-auth.ts` for testing multiple authentication flows and regions
+  - Added `test/test-eu-debug.ts` for detailed EU authentication debugging
+  - Added `test/test-eu-step1.ts` and `test/test-eu-step2.ts` for step-by-step EU auth testing
+  - Test files provide comprehensive validation of new authentication improvements
+
 ## [1.0.101] - 2025-08-24
 
 ### Fixed

@@ -2,7 +2,7 @@
  * VeSync API Device Library
  */
 
-import { Helpers, API_RATE_LIMIT, DEFAULT_TZ, setApiBaseUrl, getApiBaseUrl, generateAppId, getRegionFromCountryCode, setCurrentRegion, getCurrentRegion, REGION_ENDPOINTS } from './helpers';
+import { Helpers, API_RATE_LIMIT, DEFAULT_TZ, setApiBaseUrl, getApiBaseUrl, generateAppId, getRegionFromCountryCode, setCurrentRegion, getCurrentRegion, REGION_ENDPOINTS, getCountryCodeFromRegion } from './helpers';
 import { VeSyncBaseDevice } from './vesyncBaseDevice';
 import { fanModules } from './vesyncFanImpl';
 import { outletModules } from './vesyncOutletImpl';
@@ -171,6 +171,8 @@ export class VeSync {
     enabled: boolean;
     updateInterval: number;
     timeZone: string;
+    authFlowUsed?: 'legacy' | 'new';  // Track which auth flow was used
+    apiBaseUrl?: string;  // Track which API endpoint is being used
 
     fans: VeSyncBaseDevice[];
     outlets: VeSyncBaseDevice[];
@@ -183,31 +185,54 @@ export class VeSync {
      * @param username - VeSync account username
      * @param password - VeSync account password
      * @param timeZone - Optional timezone for device operations (defaults to America/New_York)
-     * @param debug - Optional debug mode flag
-     * @param redact - Optional redact mode flag
-     * @param apiUrl - Optional API base URL override
-     * @param customLogger - Optional custom logger implementation
-     * @param excludeConfig - Optional device exclusion configuration
+     * @param optionsOrDebug - Either options object or debug flag for backward compatibility
+     * @param redact - Optional redact mode flag (used when optionsOrDebug is boolean)
+     * @param apiUrl - Optional API base URL override (used when optionsOrDebug is boolean)
+     * @param customLogger - Optional custom logger implementation (used when optionsOrDebug is boolean)
+     * @param excludeConfig - Optional device exclusion configuration (used when optionsOrDebug is boolean)
      */
     constructor(
         username: string,
         password: string,
         timeZone: string = DEFAULT_TZ,
-        debug = false,
+        optionsOrDebug: boolean | {
+            debug?: boolean;
+            redact?: boolean;
+            apiUrl?: string;
+            customLogger?: Logger;
+            excludeConfig?: ExcludeConfig;
+            region?: string;
+            debugMode?: boolean;  // Alias for debug
+        } = false,
         redact = true,
         apiUrl?: string,
         customLogger?: Logger,
         excludeConfig?: ExcludeConfig
     ) {
-        this._debug = debug;
-        this._redact = redact;
+        // Handle options object or backward compatible parameters
+        let options: any = {};
+        if (typeof optionsOrDebug === 'object' && optionsOrDebug !== null) {
+            // Using new options pattern
+            options = optionsOrDebug;
+            this._debug = options.debug || options.debugMode || false;
+            this._redact = options.redact !== undefined ? options.redact : true;
+            this._excludeConfig = options.excludeConfig || null;
+            this._region = options.region || 'US';
+            customLogger = options.customLogger;
+            apiUrl = options.apiUrl;
+        } else {
+            // Using old parameter pattern for backward compatibility
+            this._debug = optionsOrDebug as boolean;
+            this._redact = redact;
+            this._excludeConfig = excludeConfig || null;
+            this._region = 'US';
+        }
+
         this._energyUpdateInterval = DEFAULT_ENERGY_UPDATE_INTERVAL;
         this._energyCheck = true;
         this._lastUpdateTs = null;
         this._inProcess = false;
-        this._excludeConfig = excludeConfig || null;
         this._appId = generateAppId();
-        this._region = 'US';
 
         this.username = username;
         this.password = password;
@@ -245,13 +270,21 @@ export class VeSync {
             logger.debug('Time zone is not a string');
         }
 
-        // Set custom API URL if provided, otherwise use default US endpoint
+        // Set custom API URL if provided, otherwise use region-based endpoint
         if (apiUrl) {
             setApiBaseUrl(apiUrl);
         } else {
-            // Start with US endpoint as default
-            setApiBaseUrl('https://smartapi.vesync.com');
-            setCurrentRegion('US');
+            // Set endpoint based on region
+            const regionEndpoints: Record<string, string> = {
+                'US': 'https://smartapi.vesync.com',
+                'EU': 'https://smartapi.vesync.eu',
+                'CA': 'https://smartapi.vesync.com',
+                'MX': 'https://smartapi.vesync.com',
+                'JP': 'https://smartapi.vesync.com'
+            };
+            const endpoint = regionEndpoints[this._region] || 'https://smartapi.vesync.com';
+            setApiBaseUrl(endpoint);
+            setCurrentRegion(this._region);
         }
 
         // Set custom logger if provided
@@ -259,13 +292,7 @@ export class VeSync {
             setLogger(customLogger);
         }
 
-        if (debug) {
-            this.debug = true;
-        }
-
-        if (redact) {
-            this.redact = true;
-        }
+        // Debug and redact are already set above in the options handling
     }
 
     /**
@@ -548,22 +575,42 @@ export class VeSync {
             try {
                 logger.debug(`Authentication attempt ${attempt + 1} of ${retryAttempts}`);
 
-                // Try new authentication flow first
+                // First, try to detect user's region from email
+                const detectedRegion = getRegionFromCountryCode(getCountryCodeFromRegion(this._region, this.username));
+                if (detectedRegion !== this._region) {
+                    logger.debug(`Adjusting region from ${this._region} to ${detectedRegion} based on email domain`);
+                    this._region = detectedRegion;
+                    setCurrentRegion(detectedRegion);
+                }
+
+                // Try new authentication flow first with detected region
                 let [success, token, accountId, countryCode] = await Helpers.authNewFlow(this, this._appId, this._region);
+                
+                // Track if new flow succeeded
+                if (success) {
+                    this.authFlowUsed = 'new';
+                }
 
                 if (!success) {
                     // Check if we need to try a different region
                     if (countryCode === 'cross_region') {
-                        logger.debug('Cross-region error detected, trying EU region...');
-                        this._region = 'EU';
-                        setCurrentRegion('EU');
-                        [success, token, accountId, countryCode] = await Helpers.authNewFlow(this, this._appId, 'EU');
+                        logger.debug('Cross-region error detected, trying opposite region...');
+                        const alternateRegion = this._region === 'US' ? 'EU' : 'US';
+                        this._region = alternateRegion;
+                        setCurrentRegion(alternateRegion);
+                        [success, token, accountId, countryCode] = await Helpers.authNewFlow(this, this._appId, alternateRegion);
+                        if (success) {
+                            this.authFlowUsed = 'new';
+                        }
                     }
 
                     // If new flow still fails, try legacy authentication as fallback
                     if (!success) {
                         logger.debug('New authentication flow failed, trying legacy flow...');
                         [success, token, accountId, countryCode] = await Helpers.authLegacyFlow(this);
+                        if (success) {
+                            this.authFlowUsed = 'legacy';
+                        }
                     }
                 }
 
@@ -572,6 +619,7 @@ export class VeSync {
                     this.accountId = accountId;
                     this.countryCode = countryCode;
                     this.enabled = true;
+                    this.apiBaseUrl = getApiBaseUrl();  // Track the API endpoint being used
 
                     // Set region based on country code if we got one
                     if (countryCode) {
@@ -584,6 +632,7 @@ export class VeSync {
                     }
 
                     logger.debug('Authentication successful!', {
+                        authFlow: this.authFlowUsed,
                         region: this._region,
                         countryCode: countryCode,
                         endpoint: getApiBaseUrl()

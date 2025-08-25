@@ -51,7 +51,7 @@ export function getRegionFromCountryCode(countryCode: string): string {
 export const API_RATE_LIMIT = 30;
 export const API_TIMEOUT = 15000;
 
-export const APP_VERSION = '5.6.60';
+export const APP_VERSION = '5.7.16'; // Updated to newer version
 export const PHONE_BRAND = 'SM N9005';
 export const PHONE_OS = 'Android';
 export const CLIENT_INFO = 'SM N9005';
@@ -60,7 +60,7 @@ export const DEFAULT_TZ = 'America/New_York';
 export const DEFAULT_REGION = 'US';
 export const MOBILE_ID = '1234567890123456';
 export const BYPASS_HEADER_UA = 'okhttp/3.12.1';
-export const CLIENT_VERSION = 'VeSync 5.6.60';
+export const CLIENT_VERSION = 'VeSync 5.7.16';
 
 // Regional API endpoints
 export const REGION_ENDPOINTS = {
@@ -71,13 +71,58 @@ export const REGION_ENDPOINTS = {
     'EU': 'https://smartapi.vesync.eu'
 };
 
-// Cross-region error code
-export const CROSS_REGION_ERROR_CODE = -11260022;
+// Cross-region error codes - multiple versions exist
+export const CROSS_REGION_ERROR_CODES = [-11260022, -11261022];
 export const APP_VERSION_TOO_LOW_ERROR_CODE = -11012022;
+
+// Authentication error codes
+export const AUTH_ERROR_CODES = {
+    ACCOUNT_PASSWORD_INCORRECT: -11201129,
+    ILLEGAL_ARGUMENT: -11000022,
+    CROSS_REGION: -11260022,
+    CROSS_REGION_ALT: -11261022
+};
+
+/**
+ * Detect user's home region from email domain or country hints
+ */
+export function detectUserRegion(email: string): string {
+    // Check for common EU email domains
+    const euDomains = ['.de', '.fr', '.it', '.es', '.nl', '.be', '.at', '.dk', '.se', '.no', '.fi', '.eu'];
+    const emailLower = email.toLowerCase();
+    
+    for (const domain of euDomains) {
+        if (emailLower.includes(domain)) {
+            return 'EU';
+        }
+    }
+    
+    // Default to US for unknown domains
+    return 'US';
+}
+
+/**
+ * Get country code from region
+ */
+export function getCountryCodeFromRegion(region: string, email?: string): string {
+    if (region === 'EU') {
+        // Try to detect specific EU country from email
+        if (email) {
+            const emailLower = email.toLowerCase();
+            if (emailLower.includes('.de') || emailLower.includes('german')) return 'DE';
+            if (emailLower.includes('.fr')) return 'FR';
+            if (emailLower.includes('.it')) return 'IT';
+            if (emailLower.includes('.es')) return 'ES';
+            if (emailLower.includes('.nl')) return 'NL';
+        }
+        return 'DE'; // Default to Germany for EU
+    }
+    return 'US'; // Default for non-EU
+}
 
 // Generate unique APP_ID for each session
 export function generateAppId(): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const chars = 'ABCDEFGHIJKLMNOPqRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let result = '';
     for (let i = 0; i < 8; i++) {
         result += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -196,7 +241,9 @@ export class Helpers {
         return {
             'Content-Type': 'application/json; charset=UTF-8',
             'User-Agent': BYPASS_HEADER_UA,
-            'accept-language': 'en'
+            'accept-language': 'en',
+            'appVersion': APP_VERSION,
+            'clientVersion': CLIENT_VERSION
         };
     }
 
@@ -238,7 +285,18 @@ export class Helpers {
     /**
      * Build request body for initial authentication step
      */
-    static reqBodyAuthStep1(manager: VeSync, appId: string, terminalId: string): Record<string, any> {
+    static reqBodyAuthStep1(manager: VeSync, appId: string, terminalId: string, region: string = 'US'): Record<string, any> {
+        // Detect user's home region and country code
+        const userRegion = detectUserRegion(manager.username);
+        const userCountryCode = getCountryCodeFromRegion(region === 'EU' ? 'EU' : userRegion, manager.username);
+        
+        logger.debug('Authentication Step 1 - Region detection:', {
+            email: manager.username,
+            detectedRegion: userRegion,
+            requestRegion: region,
+            userCountryCode: userCountryCode
+        });
+        
         return {
             'email': manager.username,
             'method': 'authByPWDOrOTM',
@@ -254,7 +312,7 @@ export class Helpers {
             'terminalId': terminalId,
             'timeZone': manager.timeZone || DEFAULT_TZ,
             'token': '',
-            'userCountryCode': 'US',
+            'userCountryCode': userCountryCode,
             'appID': appId,
             'sourceAppID': appId,
             'traceId': `APP${appId}${Math.floor(Date.now() / 1000)}`
@@ -504,7 +562,7 @@ export class Helpers {
             const terminalId = generateTerminalId();
             
             // Step 1: Get authorization code
-            const step1Body = this.reqBodyAuthStep1(manager, appId, terminalId);
+            const step1Body = this.reqBodyAuthStep1(manager, appId, terminalId, region);
             const step1Headers = this.reqHeaderAuth();
             
             // Set the correct regional endpoint
@@ -536,9 +594,9 @@ export class Helpers {
             if (authResponse.code !== 0) {
                 logger.error('Step 1 error code:', authResponse.code, 'message:', authResponse.msg);
                 
-                // Handle cross-region error
-                if (authResponse.code === CROSS_REGION_ERROR_CODE) {
-                    logger.debug('Cross-region error detected, will try different region');
+                // Handle cross-region error (multiple error codes possible)
+                if (CROSS_REGION_ERROR_CODES.includes(authResponse.code)) {
+                    logger.debug('Cross-region error detected:', authResponse.code, 'will try different region');
                     setApiBaseUrl(originalUrl); // Restore original URL
                     return [false, null, null, 'cross_region'];
                 }
@@ -547,7 +605,7 @@ export class Helpers {
                 return [false, null, null, null];
             }
 
-            const { authorizeCode, bizToken, userCountryCode } = authResponse.result || {};
+            const { authorizeCode, bizToken } = authResponse.result || {};
             
             if (!authorizeCode) {
                 logger.error('Missing authorization code in step 1 response:', authResponse.result);
@@ -558,7 +616,9 @@ export class Helpers {
             logger.debug('Step 1 successful, got authorization code');
 
             // Step 2: Login with authorization code
-            const step2Body = this.reqBodyAuthStep2(authorizeCode, bizToken, appId, terminalId, userCountryCode);
+            // Use the appropriate country code based on the region we're authenticating with
+            const countryCodeForStep2 = region === 'EU' ? 'DE' : 'US';
+            const step2Body = this.reqBodyAuthStep2(authorizeCode, bizToken, appId, terminalId, countryCodeForStep2);
             
             logger.debug('Step 2: Logging in with authorization code...');
 
@@ -578,7 +638,7 @@ export class Helpers {
 
             if (loginResponse.code !== 0) {
                 // Handle cross-region error with retry (like pyvesync PR #340)
-                if (loginResponse.code === CROSS_REGION_ERROR_CODE) {
+                if (CROSS_REGION_ERROR_CODES.includes(loginResponse.code)) {
                     logger.debug('Cross-region error detected in Step 2, retrying with region change token...');
                     
                     const { bizToken: regionChangeToken, countryCode: newCountryCode } = loginResponse.result || {};
@@ -649,7 +709,7 @@ export class Helpers {
             }
 
             logger.debug('Step 2 successful, got token and accountID');
-            return [true, token, accountID, countryCode || userCountryCode];
+            return [true, token, accountID, countryCode || countryCodeForStep2];
 
         } catch (error) {
             logger.error('New authentication flow error:', error);
