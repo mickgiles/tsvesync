@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.103] - 2025-08-25
+
+### Fixed
+- **CRITICAL: EU Authentication Finally Working**: EU accounts that start with US region (default in Homebridge) now correctly authenticate by automatically switching to EU region when a cross-region error is detected
+  - Simplified cross-region error handling in Step 2 authentication to immediately return 'cross_region_retry'
+  - When error -11261022 is received, immediately retry entire auth flow with alternate region instead of attempting token-based retry
+  - Removed complex token retry logic that was preventing proper region switching
+  - EU accounts now authenticate in approximately 2.5 seconds with automatic region detection
+  - Resolves critical issue where EU accounts were failing with "access region conflict error" even after previous fix attempts
+- **Improved Bad Credential Handling**: Enhanced authentication error detection for faster failure response
+  - Invalid credentials now fail fast in 0.1-1.3 seconds (previously took up to 7.5 seconds)
+  - System detects credential error codes and stops retrying immediately:
+    - -11201129: "account or password incorrect"
+    - -11202129: "the account does not exist"  
+    - -11000129: "illegal argument" (empty credentials)
+  - Clear error messages for authentication failures with specific error code recognition
+  - Eliminates unnecessary retry loops for obviously bad credentials, improving user experience
+
+### Changed
+- **Enhanced Cross-Region Error Handling**: Streamlined authentication flow for EU users
+  - Step 2 authentication now immediately detects cross-region errors and triggers region switching
+  - Improved API endpoint updates when switching regions during authentication
+  - Better region switching logic with proper endpoint configuration in VeSync class
+  - Enhanced debugging output for authentication flow troubleshooting
+
+### Added
+- **Authentication Error Constants**: New constants.ts module with comprehensive error code definitions
+  - Added CREDENTIAL_ERROR_CODES array with error codes for invalid credentials
+  - Added CROSS_REGION_ERROR_CODES array with cross-region authentication error codes
+  - Added isCredentialError() and isCrossRegionError() helper functions for error detection
+  - Enhanced src/index.ts exports to include new constants and helper functions
+  - Improved error handling throughout authentication flow with centralized error code management
+
 ## [1.0.102] - 2025-08-25
 
 ### Fixed

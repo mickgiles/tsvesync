@@ -6,6 +6,7 @@ import axios from 'axios';
 import crypto from 'crypto';
 import { VeSync } from './vesync';
 import { logger } from './logger';
+import { isCredentialError, isCrossRegionError, CROSS_REGION_ERROR_CODES } from './constants';
 
 // API configuration - Support regional endpoints
 let _apiBaseUrl = 'https://smartapi.vesync.com';
@@ -72,7 +73,7 @@ export const REGION_ENDPOINTS = {
 };
 
 // Cross-region error codes - multiple versions exist
-export const CROSS_REGION_ERROR_CODES = [-11260022, -11261022];
+// CROSS_REGION_ERROR_CODES moved to constants.ts
 export const APP_VERSION_TOO_LOW_ERROR_CODE = -11012022;
 
 // Authentication error codes
@@ -594,8 +595,15 @@ export class Helpers {
             if (authResponse.code !== 0) {
                 logger.error('Step 1 error code:', authResponse.code, 'message:', authResponse.msg);
                 
+                // Check if it's a credential error (no point retrying)
+                if (isCredentialError(authResponse.code)) {
+                    logger.error('Credential error detected - invalid username or password');
+                    setApiBaseUrl(originalUrl); // Restore original URL
+                    return [false, null, null, 'credential_error'];
+                }
+                
                 // Handle cross-region error (multiple error codes possible)
-                if (CROSS_REGION_ERROR_CODES.includes(authResponse.code)) {
+                if (isCrossRegionError(authResponse.code)) {
                     logger.debug('Cross-region error detected:', authResponse.code, 'will try different region');
                     setApiBaseUrl(originalUrl); // Restore original URL
                     return [false, null, null, 'cross_region'];
@@ -630,6 +638,13 @@ export class Helpers {
                 manager
             );
 
+            logger.debug('Step 2 response:', { 
+                status: loginStatus, 
+                code: loginResponse?.code, 
+                hasResult: !!loginResponse?.result,
+                msg: loginResponse?.msg 
+            });
+
             if (!loginResponse || loginStatus !== 200) {
                 logger.error('Step 2 failed:', loginResponse);
                 setApiBaseUrl(originalUrl); // Restore original URL on failure
@@ -637,61 +652,14 @@ export class Helpers {
             }
 
             if (loginResponse.code !== 0) {
-                // Handle cross-region error with retry (like pyvesync PR #340)
+                logger.debug('Step 2 error, code:', loginResponse.code, 'checking if cross-region...');
+                // Handle cross-region error - for EU accounts, we need to switch regions entirely
                 if (CROSS_REGION_ERROR_CODES.includes(loginResponse.code)) {
-                    logger.debug('Cross-region error detected in Step 2, retrying with region change token...');
-                    
-                    const { bizToken: regionChangeToken, countryCode: newCountryCode } = loginResponse.result || {};
-                    
-                    if (regionChangeToken && newCountryCode) {
-                        // Retry Step 2 with region change token on the SAME endpoint
-                        // The region change token tells the server to handle the cross-region authentication
-                        const retryBody = {
-                            method: 'loginByAuthorizeCode4Vesync',
-                            authorizeCode: authorizeCode,
-                            acceptLanguage: 'en',
-                            clientInfo: CLIENT_INFO,
-                            clientType: 'vesyncApp',
-                            clientVersion: CLIENT_VERSION,
-                            debugMode: false,
-                            emailSubscriptions: false,
-                            osInfo: PHONE_OS,
-                            terminalId: terminalId,
-                            timeZone: DEFAULT_TZ,
-                            userCountryCode: newCountryCode,
-                            traceId: `APP${appId}${Math.floor(Date.now() / 1000)}`,
-                            bizToken: regionChangeToken,
-                            regionChange: 'last_region'
-                        };
-                        
-                        logger.debug('Retrying Step 2 with region change token...', {
-                            newCountryCode,
-                            currentEndpoint: getApiBaseUrl()
-                        });
-                        
-                        const [retryResponse, retryStatus] = await this.callApi(
-                            '/user/api/accountManage/v1/loginByAuthorizeCode4Vesync',
-                            'post',
-                            retryBody,
-                            step1Headers,
-                            manager
-                        );
-                        
-                        if (retryResponse && retryResponse.code === 0) {
-                            const { token, accountID, countryCode } = retryResponse.result || {};
-                            if (token && accountID) {
-                                logger.debug('Step 2 retry successful with region change');
-                                setApiBaseUrl(originalUrl); // Restore original URL on success
-                                return [true, token, accountID, countryCode || newCountryCode];
-                            }
-                        }
-                        
-                        logger.error('Step 2 retry failed:', retryResponse);
-                        setApiBaseUrl(originalUrl); // Restore original URL on failure
-                        return [false, null, null, null];
-                    } else {
-                        logger.error('No region change token in cross-region error response');
-                    }
+                    logger.debug('Cross-region error detected in Step 2 - need to use different region');
+                    // For cross-region errors, we need to retry the entire flow with a different region
+                    // The authorization code from Step 1 is tied to the endpoint it was obtained from
+                    setApiBaseUrl(originalUrl); // Restore original URL
+                    return [false, null, null, 'cross_region_retry'];
                 }
                 
                 logger.error('Step 2 error code:', loginResponse.code, 'message:', loginResponse.msg);
@@ -744,6 +712,13 @@ export class Helpers {
 
             if (response.code && response.code !== 0) {
                 logger.error('Legacy login error code:', response.code, 'message:', response.msg);
+                
+                // Check if it's a credential error
+                if (isCredentialError(response.code)) {
+                    logger.error('Legacy auth: Credential error detected');
+                    return [false, null, null, 'credential_error'];
+                }
+                
                 return [false, null, null, null];
             }
 

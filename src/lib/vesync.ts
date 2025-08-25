@@ -575,13 +575,8 @@ export class VeSync {
             try {
                 logger.debug(`Authentication attempt ${attempt + 1} of ${retryAttempts}`);
 
-                // First, try to detect user's region from email
-                const detectedRegion = getRegionFromCountryCode(getCountryCodeFromRegion(this._region, this.username));
-                if (detectedRegion !== this._region) {
-                    logger.debug(`Adjusting region from ${this._region} to ${detectedRegion} based on email domain`);
-                    this._region = detectedRegion;
-                    setCurrentRegion(detectedRegion);
-                }
+                // Skip email-based region detection for now since we'll handle cross-region errors
+                // The cross-region error handling below will automatically switch to the correct region
 
                 // Try new authentication flow first with detected region
                 let [success, token, accountId, countryCode] = await Helpers.authNewFlow(this, this._appId, this._region);
@@ -592,15 +587,36 @@ export class VeSync {
                 }
 
                 if (!success) {
+                    // Check if it's a credential error (no point retrying)
+                    if (countryCode === 'credential_error') {
+                        logger.error('Authentication failed due to invalid credentials');
+                        return false;  // Exit immediately, don't retry
+                    }
+                    
                     // Check if we need to try a different region
-                    if (countryCode === 'cross_region') {
+                    if (countryCode === 'cross_region' || countryCode === 'cross_region_retry') {
                         logger.debug('Cross-region error detected, trying opposite region...');
                         const alternateRegion = this._region === 'US' ? 'EU' : 'US';
+                        logger.debug(`Switching from ${this._region} to ${alternateRegion} region`);
+                        
                         this._region = alternateRegion;
                         setCurrentRegion(alternateRegion);
+                        
+                        // Update the API endpoint for the new region
+                        const regionEndpoints: Record<string, string> = {
+                            'US': 'https://smartapi.vesync.com',
+                            'EU': 'https://smartapi.vesync.eu'
+                        };
+                        if (alternateRegion in regionEndpoints) {
+                            setApiBaseUrl(regionEndpoints[alternateRegion]);
+                            logger.debug(`API endpoint set to ${regionEndpoints[alternateRegion]}`);
+                        }
+                        
+                        // Retry with the alternate region
                         [success, token, accountId, countryCode] = await Helpers.authNewFlow(this, this._appId, alternateRegion);
                         if (success) {
                             this.authFlowUsed = 'new';
+                            logger.debug(`Authentication successful with ${alternateRegion} region`);
                         }
                     }
 
@@ -610,6 +626,10 @@ export class VeSync {
                         [success, token, accountId, countryCode] = await Helpers.authLegacyFlow(this);
                         if (success) {
                             this.authFlowUsed = 'legacy';
+                        } else if (countryCode === 'credential_error') {
+                            // Legacy auth also detected bad credentials
+                            logger.error('Both authentication methods report invalid credentials');
+                            return false;  // Exit immediately
                         }
                     }
                 }

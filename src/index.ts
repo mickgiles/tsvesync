@@ -11,4 +11,12 @@ export { VeSyncWallSwitch } from './lib/vesyncSwitchImpl';
 export { VeSyncBaseDevice } from './lib/vesyncBaseDevice';
 
 // Export helper functions
-export { Helpers, setApiBaseUrl } from './lib/helpers'; 
+export { Helpers, setApiBaseUrl } from './lib/helpers';
+
+// Export constants
+export {
+    CREDENTIAL_ERROR_CODES,
+    CROSS_REGION_ERROR_CODES,
+    isCredentialError,
+    isCrossRegionError
+} from './lib/constants'; 
