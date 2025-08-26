@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.106] - 2025-08-26
+
+### Fixed
+- **CRITICAL: Endpoint Switching Bug**: Fixed bug that broke device discovery for international accounts
+  - After successful authentication, the system now maintains the endpoint that authenticated successfully
+  - Previously, the code would switch endpoints after authentication based on country code mapping, invalidating the auth token
+  - This fixes AU/NZ/Asia-Pacific accounts that authenticate via EU endpoint but have different country codes
+  - Added warning logs when country code doesn't match the successful authentication region instead of breaking the connection
+  - The fix is dynamic: if auth succeeds on US, it stays on US; if auth succeeds on EU, it stays on EU
+  - Resolves authentication and device discovery issues for international users whose accounts authenticate via unexpected regional endpoints
+
 ## [1.0.105] - 2025-08-26
 
 ### Changed

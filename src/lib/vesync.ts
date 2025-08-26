@@ -693,13 +693,18 @@ export class VeSync {
                     this.enabled = true;
                     this.apiBaseUrl = getApiBaseUrl();  // Track the API endpoint being used
 
-                    // Set region based on country code if we got one
+                    // DO NOT change the region/endpoint after successful authentication!
+                    // The endpoint that successfully authenticated is the one we must continue using.
+                    // Tokens are endpoint-specific and won't work if we switch endpoints.
+                    // This is especially important for AU/NZ users who may authenticate via EU endpoint
+                    // but have AU/NZ country codes.
+                    
+                    // Log a warning if the country code doesn't match the successful region
                     if (countryCode) {
-                        const detectedRegion = getRegionFromCountryCode(countryCode);
-                        if (detectedRegion !== this._region) {
-                            logger.debug(`Updating region from ${this._region} to ${detectedRegion} based on country code: ${countryCode}`);
-                            this._region = detectedRegion;
-                            setCurrentRegion(detectedRegion);
+                        const expectedRegion = getRegionFromCountryCode(countryCode);
+                        if (expectedRegion !== this._region) {
+                            logger.warn(`Note: Account authenticated with ${this._region} endpoint despite country code ${countryCode} typically using ${expectedRegion}`);
+                            logger.warn(`This is normal for accounts created through different regional apps`);
                         }
                     }
 
