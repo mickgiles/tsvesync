@@ -2,7 +2,7 @@
  * VeSync API Device Library
  */
 
-import { Helpers, API_RATE_LIMIT, DEFAULT_TZ, setApiBaseUrl, getApiBaseUrl, generateAppId, getRegionFromCountryCode, setCurrentRegion, getCurrentRegion, REGION_ENDPOINTS, getCountryCodeFromRegion } from './helpers';
+import { Helpers, API_RATE_LIMIT, DEFAULT_TZ, setApiBaseUrl, getApiBaseUrl, generateAppId, getRegionFromCountryCode, setCurrentRegion, getCurrentRegion, REGION_ENDPOINTS, getCountryCodeFromRegion, getEndpointForCountryCode } from './helpers';
 import { VeSyncBaseDevice } from './vesyncBaseDevice';
 import { fanModules } from './vesyncFanImpl';
 import { outletModules } from './vesyncOutletImpl';
@@ -161,6 +161,7 @@ export class VeSync {
     private _excludeConfig: ExcludeConfig | null;
     private _appId: string;
     private _region: string;
+    private _countryCodeOverride: string | null;
 
     username: string;
     password: string;
@@ -202,6 +203,7 @@ export class VeSync {
             customLogger?: Logger;
             excludeConfig?: ExcludeConfig;
             region?: string;
+            countryCode?: string;  // Override country code for Step 2 authentication
             debugMode?: boolean;  // Alias for debug
         } = false,
         redact = true,
@@ -218,6 +220,7 @@ export class VeSync {
             this._redact = options.redact !== undefined ? options.redact : true;
             this._excludeConfig = options.excludeConfig || null;
             this._region = options.region || 'US';
+            this._countryCodeOverride = options.countryCode || null;
             customLogger = options.customLogger;
             apiUrl = options.apiUrl;
         } else {
@@ -226,6 +229,7 @@ export class VeSync {
             this._redact = redact;
             this._excludeConfig = excludeConfig || null;
             this._region = 'US';
+            this._countryCodeOverride = null;
         }
 
         this._energyUpdateInterval = DEFAULT_ENERGY_UPDATE_INTERVAL;
@@ -274,6 +278,13 @@ export class VeSync {
         if (apiUrl) {
             setApiBaseUrl(apiUrl);
         } else {
+            // If country code is provided, use it to determine the endpoint
+            if (this._countryCodeOverride) {
+                const endpointRegion = getEndpointForCountryCode(this._countryCodeOverride);
+                this._region = endpointRegion;
+                logger.debug(`Country code ${this._countryCodeOverride} maps to ${endpointRegion} endpoint`);
+            }
+            
             // Set endpoint based on region
             const regionEndpoints: Record<string, string> = {
                 'US': 'https://smartapi.vesync.com',
@@ -571,6 +582,9 @@ export class VeSync {
             region: this._region
         });
 
+        // Track which regions have been attempted to prevent infinite loops
+        const triedRegions = new Set<string>();
+
         for (let attempt = 0; attempt < retryAttempts; attempt++) {
             try {
                 logger.debug(`Authentication attempt ${attempt + 1} of ${retryAttempts}`);
@@ -579,7 +593,7 @@ export class VeSync {
                 // The cross-region error handling below will automatically switch to the correct region
 
                 // Try new authentication flow first with detected region
-                let [success, token, accountId, countryCode] = await Helpers.authNewFlow(this, this._appId, this._region);
+                let [success, token, accountId, countryCode] = await Helpers.authNewFlow(this, this._appId, this._region, this._countryCodeOverride || undefined);
                 
                 // Track if new flow succeeded
                 if (success) {
@@ -595,8 +609,39 @@ export class VeSync {
                     
                     // Check if we need to try a different region
                     if (countryCode === 'cross_region' || countryCode === 'cross_region_retry') {
+                        // Mark current region as tried
+                        triedRegions.add(this._region);
+                        
                         logger.debug('Cross-region error detected, trying opposite region...');
                         const alternateRegion = this._region === 'US' ? 'EU' : 'US';
+                        
+                        // Check if we've already tried this region to prevent infinite loops
+                        if (triedRegions.has(alternateRegion)) {
+                            logger.error('═══════════════════════════════════════════════════════════════');
+                            logger.error('AUTHENTICATION FAILED: COUNTRY CODE REQUIRED');
+                            logger.error('');
+                            logger.error('Both US and EU endpoints rejected your account.');
+                            logger.error('This means you MUST specify your country code.');
+                            logger.error('');
+                            logger.error('SOLUTION:');
+                            logger.error('1. In Homebridge UI:');
+                            logger.error('   - Go to plugin settings');
+                            logger.error('   - Select your country from the "Country Code" dropdown');
+                            logger.error('');
+                            logger.error('2. In config.json:');
+                            logger.error('   Add: "countryCode": "YOUR_COUNTRY_CODE"');
+                            logger.error('');
+                            logger.error('Common non-US/EU country codes:');
+                            logger.error('  🇦🇺 Australia: "AU"');
+                            logger.error('  🇳🇿 New Zealand: "NZ"');
+                            logger.error('  🇯🇵 Japan: "JP"');
+                            logger.error('  🇨🇦 Canada: "CA"');
+                            logger.error('  🇸🇬 Singapore: "SG"');
+                            logger.error('  🇲🇽 Mexico: "MX"');
+                            logger.error('═══════════════════════════════════════════════════════════════');
+                            return false;
+                        }
+                        
                         logger.debug(`Switching from ${this._region} to ${alternateRegion} region`);
                         
                         this._region = alternateRegion;
@@ -613,10 +658,17 @@ export class VeSync {
                         }
                         
                         // Retry with the alternate region
-                        [success, token, accountId, countryCode] = await Helpers.authNewFlow(this, this._appId, alternateRegion);
+                        [success, token, accountId, countryCode] = await Helpers.authNewFlow(this, this._appId, alternateRegion, this._countryCodeOverride || undefined);
                         if (success) {
                             this.authFlowUsed = 'new';
                             logger.debug(`Authentication successful with ${alternateRegion} region`);
+                        } else if (countryCode === 'cross_region' || countryCode === 'cross_region_retry') {
+                            // Both regions failed with cross-region error
+                            logger.error('Authentication failed: Account rejected by both US and EU regions');
+                            logger.error('This may indicate your account was created in a region not yet supported');
+                            logger.error('Please contact VeSync support to determine your account region');
+                            // Don't retry further attempts as we've exhausted both regions
+                            return false;
                         }
                     }
 

@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.104] - 2025-08-26
+
+### Added
+- **International Account Support**: Full support for accounts worldwide with country code configuration
+  - New `countryCode` parameter in VeSync constructor for specifying account country
+  - Smart endpoint selection based on country codes (EU countries → EU endpoint, others → US endpoint)
+  - Support for 40+ European country codes automatically routed to EU endpoint
+  - Comprehensive error messages when country code configuration is needed
+  - Country code detection helpers for better user guidance
+
+### Changed
+- **Enhanced Error Messages**: Clear, actionable error messages for authentication failures
+  - When both regions fail, displays helpful country code configuration instructions
+  - Shows common country codes (AU, NZ, JP, etc.) in error messages for quick reference
+  - Warning messages when country code mismatch is detected with fix instructions
+  - Improved cross-region error detection and user guidance
+
+### Fixed
+- **Australian/New Zealand Authentication**: AU and NZ accounts now work with US endpoint + country codes
+  - Discovered that AU/NZ accounts use US endpoint but require their specific country codes
+  - Fixed authentication for all Asia-Pacific region accounts
+  - Removed invalid .cn endpoint attempts
+
+### Documentation
+- Added comprehensive international account support documentation
+- Added country code configuration examples for common countries
+- Updated README with detailed setup instructions for international users
+- Added troubleshooting guide for country code related errors
+
 ## [1.0.103] - 2025-08-25
 
 ### Fixed

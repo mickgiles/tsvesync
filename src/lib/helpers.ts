@@ -85,6 +85,42 @@ export const AUTH_ERROR_CODES = {
 };
 
 /**
+ * Get list of country codes that use the US endpoint
+ * These are tried when we get a cross-region error
+ */
+export function getUSEndpointCountryCodes(): string[] {
+    // Countries that use the US endpoint but might need their own country code
+    return ['US', 'AU', 'NZ', 'JP', 'CA', 'MX', 'SG'];
+}
+
+/**
+ * Get the appropriate API endpoint based on country code
+ */
+export function getEndpointForCountryCode(countryCode: string): 'US' | 'EU' {
+    // European country codes that should use the EU endpoint
+    const euCountryCodes = [
+        // Western Europe
+        'GB', 'DE', 'FR', 'IT', 'ES', 'NL', 'BE', 'AT', 'CH', 'IE', 'PT', 'LU',
+        // Nordic countries
+        'SE', 'NO', 'DK', 'FI', 'IS',
+        // Eastern Europe
+        'PL', 'CZ', 'HU', 'RO', 'BG', 'HR', 'SI', 'SK', 'LT', 'LV', 'EE',
+        // Southern Europe
+        'GR', 'CY', 'MT',
+        // Other European
+        'AL', 'BA', 'RS', 'ME', 'MK', 'MD', 'UA', 'BY'
+    ];
+    
+    // Check if country code is in EU list
+    if (euCountryCodes.includes(countryCode)) {
+        return 'EU';
+    }
+    
+    // Everything else uses US endpoint (including AU, NZ, JP, CA, MX, etc.)
+    return 'US';
+}
+
+/**
  * Detect user's home region from email domain or country hints
  */
 export function detectUserRegion(email: string): string {
@@ -557,7 +593,7 @@ export class Helpers {
     /**
      * Perform new two-step authentication flow
      */
-    static async authNewFlow(manager: VeSync, appId: string, region: string = 'US'): Promise<[boolean, string | null, string | null, string | null]> {
+    static async authNewFlow(manager: VeSync, appId: string, region: string = 'US', countryCodeOverride?: string): Promise<[boolean, string | null, string | null, string | null]> {
         try {
             // Generate terminal ID to be used in both steps
             const terminalId = generateTerminalId();
@@ -624,8 +660,9 @@ export class Helpers {
             logger.debug('Step 1 successful, got authorization code');
 
             // Step 2: Login with authorization code
-            // Use the appropriate country code based on the region we're authenticating with
-            const countryCodeForStep2 = region === 'EU' ? 'DE' : 'US';
+            // Use the override if provided, otherwise default to 'US'
+            // Users should specify their actual country code in the configuration
+            const countryCodeForStep2 = countryCodeOverride || 'US';
             const step2Body = this.reqBodyAuthStep2(authorizeCode, bizToken, appId, terminalId, countryCodeForStep2);
             
             logger.debug('Step 2: Logging in with authorization code...');
@@ -655,7 +692,22 @@ export class Helpers {
                 logger.debug('Step 2 error, code:', loginResponse.code, 'checking if cross-region...');
                 // Handle cross-region error - for EU accounts, we need to switch regions entirely
                 if (CROSS_REGION_ERROR_CODES.includes(loginResponse.code)) {
-                    logger.debug('Cross-region error detected in Step 2 - need to use different region');
+                    // Log helpful message about country code mismatch
+                    logger.warn('═══════════════════════════════════════════════════════════════');
+                    logger.warn('COUNTRY CODE MISMATCH DETECTED');
+                    logger.warn(`Your account expects a different country code than '${countryCodeForStep2}'`);
+                    logger.warn('This usually means:');
+                    logger.warn('  1. You need to set the correct country code in your config');
+                    logger.warn('  2. Your account was created in a different country/region');
+                    logger.warn('');
+                    logger.warn('To fix this:');
+                    logger.warn('  - In Homebridge UI: Select your correct country from the dropdown');
+                    logger.warn('  - In config.json: Add "countryCode": "YOUR_COUNTRY_CODE"');
+                    logger.warn('');
+                    logger.warn('Common country codes: US, CA, GB, DE, FR, AU, NZ, JP');
+                    logger.warn('═══════════════════════════════════════════════════════════════');
+                    
+                    logger.debug('Cross-region error detected in Step 2 - will try different endpoint');
                     // For cross-region errors, we need to retry the entire flow with a different region
                     // The authorization code from Step 1 is tied to the endpoint it was obtained from
                     setApiBaseUrl(originalUrl); // Restore original URL

@@ -6,8 +6,10 @@ A TypeScript library for interacting with VeSync smart home devices. This librar
 
 - **Enhanced Authentication**: Now supports the new VeSync authentication flow (pyvesync PR #340) with automatic fallback to legacy authentication
 - **Regional API Support**: Automatic detection and routing for US (`smartapi.vesync.com`) and EU (`smartapi.vesync.eu`) endpoints
-- **Improved Error Handling**: Better recovery from API changes and authentication errors
-- **Cross-Region Support**: Handles cross-region authentication errors automatically
+- **International Account Support**: Full support for accounts worldwide including Australia, New Zealand, Japan, and all European countries
+- **Country Code Configuration**: Specify your country code for proper authentication with international accounts
+- **Improved Error Handling**: Better recovery from API changes and authentication errors with helpful guidance
+- **Cross-Region Support**: Automatic handling of cross-region authentication errors
 
 ## Features
 
@@ -175,6 +177,68 @@ await manager.login();
 // Get all devices
 await manager.getDevices();
 ```
+
+### International Account Support
+
+For accounts created outside the United States, you may need to specify your country code:
+
+```typescript
+import { VeSync } from 'tsvesync';
+
+// For Australian users
+const manager = new VeSync(username, password, 'America/Sydney', {
+    countryCode: 'AU'
+});
+
+// For German users
+const manager = new VeSync(username, password, 'Europe/Berlin', {
+    countryCode: 'DE'
+});
+
+// For UK users
+const manager = new VeSync(username, password, 'Europe/London', {
+    countryCode: 'GB'
+});
+
+await manager.login();
+```
+
+#### Supported Country Codes
+
+The library supports all country codes. Common ones include:
+
+**Americas:**
+- `US` - United States (default)
+- `CA` - Canada
+- `MX` - Mexico
+
+**Europe:** (uses EU endpoint)
+- `GB` - United Kingdom
+- `DE` - Germany
+- `FR` - France
+- `IT` - Italy
+- `ES` - Spain
+- `NL` - Netherlands
+- `SE` - Sweden
+- `NO` - Norway
+- `DK` - Denmark
+- `FI` - Finland
+- `PL` - Poland
+- And all other European countries
+
+**Asia-Pacific:** (uses US endpoint)
+- `AU` - Australia
+- `NZ` - New Zealand
+- `JP` - Japan
+- `SG` - Singapore
+- `CN` - China
+- `KR` - South Korea
+
+**Important Notes:**
+- If you get an authentication error about "country code mismatch" or "cross-region error", you need to set your country code
+- The country code should match the country where your VeSync account was created
+- European countries automatically use the EU endpoint (`smartapi.vesync.eu`)
+- All other countries use the US endpoint (`smartapi.vesync.com`)
 
 ### Working with Devices
 
