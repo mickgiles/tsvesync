@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.112] - 2025-08-28
+
+### Fixed
+- **🔗 Synchronized Release**: Version bump to maintain synchronization with homebridge-tsvesync v1.0.112
+  - **🎯 Core 200S Air Quality Fix**: Related to the definitive fix for Core 200S air quality phantom service issue in homebridge-tsvesync v1.0.112
+  - **⚙️ Technical Details**: The homebridge plugin now correctly handles the bypass logic to ensure `hasFeature('air_quality')` returns actual boolean values
+  - **📋 Library Status**: All tsvesync device methods work correctly - the issue was in homebridge plugin's API proxy wrapper logic
+
+### Changed
+- **🔄 Version Synchronization**: Bumped version to maintain compatibility with homebridge-tsvesync v1.0.112
+  - **⚠️ Critical Fix**: The definitive Core 200S air quality detection fix is implemented in homebridge-tsvesync v1.0.112
+  - **🔧 Library Integrity**: This library's feature detection methods work correctly and are now properly handled by the plugin
+  - **🎯 Confirmed Functionality**: `hasFeature('air_quality')` method returns correct boolean values for all device types
+
+### Technical Notes
+- **✅ Library Functionality**: All tsvesync device methods including `hasFeature()` work correctly and return the expected synchronous types
+- **🔗 Plugin Integration**: The homebridge plugin v1.0.112 now correctly bypasses rate limiting for configuration methods before async wrapping
+- **📱 Device Compatibility**: Confirmed working with Core 200S (no air quality), Core 300S+ (with air quality), and all other supported VeSync devices
+- **🎉 Resolution**: The phantom air quality service issue has been definitively resolved through proper proxy bypass logic
+
 ## [1.0.111] - 2025-08-28
 
 ### Fixed
