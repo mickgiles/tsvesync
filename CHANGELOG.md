@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.114] - 2025-08-28
+
+### Changed
+- **🔄 Synchronized Release**: Version bump to maintain synchronization with homebridge-tsvesync v1.0.114
+  - **🎯 Related Fix**: This release corresponds to homebridge-tsvesync v1.0.114 which fixes air quality sensor detection issues
+  - **📚 Library Status**: No changes to tsvesync library itself - all methods including `hasFeature()` continue to work correctly
+  - **🔗 Plugin Integration**: The homebridge plugin v1.0.114 now properly handles synchronous feature detection methods
+  - **⚙️ Proxy Compatibility**: Ensures compatibility with improved API proxy handling in homebridge-tsvesync
+
+### Fixed
+- **🔄 Version Synchronization**: Maintains synchronized versioning with homebridge-tsvesync per project requirements
+  - **📊 Plugin Benefits**: Homebridge plugin v1.0.114 resolves phantom air quality service issues on devices without sensors
+  - **✅ Device Compatibility**: All VeSync devices continue to work correctly with improved feature detection in the plugin
+  - **🔍 Diagnostic Improvements**: Plugin now has cleaner logging while maintaining debug capability
+
+### Technical Notes
+- **📚 Library Integrity**: All tsvesync core functionality remains unchanged and stable
+- **🔗 Cross-Project**: This version aligns with homebridge-tsvesync v1.0.114 air quality detection improvements
+- **📦 Publishing**: Will be published to npm to enable homebridge-tsvesync dependency update
+- **🔄 Compatibility**: Maintains full backward compatibility with all existing implementations
+
 ## [1.0.113] - 2025-08-28
 
 ### Fixed
