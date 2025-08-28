@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.116] - 2025-08-28
+
+### Changed
+- **🔄 Synchronized Release**: Version bump to maintain synchronization with homebridge-tsvesync v1.0.116
+  - **🎯 Related Fix**: This release corresponds to homebridge-tsvesync v1.0.116 which fixes Core300S and other Core series filter life detection
+  - **🏠 Filter Integration**: The homebridge plugin now has enhanced device type detection for Core series air purifiers
+  - **📚 Library Status**: No changes to tsvesync library itself - all device detection methods continue to work correctly
+  - **🔗 Plugin Enhancement**: Homebridge plugin v1.0.116 improves Core series device type pattern matching for filter life support
+
+### Fixed
+- **🔄 Version Synchronization**: Maintains synchronized versioning with homebridge-tsvesync per project requirements
+  - **📱 HomeKit Benefits**: Homebridge plugin v1.0.116 resolves filter life display issues for Core300S and variants
+  - **✅ Device Compatibility**: All Core series air purifiers now properly show filter life characteristics in HomeKit
+  - **🔧 Detection Enhancement**: Plugin now handles Core series models that report without "Core" prefix (e.g., "300S" instead of "Core300S")
+  - **🧹 Pattern Matching**: Enhanced device type detection for LAP-C301S, LAP-C302S, and other Core series variants
+
+### Technical Notes
+- **📚 Library Integrity**: All tsvesync core functionality remains unchanged and stable
+- **🔗 Cross-Project**: This version aligns with homebridge-tsvesync v1.0.116 Core series detection improvements
+- **📦 Publishing**: Will be published to npm to enable homebridge-tsvesync dependency update
+- **🔄 Compatibility**: Maintains full backward compatibility with all existing implementations
+- **🎛️ Filter Support**: All Core series device filter life methods continue to work as expected
+
 ## [1.0.115] - 2025-08-28
 
 ### Changed
