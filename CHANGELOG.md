@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.108] - 2025-08-28
+
+### Changed
+- Version bump to maintain synchronization with homebridge-tsvesync v1.0.108
+- No functional changes in this release - air quality fixes were already included in v1.0.107
+
 ## [1.0.107] - 2025-08-28
 
 ### Fixed
