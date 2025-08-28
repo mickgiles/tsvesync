@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.111] - 2025-08-28
+
+### Fixed
+- **🔧 Core 200S Air Quality Detection**: Related to the definitive fix for Core 200S air quality phantom service issue in homebridge-tsvesync
+  - The root cause was in the homebridge plugin's API proxy wrapper, not in this library
+  - This version bump maintains synchronization with homebridge-tsvesync v1.0.111
+  - The `hasFeature('air_quality')` method in tsvesync correctly returns boolean values - the issue was that homebridge-tsvesync was inadvertently converting them to Promises via the rate limiting proxy
+
+### Changed
+- **Version Synchronization**: Bumped version to maintain compatibility with homebridge-tsvesync v1.0.111
+  - No functional changes in this release - the definitive air quality detection fix is implemented in homebridge-tsvesync
+  - This library's feature detection methods work correctly and now properly bypass rate limiting in the plugin
+
+### Technical Notes
+- **Library Functionality**: All tsvesync device methods including `hasFeature()` work correctly and return the expected types
+- **Plugin Integration**: The homebridge plugin now correctly handles synchronous configuration methods without wrapping them in rate limiting
+- **Device Support**: Confirmed working with Core 200S (no air quality), Core 300S+ (with air quality), and all other supported devices
+
 ## [1.0.110] - 2025-08-28
 
 ### Changed
