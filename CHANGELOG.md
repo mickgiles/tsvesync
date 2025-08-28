@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.118] - 2025-08-28
+
+### Changed
+- **🔄 Synchronized Release**: Version bump to maintain synchronization with homebridge-tsvesync v1.0.118
+  - **🎯 Related Fix**: This release corresponds to homebridge-tsvesync v1.0.118 which fixes Core300S filter characteristics in HomeKit
+  - **📊 HomeKit Integration**: The homebridge plugin now properly displays filter life and mode characteristics for Core300S devices
+  - **📚 Library Status**: No changes to tsvesync library itself - all device methods continue to work correctly
+  - **🔗 Plugin Enhancement**: Homebridge plugin v1.0.118 fixes characteristic setup to ensure filter life and mode controls appear in HomeKit
+
 ## [1.0.117] - 2025-08-28
 
 ### Changed
