@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.107] - 2025-08-28
+
+### Fixed
+- **Air Quality Sensor Configuration**: Updated device configurations to accurately reflect which air purifier models have hardware air quality sensors
+  - Removed `air_quality` feature from LAP-C series devices (LAP-C201S, LAP-C202S, LAP-C301S, LAP-C302S, LAP-C401S, LAP-C601S variants)
+  - Removed `air_quality` feature from Core200S devices without sensors
+  - Removed `air_quality` feature from LV-RH131S humidifier (does not have air quality sensor)
+  - Kept `air_quality` feature for devices with confirmed hardware sensors (Core300S/400S/600S, Vital series, EverestAir series, LV-PUR131S)
+  - Prevents HomeKit from displaying invalid air quality data for devices without physical sensors
+  - Eliminates user confusion from non-functional air quality readings on devices lacking hardware support
+
 ## [1.0.106] - 2025-08-26
 
 ### Fixed

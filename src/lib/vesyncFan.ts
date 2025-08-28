@@ -41,57 +41,57 @@ export const fanConfig: FanConfig = {
     // LAP Series
     'LAP-C201S-AUSR': {
         module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
+        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
         levels: [1, 2, 3]
     },
     'LAP-C202S-WUSR': {
         module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
+        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
         levels: [1, 2, 3]
     },
     'LAP-C301S-WJP': {
         module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
+        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
         levels: [1, 2, 3, 4]
     },
     'LAP-C302S-WUSB': {
         module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
+        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
         levels: [1, 2, 3, 4]
     },
     'LAP-C301S-WAAA': {
         module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
+        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
         levels: [1, 2, 3, 4]
     },
     'LAP-C401S-WJP': {
         module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
+        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
         levels: [1, 2, 3, 4]
     },
     'LAP-C401S-WUSR': {
         module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
+        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
         levels: [1, 2, 3, 4]
     },
     'LAP-C401S-WAAA': {
         module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
+        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
         levels: [1, 2, 3, 4]
     },
     'LAP-C601S-WUS': {
         module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
+        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
         levels: [1, 2, 3, 4]
     },
     'LAP-C601S-WUSR': {
         module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
+        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
         levels: [1, 2, 3, 4]
     },
     'LAP-C601S-WEU': {
         module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
+        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
         levels: [1, 2, 3, 4]
     },
     'LAP-V102S-AASR': {
@@ -310,7 +310,7 @@ export const fanConfig: FanConfig = {
     },
     'LV-RH131S': {
         module: 'VeSyncAir131',
-        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed', 'auto_mode', 'filter_life'],
+        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed', 'filter_life'],
         levels: [1, 2, 3]
     }
 }; 
