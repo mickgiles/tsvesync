@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.113] - 2025-08-28
+
+### Fixed
+- **🔗 Synchronized Release**: Version bump to maintain synchronization with homebridge-tsvesync v1.0.113
+  - **🚨 Critical Stability Fix**: Related to the resolution of crash issues introduced in homebridge-tsvesync v1.0.112
+  - **⚙️ Proxy Chain Safety**: The homebridge plugin now uses synchronous wrapper functions instead of direct returns for bypassed methods
+  - **📋 Library Status**: All tsvesync library methods continue to work correctly - the crashes were in the homebridge plugin's proxy handling
+  - **🎯 Maintained Functionality**: Core 200S air quality detection fix remains active while preventing crashes
+
+### Changed
+- **🔄 Version Synchronization**: Bumped version to maintain compatibility with homebridge-tsvesync v1.0.113
+  - **✅ Library Integrity**: This library's methods including `hasFeature()` continue to work correctly
+  - **🔧 Plugin Integration**: The homebridge plugin v1.0.113 now safely handles bypassed methods without crashes
+  - **📱 Device Compatibility**: All supported VeSync devices maintain proper functionality
+  - **🛡️ Enhanced Safety**: Plugin proxy now uses safer synchronous wrapper approach for bypassed methods
+
+### Technical Notes
+- **✅ Library Functionality**: All tsvesync methods work as expected - no changes needed in the core library
+- **🔗 Plugin Integration**: The homebridge plugin v1.0.113 resolves crash issues while maintaining all library compatibility
+- **📱 Device Support**: Confirmed working with all supported VeSync devices including Core series, Vital series, and LAP series
+- **🎉 Resolution**: The v1.0.112 crash issue has been resolved through improved proxy safety in homebridge-tsvesync v1.0.113
+
 ## [1.0.112] - 2025-08-28
 
 ### Fixed
