@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.122] - 2025-08-29
+
+### Changed
+- **🔄 Synchronized Release**: Version bump to maintain synchronization with homebridge-tsvesync v1.0.122
+  - **🎯 Related Fix**: This release corresponds to homebridge-tsvesync v1.0.122 which contains Core300S HomeKit tile fixes
+  - **📱 HomeKit Integration**: The homebridge plugin now always registers filter characteristics for all air purifiers
+  - **🔧 Technical Enhancement**: Plugin v1.0.122 uses consistent filter characteristic setup approach like reference implementations
+  - **📊 Core300S Fix**: Homebridge plugin v1.0.122 resolves missing filter and mode settings in Core300S HomeKit tile
+  - **🛡️ Universal Approach**: Plugin now uses unified characteristic setup for all air purifiers
+
+### Fixed
+- **🔄 Version Synchronization**: Maintains synchronized versioning with homebridge-tsvesync per project requirements
+  - **📱 HomeKit Benefits**: Homebridge plugin v1.0.122 includes comprehensive Core300S HomeKit tile improvements
+  - **✅ Device Compatibility**: Core300S devices now show all expected filter and mode characteristics in HomeKit
+  - **🔧 Technical Enhancement**: Plugin uses always-register approach for filter characteristics like proven reference plugins
+  - **🛡️ Backward Compatibility**: All existing device support continues to work with enhanced HomeKit integration
+
+### Technical Notes
+- **📚 Library Integrity**: All tsvesync core functionality remains unchanged and stable
+- **🔗 Cross-Project**: This version aligns with homebridge-tsvesync v1.0.122 Core300S HomeKit tile fixes
+- **📦 Publishing**: Will be published to npm to enable homebridge-tsvesync dependency update
+- **🔄 Compatibility**: Maintains full backward compatibility with all existing implementations
+- **🎛️ Device Support**: All air purifier device methods continue to work as expected with enhanced HomeKit integration
+
 ## [1.0.121] - 2025-08-29
 
 ### Fixed
