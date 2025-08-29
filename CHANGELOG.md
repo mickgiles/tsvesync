@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-08-29
+
+### Changed
+- **🔄 Synchronized Release**: Version bump to v1.1.0 to align with homebridge-tsvesync v1.1.0 major improvements
+  - **🆕 Air Quality Sensor Separation**: This version supports the new separated air quality sensor functionality in homebridge-tsvesync v1.1.0
+  - **🎯 Core Series Enhancement**: Improved compatibility with enhanced Core series filter life detection in the homebridge plugin
+  - **🔧 API Stability**: All core tsvesync functionality remains stable while supporting enhanced HomeKit integration features
+  - **📱 HomeKit Benefits**: The homebridge plugin v1.1.0 now provides separated air quality sensors and improved service hierarchy
+
+### Technical Notes
+- **📚 Library Integrity**: All tsvesync core functionality remains unchanged and fully backward compatible
+- **🔗 Cross-Project Alignment**: This version aligns with homebridge-tsvesync v1.1.0 which includes significant air purifier improvements
+- **📦 Publishing**: Published to npm to enable homebridge-tsvesync v1.1.0 dependency alignment
+- **🔄 Compatibility**: Maintains full backward compatibility with all existing implementations
+- **🎛️ Device Support**: All air purifier device methods continue to work as expected with enhanced HomeKit integration
+
 ## [1.0.123] - 2025-08-29
 
 ### Changed
