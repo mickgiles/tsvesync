@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.123] - 2025-08-29
+
+### Changed
+- **🔄 Synchronized Release**: Version bump to maintain synchronization with homebridge-tsvesync v1.0.123
+  - **🎯 Related Fix**: This release corresponds to homebridge-tsvesync v1.0.123 which contains Core300S HomeKit controls display fixes
+  - **📱 HomeKit Enhancement**: The homebridge plugin now sets AirPurifier service as primary service for proper control display
+  - **🔧 Technical Improvement**: Plugin v1.0.123 adds proper service hierarchy with AirQualitySensor linked as secondary service
+  - **📊 Core300S Fix**: Homebridge plugin v1.0.123 resolves Core300S showing info page instead of controls in HomeKit
+  - **🛡️ Service Hierarchy**: Plugin now uses correct setPrimaryService() configuration for all air purifiers
+
+### Fixed
+- **🔄 Version Synchronization**: Maintains synchronized versioning with homebridge-tsvesync per project requirements
+  - **📱 HomeKit Benefits**: Homebridge plugin v1.0.123 includes comprehensive Core300S HomeKit display improvements
+  - **✅ Control Display**: Core300S devices now show control settings instead of info page in HomeKit
+  - **🔧 Service Configuration**: Plugin uses proper primary service setup with linked secondary services
+  - **🛡️ Backward Compatibility**: All existing device support continues to work with enhanced HomeKit display
+
+### Technical Notes
+- **📚 Library Integrity**: All tsvesync core functionality remains unchanged and stable
+- **🔗 Cross-Project**: This version aligns with homebridge-tsvesync v1.0.123 Core300S HomeKit display fixes
+- **📦 Publishing**: Will be published to npm to enable homebridge-tsvesync dependency update
+- **🔄 Compatibility**: Maintains full backward compatibility with all existing implementations
+- **🎛️ Device Support**: All air purifier device methods continue to work as expected with enhanced HomeKit integration
+
 ## [1.0.122] - 2025-08-29
 
 ### Changed
