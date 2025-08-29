@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.120] - 2025-08-29
+
+### Changed
+- **🔄 Synchronized Release**: Version bump to maintain synchronization with homebridge-tsvesync v1.0.120
+  - **🎯 Related Fix**: This release corresponds to homebridge-tsvesync v1.0.120 which contains comprehensive Core300S debugging and characteristic display improvements
+  - **📊 HomeKit Integration**: The homebridge plugin now has extensive debugging capabilities and enhanced Core300S support
+  - **📚 Library Status**: No changes to tsvesync library itself - all device methods continue to work correctly
+  - **🔧 Plugin Enhancement**: Homebridge plugin v1.0.120 includes enhanced diagnostic logging, improved characteristic handling, and Core300S-specific fixes
+
+### Fixed
+- **🔄 Version Synchronization**: Maintains synchronized versioning with homebridge-tsvesync per project requirements
+  - **📱 HomeKit Benefits**: Homebridge plugin v1.0.120 includes comprehensive Core300S fixes and enhanced debugging
+  - **✅ Device Compatibility**: Core300S and other air purifier devices have improved characteristic detection and setup
+  - **🔧 Technical Enhancement**: Plugin now has extensive logging and debugging capabilities for troubleshooting device issues
+  - **🛡️ Backward Compatibility**: All existing device support continues to work as before
+
+### Technical Notes
+- **📚 Library Integrity**: All tsvesync core functionality remains unchanged and stable
+- **🔗 Cross-Project**: This version aligns with homebridge-tsvesync v1.0.120 comprehensive debugging and Core300S improvements
+- **📦 Publishing**: Will be published to npm to enable homebridge-tsvesync dependency update
+- **🔄 Compatibility**: Maintains full backward compatibility with all existing implementations
+- **🎛️ Device Support**: All air purifier device methods continue to work as expected with enhanced HomeKit integration
+
 ## [1.0.119] - 2025-08-29
 
 ### Changed
