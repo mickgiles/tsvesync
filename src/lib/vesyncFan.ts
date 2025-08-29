@@ -20,7 +20,7 @@ export const fanConfig: FanConfig = {
     'Core200S': {
         module: 'VeSyncAirBypass',
         features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed', 'sleep_mode', 'filter_life'],
-        levels: [1, 2, 3]
+        levels: [1, 2, 3, 4]  // 4 levels including sleep mode, matching reference plugin
     },
     'Core300S': {
         module: 'VeSyncAirBypass',

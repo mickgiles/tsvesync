@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.121] - 2025-08-29
+
+### Fixed
+- **🎯 Core200S Speed Level Configuration**: Updated Core200S to have 4 speed levels [1, 2, 3, 4] instead of 3
+  - **✅ Sleep Mode Support**: Sleep mode is now correctly treated as speed level 1, matching reference plugin behavior
+  - **🔧 Technical Enhancement**: Aligns with proven working implementation from reference homebridge-levoit-air-purifier plugin
+  - **📱 HomeKit Impact**: Ensures proper speed control and display in HomeKit for Core200S devices
+  - **🛡️ Backward Compatibility**: All existing functionality preserved while fixing speed level handling
+
+### Changed
+- **🔄 Synchronized Release**: Version bump to maintain synchronization with homebridge-tsvesync v1.0.121
+  - **🎯 Related Fix**: This release corresponds to homebridge-tsvesync v1.0.121 which contains simplified HomeKit characteristic setup
+  - **📊 HomeKit Integration**: The homebridge plugin now uses a much simpler, more reliable characteristic setup approach
+  - **📚 Library Enhancement**: Core200S speed levels updated to match working reference implementation
+  - **🔧 Plugin Improvement**: Homebridge plugin v1.0.121 eliminates complex characteristic handling in favor of proven approach
+
+### Technical Notes
+- **📚 Speed Level Update**: Core200S levels changed from [1, 2, 3] to [1, 2, 3, 4] in fanConfig
+- **🔗 Cross-Project**: This version aligns with homebridge-tsvesync v1.0.121 simplified characteristic setup improvements
+- **📦 Publishing**: Will be published to npm to enable homebridge-tsvesync dependency update
+- **🔄 Compatibility**: Maintains full backward compatibility with all existing implementations
+- **🎛️ Reference Alignment**: Changes based on analysis of working homebridge-levoit-air-purifier plugin
+
 ## [1.0.120] - 2025-08-29
 
 ### Changed
