@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.119] - 2025-08-29
+
+### Changed
+- **🔄 Synchronized Release**: Version bump to maintain synchronization with homebridge-tsvesync v1.0.119
+  - **🎯 Related Fix**: This release corresponds to homebridge-tsvesync v1.0.119 which fixes Core300S HomeKit characteristic display
+  - **📊 HomeKit Integration**: The homebridge plugin now properly displays filter life and mode characteristics for Core300S devices
+  - **📚 Library Status**: No changes to tsvesync library itself - all device methods continue to work correctly
+  - **🔧 Plugin Enhancement**: Homebridge plugin v1.0.119 removes Core300S from special rotation speed handling that was disrupting AirPurifier service
+
+### Fixed
+- **🔄 Version Synchronization**: Maintains synchronized versioning with homebridge-tsvesync per project requirements
+  - **📱 HomeKit Benefits**: Homebridge plugin v1.0.119 resolves Core300S filter life and mode characteristic display issues
+  - **✅ Device Compatibility**: Core300S devices now properly show all expected features in HomeKit tile
+  - **🔧 Technical Enhancement**: Plugin now uses standard rotation speed setup for Core300S, preserving service integrity
+  - **🛡️ Backward Compatibility**: Core200S continues to work with its special handling as before
+
+### Technical Notes
+- **📚 Library Integrity**: All tsvesync core functionality remains unchanged and stable
+- **🔗 Cross-Project**: This version aligns with homebridge-tsvesync v1.0.119 Core300S characteristic display improvements
+- **📦 Publishing**: Will be published to npm to enable homebridge-tsvesync dependency update
+- **🔄 Compatibility**: Maintains full backward compatibility with all existing implementations
+- **🎛️ Device Support**: All Core series device methods continue to work as expected with proper HomeKit integration
+
 ## [1.0.118] - 2025-08-28
 
 ### Changed
