@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2025-08-30
+
+### Changed
+- **🔄 Synchronized Release**: Version bump to v1.1.1 to align with homebridge-tsvesync v1.1.1 patch release
+  - **⚡ HomeKit Responsiveness**: This version supports the enhanced on/off functionality in homebridge-tsvesync v1.1.1
+  - **🎯 Immediate Feedback**: Improved compatibility with instant HomeKit UI feedback while API calls are processed
+  - **🛡️ Error Recovery**: Support for error handling with state reversion in the homebridge plugin
+  - **🔧 Speed Restoration**: Enhanced speed restoration logic for Air131 and other device models
+  - **📱 Better UX**: The homebridge plugin v1.1.1 now provides more responsive device control
+
+### Technical Notes
+- **📚 Library Integrity**: All tsvesync core functionality remains unchanged and fully backward compatible
+- **🔗 Cross-Project Alignment**: This version aligns with homebridge-tsvesync v1.1.1 on/off improvements
+- **📦 Publishing**: Published to npm to enable homebridge-tsvesync v1.1.1 dependency alignment
+- **🔄 Compatibility**: Maintains full backward compatibility with all existing implementations
+- **🎛️ Device Support**: All device methods continue to work as expected with enhanced HomeKit responsiveness
+
 ## [1.1.0] - 2025-08-29
 
 ### Changed
