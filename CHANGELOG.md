@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2025-09-03
+
+### Changed
+- **🔄 Synchronized Release**: Version bump to v1.1.2 to align with homebridge-tsvesync v1.1.2 sleep mode enhancements
+  - **🌙 Enhanced Sleep Mode Support**: This version supports the improved sleep mode speed control in homebridge-tsvesync v1.1.2
+  - **🎛️ Better Speed Mapping**: Improved compatibility with enhanced speed control logic in the homebridge plugin
+  - **📱 HomeKit UX**: The homebridge plugin v1.1.2 now provides better sleep mode integration and speed control
+  - **🔧 Performance Optimizations**: Support for consolidated and optimized speed conversion logic
+
+### Technical Notes
+- **📚 Library Integrity**: All tsvesync core functionality remains unchanged and fully backward compatible
+- **🔗 Cross-Project Alignment**: This version aligns with homebridge-tsvesync v1.1.2 sleep mode control improvements
+- **📦 Publishing**: Published to npm to enable homebridge-tsvesync v1.1.2 dependency alignment
+- **🔄 Compatibility**: Maintains full backward compatibility with all existing implementations
+- **🎛️ Device Support**: All device methods continue to work as expected with enhanced HomeKit sleep mode functionality
+
 ## [1.1.1] - 2025-08-30
 
 ### Changed
