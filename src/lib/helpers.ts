@@ -495,11 +495,10 @@ export class Helpers {
                 const httpStatus = error.response.status;
                 const msg: string | undefined = responseData?.msg;
                 if (
-                    responseData?.code === 4001004 ||
-                    msg === 'token expired' ||
                     httpStatus === 401 ||
                     httpStatus === 419 ||
-                    (typeof msg === 'string' && /token|login/i.test(msg))
+                    responseData?.code === 4001004 ||
+                    (typeof msg === 'string' && /token\s*expired/i.test(msg))
                 ) {
                     logger.debug('Token expired, attempting to re-login...');
                     
