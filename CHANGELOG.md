@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2025-09-04
+
+### Added
+- **🚀 Enhanced Session Management**: Advanced token lifecycle management for homebridge-tsvesync integration
+  - **⏰ Proactive Token Refresh Support**: Full compatibility with homebridge-tsvesync v1.3.0 proactive token refresh
+  - **🔄 Advanced Scheduling Integration**: Supports intelligent refresh scheduling based on JWT token lifetime
+  - **📊 Enhanced JWT Decoding**: Built-in support for accurate token lifetime tracking with issuance time (iat)
+  - **🔔 Callback System**: Comprehensive onTokenChange callback support for real-time session monitoring
+  - **🛡️ Reliability Features**: Foundation for uninterrupted long-running Homebridge sessions
+
+### Changed
+- **📦 Version Synchronization**: Updated to v1.3.0 to maintain alignment with homebridge-tsvesync enhancements
+- **🔄 API Compatibility**: Enhanced session management APIs to support advanced token refresh strategies
+- **📚 Documentation**: Comprehensive release notes including all token refresh enhancements
+
+### Enhanced
+- **🔐 Session Persistence**: Improved session persistence system with enhanced reliability
+  - **🎯 Token Lifecycle**: Advanced token lifecycle management with proactive refresh support
+  - **📈 Integration**: Seamless integration with homebridge-tsvesync proactive token refresh system
+  - **⚡ Performance**: Optimized for long-running applications with intelligent refresh scheduling
+  - **🛡️ Stability**: Enhanced session stability for continuous operation environments
+
+### Summary of All Features from v1.2.0 onwards
+
+This version maintains full compatibility with all session management features and adds comprehensive support for the advanced proactive token refresh capabilities in homebridge-tsvesync v1.3.0.
+
+#### Session Management System (v1.2.0-1.3.0)
+- **🔐 Complete Session Persistence**: Comprehensive token lifecycle management with SessionStore interface
+- **⏰ Proactive Token Refresh**: Advanced JWT token refresh before expiration (Enhanced in v1.3.0)
+- **🔄 Automatic Token Refresh**: Session hydration and refresh across application restarts
+- **📊 JWT Token Support**: Built-in JWT decoding for expiration and issuance timestamp extraction
+- **🔔 Event System**: onTokenChange callbacks for real-time session state monitoring
+- **🛡️ Secure Storage**: Session data persistence with proper file permissions (0o600)
+- **🚫 Concurrent Login Protection**: Promise-based coordination prevents simultaneous login attempts
+- **🌍 Cross-Region Resilience**: Enhanced authentication failure handling across US/EU regions
+
+Full changelog: https://github.com/mickgiles/tsvesync/blob/main/CHANGELOG.md
+
 ## [1.2.2] - 2025-09-04
 
 ### Changed
