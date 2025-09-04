@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2025-09-04
+
+### Fixed
+- **🔧 Enhanced Token Expiration Detection**: Improved authentication reliability and error handling
+  - **⚡ Prioritized HTTP Status Codes**: Token expiration detection now prioritizes HTTP 401/419 status codes over message content
+  - **🎯 Refined Pattern Matching**: Improved regex pattern for token expired message detection to be more precise
+  - **🛡️ Streamlined Error Logic**: Simplified authentication failure detection for better reliability
+  - **📈 Better Error Handling**: Enhanced handling of authentication-related errors across different scenarios
+
+### Changed
+- **🔄 Authentication Flow Optimization**: Improved token expiration detection sequence for more reliable re-authentication
+- **📊 Error Code Priority**: HTTP status codes (401, 419) now take precedence over error message parsing
+- **🎯 Pattern Specificity**: More specific regex pattern for token expired messages reduces false positives
+
+### Technical Details
+- **🏗️ Detection Sequence**: Reordered token expiration checks to prioritize HTTP status codes first
+- **🔧 Regex Enhancement**: Updated token expired pattern from general `/token|login/i` to specific `/token\s*expired/i`
+- **📦 Error Handling**: Maintained backward compatibility while improving detection accuracy
+- **⚡ Performance**: Reduced false positive detections for more efficient re-authentication
+
 ## [1.3.0] - 2025-09-04
 
 ### Added
