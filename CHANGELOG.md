@@ -5,39 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2025-09-04
+
+### Changed
+- **📦 Version Synchronization**: Updated to 1.2.2 to maintain alignment with homebridge-tsvesync enhancements
+- **🔄 Compatibility**: Full support for proactive token refresh functionality in homebridge-tsvesync
+- **📚 Documentation**: Comprehensive release notes including all changes from 1.2.0 onwards
+
+### Summary of Features from v1.2.0 onwards
+
+This version maintains full compatibility with the enhanced session management features introduced in v1.2.0 and supports the proactive token refresh capabilities added in homebridge-tsvesync v1.2.2.
+
+#### Session Management System (v1.2.0)
+- **🔐 Complete Session Persistence**: Comprehensive token lifecycle management with SessionStore interface
+- **🔄 Automatic Token Refresh**: Session hydration and refresh across application restarts
+- **📊 JWT Token Support**: Built-in JWT decoding for expiration and issuance timestamp extraction
+- **🔔 Event System**: onTokenChange callbacks for real-time session state monitoring
+- **🛡️ Secure Storage**: Session data persistence with proper file permissions (0o600)
+- **🚫 Concurrent Login Protection**: Promise-based coordination prevents simultaneous login attempts
+- **🌍 Cross-Region Resilience**: Enhanced authentication failure handling across US/EU regions
+
+Full changelog: https://github.com/mickgiles/tsvesync/blob/main/CHANGELOG.md
+
 ## [1.2.1] - 2025-09-04
 
 ### Changed
 - **📦 Re-release**: Version 1.2.1 re-release with comprehensive release notes from 1.2.0
 - **📝 Documentation**: Enhanced release documentation and changelog formatting
 - **🔄 Version Alignment**: Synchronized version numbers across tsvesync and homebridge-tsvesync
-
-### Release Notes from v1.2.0 - Session Management System
-
-This release includes all the major enhancements from v1.2.0:
-
-#### Major Enhancements
-- **🔐 Session Management System**: Comprehensive session persistence and token lifecycle management
-  - **💾 Session Persistence**: New `Session` and `SessionStore` interfaces for persistent authentication state
-  - **🔄 Token Lifecycle**: Automatic session hydration and token refresh across application restarts
-  - **📊 JWT Decoding**: Built-in JWT token parsing to extract expiration and issued timestamps
-  - **🔔 Event System**: `onTokenChange` callbacks for session state monitoring
-  - **🛡️ Secure Storage**: Session data persistence with proper file permissions (0o600)
-
-- **⚡ Enhanced Authentication Flow**: Improved login reliability and concurrency management
-  - **🚫 Concurrent Login Protection**: Prevents multiple simultaneous login attempts with promise-based coordination
-  - **🔄 Smart Re-authentication**: Enhanced token expiration detection with broader HTTP status code handling
-  - **🌍 Cross-Region Resilience**: Better handling of authentication failures across US/EU regions
-  - **📝 Detailed Error Messages**: Comprehensive error messaging for authentication troubleshooting
-
-#### Technical Improvements
-- **🔧 API Integration**: Enhanced authentication system with session callbacks
-- **📦 Export Surface**: Added session utilities (`Session`, `SessionStore`, `decodeJwtTimestamps`) to public API
-- **🔗 Event Integration**: Support for `sessionStore` and `onTokenChange` parameters in VeSync constructor
-- **🛡️ Token Validation**: Improved token expiration detection with HTTP 401/419 status code handling
-- **🔄 State Management**: Automatic session state emission on successful authentication
-
-Full changelog: https://github.com/mickgiles/tsvesync/blob/main/CHANGELOG.md
 
 ## [1.2.0] - 2025-09-04
 
