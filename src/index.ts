@@ -20,3 +20,6 @@ export {
     isCredentialError,
     isCrossRegionError
 } from './lib/constants'; 
+
+// Export session types and utilities
+export { Session, SessionStore, decodeJwtTimestamps } from './lib/session';

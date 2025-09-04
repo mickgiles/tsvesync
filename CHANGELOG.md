@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-09-04
+
+### Added
+- **🔐 Session Management System**: Comprehensive session persistence and token lifecycle management
+  - **💾 Session Persistence**: New `Session` and `SessionStore` interfaces for persistent authentication state
+  - **🔄 Token Lifecycle**: Automatic session hydration and token refresh across application restarts
+  - **📊 JWT Decoding**: Built-in JWT token parsing to extract expiration and issued timestamps
+  - **🔔 Event System**: `onTokenChange` callbacks for session state monitoring
+  - **🛡️ Secure Storage**: Session data persistance with proper file permissions (0o600)
+
+- **⚡ Enhanced Authentication Flow**: Improved login reliability and concurrency management
+  - **🚫 Concurrent Login Protection**: Prevents multiple simultaneous login attempts with promise-based coordination
+  - **🔄 Smart Re-authentication**: Enhanced token expiration detection with broader HTTP status code handling
+  - **🌍 Cross-Region Resilience**: Better handling of authentication failures across US/EU regions
+  - **📝 Detailed Error Messages**: Comprehensive error messaging for authentication troubleshooting
+
+### Changed
+- **🔧 API Integration**: Enhanced authentication system with session callbacks
+  - **📦 Export Surface**: Added session utilities (`Session`, `SessionStore`, `decodeJwtTimestamps`) to public API
+  - **🔗 Event Integration**: Support for `sessionStore` and `onTokenChange` parameters in VeSync constructor
+  - **🛡️ Token Validation**: Improved token expiration detection with HTTP 401/419 status code handling
+  - **🔄 State Management**: Automatic session state emission on successful authentication
+
+### Fixed
+- **🔒 Authentication Reliability**: Enhanced token expiration and re-authentication logic
+  - **⏰ Expiration Detection**: More comprehensive token expiration detection patterns
+  - **🔄 Auto-Retry Logic**: Improved automatic re-login on authentication failures
+  - **🌐 Multi-Region Support**: Better cross-region error handling and fallback mechanisms
+  - **📊 State Consistency**: Consistent authentication state management across library lifecycle
+
+### Technical Details
+- **🏗️ New Session Architecture**: Complete session persistence layer with secure file-based storage
+- **🔧 Constructor Enhancement**: New optional `sessionStore` and `onTokenChange` parameters
+- **📦 JWT Utilities**: Built-in JWT decoding without external dependencies
+- **🔄 Promise Coordination**: Login method now uses promise-based concurrency control
+- **🛡️ Enhanced Validation**: Improved HTTP status code and message pattern recognition for auth failures
+
 ## [1.1.2] - 2025-09-03
 
 ### Changed

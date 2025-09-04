@@ -3,6 +3,7 @@
  */
 
 import { Helpers, API_RATE_LIMIT, DEFAULT_TZ, setApiBaseUrl, getApiBaseUrl, generateAppId, getRegionFromCountryCode, setCurrentRegion, getCurrentRegion, REGION_ENDPOINTS, getCountryCodeFromRegion, getEndpointForCountryCode } from './helpers';
+import { Session, SessionStore, decodeJwtTimestamps } from './session';
 import { VeSyncBaseDevice } from './vesyncBaseDevice';
 import { fanModules } from './vesyncFanImpl';
 import { outletModules } from './vesyncOutletImpl';
@@ -162,6 +163,9 @@ export class VeSync {
     private _appId: string;
     private _region: string;
     private _countryCodeOverride: string | null;
+    private _sessionStore?: SessionStore;
+    private _onTokenChange?: (session: Session) => void;
+    private _loginPromise: Promise<boolean> | null = null;
 
     username: string;
     password: string;
@@ -205,6 +209,8 @@ export class VeSync {
             region?: string;
             countryCode?: string;  // Override country code for Step 2 authentication
             debugMode?: boolean;  // Alias for debug
+            sessionStore?: SessionStore;
+            onTokenChange?: (session: Session) => void;
         } = false,
         redact = true,
         apiUrl?: string,
@@ -223,6 +229,8 @@ export class VeSync {
             this._countryCodeOverride = options.countryCode || null;
             customLogger = options.customLogger;
             apiUrl = options.apiUrl;
+            this._sessionStore = options.sessionStore;
+            this._onTokenChange = options.onTokenChange;
         } else {
             // Using old parameter pattern for backward compatibility
             this._debug = optionsOrDebug as boolean;
@@ -304,6 +312,47 @@ export class VeSync {
         }
 
         // Debug and redact are already set above in the options handling
+    }
+
+    /**
+     * Hydrate manager from a previously persisted session
+     */
+    hydrateSession(session: Session): void {
+        try {
+            if (session.apiBaseUrl) {
+                setApiBaseUrl(session.apiBaseUrl);
+                this.apiBaseUrl = session.apiBaseUrl;
+            }
+            if (session.region) {
+                this._region = session.region;
+                setCurrentRegion(session.region);
+            }
+            this.token = session.token;
+            this.accountId = session.accountId;
+            this.countryCode = session.countryCode || null;
+            this.enabled = true;
+        } catch (e) {
+            logger.warn('Failed to hydrate session; will require fresh login');
+        }
+    }
+
+    private emitTokenChange(): void {
+        if (!this.token || !this.accountId || !this.apiBaseUrl) return;
+        const timestamps = decodeJwtTimestamps(this.token);
+        const session: Session = {
+            token: this.token,
+            accountId: this.accountId,
+            countryCode: this.countryCode,
+            region: this._region,
+            apiBaseUrl: this.apiBaseUrl,
+            authFlowUsed: this.authFlowUsed,
+            issuedAt: timestamps?.iat ?? null,
+            expiresAt: timestamps?.exp ?? null,
+            lastValidatedAt: Date.now(),
+        };
+        // Best-effort persist and callback; errors are non-fatal
+        Promise.resolve(this._sessionStore?.save(session)).catch(() => {});
+        try { this._onTokenChange?.(session); } catch { /* noop */ }
     }
 
     /**
@@ -576,168 +625,179 @@ export class VeSync {
      * Login to VeSync server with new authentication flow and backwards compatibility
      */
     async login(retryAttempts: number = 3, initialDelayMs: number = 1000): Promise<boolean> {
-        logger.debug('Starting VeSync authentication...', {
-            username: this.username,
-            appId: this._appId,
-            region: this._region
-        });
-
-        // Track which regions have been attempted to prevent infinite loops
-        const triedRegions = new Set<string>();
-
-        for (let attempt = 0; attempt < retryAttempts; attempt++) {
-            try {
-                logger.debug(`Authentication attempt ${attempt + 1} of ${retryAttempts}`);
-
-                // Skip email-based region detection for now since we'll handle cross-region errors
-                // The cross-region error handling below will automatically switch to the correct region
-
-                // Try new authentication flow first with detected region
-                let [success, token, accountId, countryCode] = await Helpers.authNewFlow(this, this._appId, this._region, this._countryCodeOverride || undefined);
-                
-                // Track if new flow succeeded
-                if (success) {
-                    this.authFlowUsed = 'new';
-                }
-
-                if (!success) {
-                    // Check if it's a credential error (no point retrying)
-                    if (countryCode === 'credential_error') {
-                        logger.error('Authentication failed due to invalid credentials');
-                        return false;  // Exit immediately, don't retry
-                    }
-                    
-                    // Check if we need to try a different region
-                    if (countryCode === 'cross_region' || countryCode === 'cross_region_retry') {
-                        // Mark current region as tried
-                        triedRegions.add(this._region);
-                        
-                        logger.debug('Cross-region error detected, trying opposite region...');
-                        const alternateRegion = this._region === 'US' ? 'EU' : 'US';
-                        
-                        // Check if we've already tried this region to prevent infinite loops
-                        if (triedRegions.has(alternateRegion)) {
-                            logger.error('═══════════════════════════════════════════════════════════════');
-                            logger.error('AUTHENTICATION FAILED: COUNTRY CODE REQUIRED');
-                            logger.error('');
-                            logger.error('Both US and EU endpoints rejected your account.');
-                            logger.error('This means you MUST specify your country code.');
-                            logger.error('');
-                            logger.error('SOLUTION:');
-                            logger.error('1. In Homebridge UI:');
-                            logger.error('   - Go to plugin settings');
-                            logger.error('   - Select your country from the "Country Code" dropdown');
-                            logger.error('');
-                            logger.error('2. In config.json:');
-                            logger.error('   Add: "countryCode": "YOUR_COUNTRY_CODE"');
-                            logger.error('');
-                            logger.error('Common non-US/EU country codes:');
-                            logger.error('  🇦🇺 Australia: "AU"');
-                            logger.error('  🇳🇿 New Zealand: "NZ"');
-                            logger.error('  🇯🇵 Japan: "JP"');
-                            logger.error('  🇨🇦 Canada: "CA"');
-                            logger.error('  🇸🇬 Singapore: "SG"');
-                            logger.error('  🇲🇽 Mexico: "MX"');
-                            logger.error('═══════════════════════════════════════════════════════════════');
-                            return false;
-                        }
-                        
-                        logger.debug(`Switching from ${this._region} to ${alternateRegion} region`);
-                        
-                        this._region = alternateRegion;
-                        setCurrentRegion(alternateRegion);
-                        
-                        // Update the API endpoint for the new region
-                        const regionEndpoints: Record<string, string> = {
-                            'US': 'https://smartapi.vesync.com',
-                            'EU': 'https://smartapi.vesync.eu'
-                        };
-                        if (alternateRegion in regionEndpoints) {
-                            setApiBaseUrl(regionEndpoints[alternateRegion]);
-                            logger.debug(`API endpoint set to ${regionEndpoints[alternateRegion]}`);
-                        }
-                        
-                        // Retry with the alternate region
-                        [success, token, accountId, countryCode] = await Helpers.authNewFlow(this, this._appId, alternateRegion, this._countryCodeOverride || undefined);
-                        if (success) {
-                            this.authFlowUsed = 'new';
-                            logger.debug(`Authentication successful with ${alternateRegion} region`);
-                        } else if (countryCode === 'cross_region' || countryCode === 'cross_region_retry') {
-                            // Both regions failed with cross-region error
-                            logger.error('Authentication failed: Account rejected by both US and EU regions');
-                            logger.error('This may indicate your account was created in a region not yet supported');
-                            logger.error('Please contact VeSync support to determine your account region');
-                            // Don't retry further attempts as we've exhausted both regions
-                            return false;
-                        }
-                    }
-
-                    // If new flow still fails, try legacy authentication as fallback
-                    if (!success) {
-                        logger.debug('New authentication flow failed, trying legacy flow...');
-                        [success, token, accountId, countryCode] = await Helpers.authLegacyFlow(this);
-                        if (success) {
-                            this.authFlowUsed = 'legacy';
-                        } else if (countryCode === 'credential_error') {
-                            // Legacy auth also detected bad credentials
-                            logger.error('Both authentication methods report invalid credentials');
-                            return false;  // Exit immediately
-                        }
-                    }
-                }
-
-                if (success && token && accountId) {
-                    this.token = token;
-                    this.accountId = accountId;
-                    this.countryCode = countryCode;
-                    this.enabled = true;
-                    this.apiBaseUrl = getApiBaseUrl();  // Track the API endpoint being used
-
-                    // DO NOT change the region/endpoint after successful authentication!
-                    // The endpoint that successfully authenticated is the one we must continue using.
-                    // Tokens are endpoint-specific and won't work if we switch endpoints.
-                    // This is especially important for AU/NZ users who may authenticate via EU endpoint
-                    // but have AU/NZ country codes.
-                    
-                    // Log a warning if the country code doesn't match the successful region
-                    if (countryCode) {
-                        const expectedRegion = getRegionFromCountryCode(countryCode);
-                        if (expectedRegion !== this._region) {
-                            logger.warn(`Note: Account authenticated with ${this._region} endpoint despite country code ${countryCode} typically using ${expectedRegion}`);
-                            logger.warn(`This is normal for accounts created through different regional apps`);
-                        }
-                    }
-
-                    logger.debug('Authentication successful!', {
-                        authFlow: this.authFlowUsed,
-                        region: this._region,
-                        countryCode: countryCode,
-                        endpoint: getApiBaseUrl()
-                    });
-                    return true;
-                }
-
-                // If we reach here, authentication failed
-                const delay = initialDelayMs * Math.pow(2, attempt);
-                logger.debug(`Authentication attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
-                await new Promise(resolve => setTimeout(resolve, delay));
-
-            } catch (error) {
-                logger.error(`Authentication attempt ${attempt + 1} error:`, error);
-                
-                if (attempt === retryAttempts - 1) {
-                    logger.error('Authentication failed after all retry attempts');
-                    return false;
-                }
-
-                const delay = initialDelayMs * Math.pow(2, attempt);
-                logger.debug(`Retrying authentication in ${delay}ms...`);
-                await new Promise(resolve => setTimeout(resolve, delay));
-            }
+        if (this._loginPromise) {
+            return this._loginPromise;
         }
+        this._loginPromise = (async () => {
+            logger.debug('Starting VeSync authentication...', {
+                username: this.username,
+                appId: this._appId,
+                region: this._region
+            });
 
-        logger.error('Unable to authenticate with supplied credentials after all retry attempts');
-        return false;
+            // Track which regions have been attempted to prevent infinite loops
+            const triedRegions = new Set<string>();
+
+            for (let attempt = 0; attempt < retryAttempts; attempt++) {
+                try {
+                    logger.debug(`Authentication attempt ${attempt + 1} of ${retryAttempts}`);
+
+                    // Try new authentication flow first with detected region
+                    let [success, token, accountId, countryCode] = await Helpers.authNewFlow(this, this._appId, this._region, this._countryCodeOverride || undefined);
+                    
+                    // Track if new flow succeeded
+                    if (success) {
+                        this.authFlowUsed = 'new';
+                    }
+
+                    if (!success) {
+                        // Check if it's a credential error (no point retrying)
+                        if (countryCode === 'credential_error') {
+                            logger.error('Authentication failed due to invalid credentials');
+                            return false;  // Exit immediately, don't retry
+                        }
+                        
+                        // Check if we need to try a different region
+                        if (countryCode === 'cross_region' || countryCode === 'cross_region_retry') {
+                            // Mark current region as tried
+                            triedRegions.add(this._region);
+                            
+                            logger.debug('Cross-region error detected, trying opposite region...');
+                            const alternateRegion = this._region === 'US' ? 'EU' : 'US';
+                            
+                            // Check if we've already tried this region to prevent infinite loops
+                            if (triedRegions.has(alternateRegion)) {
+                                logger.error('═══════════════════════════════════════════════════════════════');
+                                logger.error('AUTHENTICATION FAILED: COUNTRY CODE REQUIRED');
+                                logger.error('');
+                                logger.error('Both US and EU endpoints rejected your account.');
+                                logger.error('This means you MUST specify your country code.');
+                                logger.error('');
+                                logger.error('SOLUTION:');
+                                logger.error('1. In Homebridge UI:');
+                                logger.error('   - Go to plugin settings');
+                                logger.error('   - Select your country from the "Country Code" dropdown');
+                                logger.error('');
+                                logger.error('2. In config.json:');
+                                logger.error('   Add: "countryCode": "YOUR_COUNTRY_CODE"');
+                                logger.error('');
+                                logger.error('Common non-US/EU country codes:');
+                                logger.error('  🇦🇺 Australia: "AU"');
+                                logger.error('  🇳🇿 New Zealand: "NZ"');
+                                logger.error('  🇯🇵 Japan: "JP"');
+                                logger.error('  🇨🇦 Canada: "CA"');
+                                logger.error('  🇸🇬 Singapore: "SG"');
+                                logger.error('  🇲🇽 Mexico: "MX"');
+                                logger.error('═══════════════════════════════════════════════════════════════');
+                                return false;
+                            }
+                            
+                            logger.debug(`Switching from ${this._region} to ${alternateRegion} region`);
+                            
+                            this._region = alternateRegion;
+                            setCurrentRegion(alternateRegion);
+                            
+                            // Update the API endpoint for the new region
+                            const regionEndpoints: Record<string, string> = {
+                                'US': 'https://smartapi.vesync.com',
+                                'EU': 'https://smartapi.vesync.eu'
+                            };
+                            if (alternateRegion in regionEndpoints) {
+                                setApiBaseUrl(regionEndpoints[alternateRegion]);
+                                logger.debug(`API endpoint set to ${regionEndpoints[alternateRegion]}`);
+                            }
+                            
+                            // Retry with the alternate region
+                            [success, token, accountId, countryCode] = await Helpers.authNewFlow(this, this._appId, alternateRegion, this._countryCodeOverride || undefined);
+                            if (success) {
+                                this.authFlowUsed = 'new';
+                                logger.debug(`Authentication successful with ${alternateRegion} region`);
+                            } else if (countryCode === 'cross_region' || countryCode === 'cross_region_retry') {
+                                // Both regions failed with cross-region error
+                                logger.error('Authentication failed: Account rejected by both US and EU regions');
+                                logger.error('This may indicate your account was created in a region not yet supported');
+                                logger.error('Please contact VeSync support to determine your account region');
+                                // Don't retry further attempts as we've exhausted both regions
+                                return false;
+                            }
+                        }
+
+                        // If new flow still fails, try legacy authentication as fallback
+                        if (!success) {
+                            logger.debug('New authentication flow failed, trying legacy flow...');
+                            [success, token, accountId, countryCode] = await Helpers.authLegacyFlow(this);
+                            if (success) {
+                                this.authFlowUsed = 'legacy';
+                            } else if (countryCode === 'credential_error') {
+                                // Legacy auth also detected bad credentials
+                                logger.error('Both authentication methods report invalid credentials');
+                                return false;  // Exit immediately
+                            }
+                        }
+                    }
+
+                    if (success && token && accountId) {
+                        this.token = token;
+                        this.accountId = accountId;
+                        this.countryCode = countryCode;
+                        this.enabled = true;
+                        this.apiBaseUrl = getApiBaseUrl();  // Track the API endpoint being used
+
+                        // Persist session details for reuse across restarts
+                        this.emitTokenChange();
+
+                        // DO NOT change the region/endpoint after successful authentication!
+                        // The endpoint that successfully authenticated is the one we must continue using.
+                        // Tokens are endpoint-specific and won't work if we switch endpoints.
+                        // This is especially important for AU/NZ users who may authenticate via EU endpoint
+                        // but have AU/NZ country codes.
+                        
+                        // Log a warning if the country code doesn't match the successful region
+                        if (countryCode) {
+                            const expectedRegion = getRegionFromCountryCode(countryCode);
+                            if (expectedRegion !== this._region) {
+                                logger.warn(`Note: Account authenticated with ${this._region} endpoint despite country code ${countryCode} typically using ${expectedRegion}`);
+                                logger.warn(`This is normal for accounts created through different regional apps`);
+                            }
+                        }
+
+                        logger.debug('Authentication successful!', {
+                            authFlow: this.authFlowUsed,
+                            region: this._region,
+                            countryCode: countryCode,
+                            endpoint: getApiBaseUrl()
+                        });
+                        return true;
+                    }
+
+                    // If we reach here, authentication failed
+                    const delay = initialDelayMs * Math.pow(2, attempt);
+                    logger.debug(`Authentication attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+
+                } catch (error) {
+                    logger.error(`Authentication attempt ${attempt + 1} error:`, error);
+                    
+                    if (attempt === retryAttempts - 1) {
+                        logger.error('Authentication failed after all retry attempts');
+                        return false;
+                    }
+
+                    const delay = initialDelayMs * Math.pow(2, attempt);
+                    logger.debug(`Retrying authentication in ${delay}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+
+            logger.error('Unable to authenticate with supplied credentials after all retry attempts');
+            return false;
+        })();
+
+        try {
+            return await this._loginPromise;
+        } finally {
+            this._loginPromise = null;
+        }
     }
 
     /**

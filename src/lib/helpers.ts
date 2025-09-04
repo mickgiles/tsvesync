@@ -491,8 +491,16 @@ export class Helpers {
             if (error.response) {
                 const responseData = error.response.data;
                 
-                // Check for token expiration
-                if (responseData?.code === 4001004 || responseData?.msg === "token expired") {
+                // Check for token expiration or auth invalidation
+                const httpStatus = error.response.status;
+                const msg: string | undefined = responseData?.msg;
+                if (
+                    responseData?.code === 4001004 ||
+                    msg === 'token expired' ||
+                    httpStatus === 401 ||
+                    httpStatus === 419 ||
+                    (typeof msg === 'string' && /token|login/i.test(msg))
+                ) {
                     logger.debug('Token expired, attempting to re-login...');
                     
                     // Re-login
