@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2025-01-05
+
+### Fixed
+- **🔧 JWT Timestamp Precision Normalization**: Enhanced JWT token timestamp handling for consistent processing
+  - **📊 Timestamp Standardization**: Automatically normalizes millisecond timestamps to seconds for consistent handling
+  - **🛡️ Edge Case Prevention**: Fixes compatibility issues with tokens that use millisecond precision (>1e11)
+  - **⚡ Improved Reliability**: Ensures accurate token expiration calculations across different token formats
+  - **🔄 Backward Compatibility**: Maintains support for both second and millisecond timestamp formats
+
+### Enhanced
+- **📈 Session Management Robustness**: Improved session persistence and validation flows
+  - **🔍 Enhanced Error Handling**: Better error messages and logging for session hydration failures
+  - **💾 Optimized Persistence**: Best-effort session saving immediately after successful authentication
+  - **📝 Detailed Logging**: Comprehensive debug information for session lifecycle events
+  - **🛡️ Validation Improvements**: Enhanced session validation with better timestamp handling
+
+### Technical Details
+- **🏗️ Timestamp Normalization**: Automatic detection and conversion of millisecond timestamps to seconds
+- **📊 Consistent Processing**: All JWT timestamp operations now use normalized second-precision values
+- **🔄 Compatibility Layer**: Maintains compatibility with both timestamp formats from different VeSync regions
+- **⚡ Performance**: Optimized session management with reduced overhead and better error recovery
+
 ## [1.3.1] - 2025-09-04
 
 ### Fixed
