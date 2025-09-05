@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.3] - 2025-01-05
+
+### Changed
+- **📦 Version Synchronization**: Updated to 1.3.3 to maintain alignment with homebridge-tsvesync v1.3.3 enhancements
+- **🔄 Cross-Project Compatibility**: Full support for timeout chain fixes and enhanced session management in homebridge-tsvesync
+- **📚 Documentation**: Comprehensive release notes including all changes from 1.2.0 onwards
+
+### Summary of Features from v1.2.0 onwards
+
+This version maintains full compatibility with all session management features introduced in v1.2.0 and enhanced through v1.3.3, supporting the comprehensive timeout chain improvements added in homebridge-tsvesync v1.3.3.
+
+#### Session Management System (v1.2.0-1.3.3)
+- **🔐 Complete Session Persistence**: Comprehensive token lifecycle management with SessionStore interface
+- **⏰ Advanced Proactive Token Refresh**: Intelligent JWT token refresh before expiration with enhanced scheduling (Enhanced in v1.3.0)
+- **🔄 Automatic Token Refresh**: Session hydration and refresh across application restarts
+- **📊 JWT Token Support**: Built-in JWT decoding for expiration and issuance timestamp extraction with normalized precision (Enhanced in v1.3.2)
+- **🔔 Event System**: onTokenChange callbacks for real-time session state monitoring
+- **🛡️ Secure Storage**: Session data persistence with proper file permissions (0o600)
+- **🚫 Concurrent Login Protection**: Promise-based coordination prevents simultaneous login attempts
+- **🌍 Cross-Region Resilience**: Enhanced authentication failure handling across US/EU regions
+- **🎯 Timeout Chain Compatibility**: Support for extended timeout scenarios with chained timers (v1.3.3)
+
+Full changelog: https://github.com/mickgiles/tsvesync/blob/main/CHANGELOG.md
+
 ## [1.3.2] - 2025-01-05
 
 ### Fixed
