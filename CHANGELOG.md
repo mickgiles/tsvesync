@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.4] - 2025-09-18
+
+### Changed
+- **🔗 Release Alignment**: Version bump to keep tsvesync in lock-step with homebridge-tsvesync v1.3.4. Library APIs for ESWD16 dimmer brightness, RGB indicator, and locator light control remain unchanged and fully compatible.
+
 ## [1.3.3] - 2025-01-05
 
 ### Changed
@@ -829,3 +834,14 @@ Full changelog: https://github.com/mickgiles/tsvesync/blob/main/CHANGELOG.md
 ### Changed
 - Updated APP_VERSION constant to match latest VeSync mobile app
 - Enhanced error handling for API version compatibility issues
+
+## [1.3.4] - 2025-09-18
+
+### Changed
+- **🔗 Release Alignment**: Version bump to keep tsvesync in lock-step with homebridge-tsvesync v1.3.4. Library APIs for ESWD16 dimmer brightness, RGB indicator, and locator light control remain unchanged and fully compatible.
+
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+
