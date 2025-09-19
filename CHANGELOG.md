@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.8] - 2025-09-19
+
+### Fixed
+- **🆔 UUID Parity for ESWD16**: All dimmer API requests now send the device UUID just like pyvesync, restoring on/off and indicator actions for the ESWD16 wall dimmer.
+- **🔆 Brightness Payload Accuracy**: Brightness updates are transmitted as numeric values, ensuring the cloud accepts level changes triggered from HomeKit.
+- **🌈 RGB Safety Checks**: RGB commands now normalize outgoing values so the locator ring reliably reflects HomeKit hue and saturation updates.
+
+### Changed
+- **📦 Library Surface**: `VeSyncDimmerSwitch` is exported from the top-level bundle, enabling downstream projects to access the ESWD16 helper directly.
+
 ## [1.3.7] - 2025-09-19
 
 ### Changed
@@ -853,5 +863,3 @@ Full changelog: https://github.com/mickgiles/tsvesync/blob/main/CHANGELOG.md
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-

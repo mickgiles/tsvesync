@@ -23,7 +23,7 @@ export class VeSyncWallSwitch extends VeSyncSwitch {
         logger.debug(`Getting details for device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicedetail'),
-            uuid: this.cid,
+            uuid: this.uuid,
             method: 'devicedetail'
         };
 
@@ -53,7 +53,7 @@ export class VeSyncWallSwitch extends VeSyncSwitch {
         const body = {
             ...Helpers.reqBody(this.manager, 'devicedetail'),
             method: 'configurations',
-            uuid: this.cid
+            uuid: this.uuid
         };
 
         const [response] = await this.callApi(
@@ -79,7 +79,7 @@ export class VeSyncWallSwitch extends VeSyncSwitch {
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             status: 'off',
-            uuid: this.cid
+            uuid: this.uuid
         };
 
         const [response] = await this.callApi(
@@ -106,7 +106,7 @@ export class VeSyncWallSwitch extends VeSyncSwitch {
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             status: 'on',
-            uuid: this.cid
+            uuid: this.uuid
         };
 
         const [response] = await this.callApi(
@@ -147,7 +147,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
         logger.debug(`Getting details for device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicedetail'),
-            uuid: this.cid,
+            uuid: this.uuid,
             method: 'devicedetail'
         };
 
@@ -187,7 +187,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
         const body = {
             ...Helpers.reqBody(this.manager, 'devicedetail'),
             method: 'configurations',
-            uuid: this.cid
+            uuid: this.uuid
         };
 
         const [response] = await this.callApi(
@@ -213,7 +213,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             status: 'off',
-            uuid: this.cid
+            uuid: this.uuid
         };
 
         const [response] = await this.callApi(
@@ -240,7 +240,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             status: 'on',
-            uuid: this.cid
+            uuid: this.uuid
         };
 
         const [response] = await this.callApi(
@@ -271,8 +271,8 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
         logger.debug(`Setting brightness to ${brightness} for device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
-            brightness: brightness.toString(),
-            uuid: this.cid
+            brightness,
+            uuid: this.uuid
         };
 
         const [response] = await this.callApi(
@@ -304,7 +304,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
                 blue: Math.round(blue)
             },
             status: 'on',
-            uuid: this.cid
+            uuid: this.uuid
         };
 
         const [response] = await this.callApi(
@@ -332,7 +332,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
             status: 'off',
-            uuid: this.cid
+            uuid: this.uuid
         };
 
         const [response] = await this.callApi(
@@ -358,7 +358,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
         logger.debug(`Turning on RGB color for device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
-            uuid: this.cid,
+            uuid: this.uuid,
             status: 'on'
         };
 
@@ -385,7 +385,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
         logger.debug(`Turning on indicator light for device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
-            uuid: this.cid,
+            uuid: this.uuid,
             status: 'on'
         };
 
@@ -412,7 +412,7 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
         logger.debug(`Turning off indicator light for device: ${this.deviceName}`);
         const body = {
             ...Helpers.reqBody(this.manager, 'devicestatus'),
-            uuid: this.cid,
+            uuid: this.uuid,
             status: 'off'
         };
 

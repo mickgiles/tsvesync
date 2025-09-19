@@ -5,7 +5,7 @@ export { VeSync } from './lib/vesync';
 export { VeSyncAirBypass } from './lib/vesyncFanImpl';
 export { VeSyncOutlet7A, VeSyncOutlet10A, VeSyncOutlet15A, VeSyncOutdoorPlug } from './lib/vesyncOutletImpl';
 export { VeSyncBulb } from './lib/vesyncBulb';
-export { VeSyncWallSwitch } from './lib/vesyncSwitchImpl';
+export { VeSyncWallSwitch, VeSyncDimmerSwitch } from './lib/vesyncSwitchImpl';
 
 // Export base device class
 export { VeSyncBaseDevice } from './lib/vesyncBaseDevice';
