@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.5] - 2025-09-19
+
+### Changed
+- **🔗 Release Alignment**: Version bump to keep tsvesync synchronized with homebridge-tsvesync v1.3.6. No library code changes; existing ESWD16 dimmer, RGB, and locator light APIs remain intact.
+
 ## [1.3.4] - 2025-09-18
 
 ### Changed
