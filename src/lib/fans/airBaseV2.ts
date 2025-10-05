@@ -1,6 +1,5 @@
 import { VeSyncAirBypass } from './airBypass';
 import { VeSync } from '../vesync';
-import { Helpers } from '../helpers';
 import { logger } from '../logger';
 
 /**
@@ -55,29 +54,23 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
     }
 
     /**
-     * Check response for Vital series devices
-     * These devices return success at API level but may have inner errors
+     * Check response for bypassV2 purifiers that surface nested result codes.
      */
-    protected checkVitalResponse(response: any, status: number, method: string): boolean {
-        // First check basic response
+    protected checkV2Response(response: any, status: number, method: string): boolean {
+        // First check basic response structure
         if (!this.checkResponse([response, status], method)) {
             return false;
         }
 
-        // Check if this is a Vital series device
-        const isVitalSeries = this.deviceType.includes('LAP-V102S') || this.deviceType.includes('LAP-V201S');
-        if (!isVitalSeries) {
-            return true; // Not a Vital series device, standard check is enough
+        // Only apply extended handling to bypassV2 purifiers (Vital/Everest)
+        if (!this.requiresPowerSwitchPayload()) {
+            return true;
         }
 
-        // For Vital series, we need to check the inner result code
+        // These devices frequently succeed with a nested non-zero code
         if (response.result && response.result.code !== undefined && response.result.code !== 0) {
-            // Vital series often returns code -1 but still succeeds
-            // Let's update the state optimistically
-            logger.debug(`Vital series device ${this.deviceName} returned inner code ${response.result.code} for ${method}`);
-            logger.debug('This is normal for Vital series devices - proceeding with operation');
-            
-            // Keep the device online despite inner error
+            logger.debug(`${this.deviceName} returned inner code ${response.result.code} for ${method}`);
+            logger.debug('BypassV2 purifier reports non-zero inner code but request still succeeded');
             this.connectionStatus = 'online';
             return true;
         }
@@ -99,8 +92,7 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
             head
         );
 
-        // Check if this is a Vital series device (LAP-V102S or LAP-V201S)
-        const isVitalSeries = this.deviceType.includes('LAP-V102S') || this.deviceType.includes('LAP-V201S');
+        const needsV2Handling = this.requiresPowerSwitchPayload();
         
         // First check the outer response
         if (!response || status !== 200) {
@@ -109,15 +101,14 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
             return false;
         }
 
-        // For Vital series, we need special handling as they return inner code -1 for details
-        // but still provide valid status information
-        if (isVitalSeries && response.result) {
+        // For bypassV2 purifier families the API nests the result and may surface non-zero codes
+        if (needsV2Handling && response.result) {
             // Check if we have a valid getPurifierStatus response
             if (response.code === 0 && response.result?.result) {
                 const statusResponse = response.result.result;
                 
                 // If we have valid status data, use it regardless of inner result code
-                logger.debug(`Using status data for Vital series device: ${this.deviceName}`);
+                logger.debug(`Using nested status data for bypassV2 purifier: ${this.deviceName}`);
                 this.buildPurifierDict(statusResponse);
                 if (statusResponse.configuration) {
                     this.buildConfigDict(statusResponse.configuration);
@@ -128,7 +119,7 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
             }
         }
         
-        // Standard processing for non-Vital devices or when no status data is available
+        // Standard processing for non-bypassV2 devices or when no status data is available
         if (!this.checkResponse([response, status], 'getDetails') || !response?.result) {
             logger.debug('Error getting purifier details');
             this.connectionStatus = 'offline';
@@ -159,10 +150,12 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
         this.enabled = powerSwitch;
         this.deviceStatus = powerSwitch ? 'on' : 'off';
         this.mode = devDict.workMode ?? 'manual';
-        
-        this.speed = devDict.fanSpeedLevel ?? 0;
+
+        const reportedFanSpeed = devDict.fanSpeedLevel ?? 0;
+        const isAutoSentinel = reportedFanSpeed === 255;
+        this.speed = isAutoSentinel ? 0 : reportedFanSpeed;
         this.setSpeedLevel = devDict.manualSpeedLevel ?? 1;
-        
+
         // Parse filter life with proper fallback handling and logging
         let filterLife = 0;
         if (devDict.filterLifePercent !== undefined) {
@@ -186,7 +179,11 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
             light_detection_switch: Boolean(devDict.lightDetectionSwitch ?? 0),
             environment_light_state: Boolean(devDict.environmentLightState ?? 0),
             screen_switch: Boolean(devDict.screenSwitch ?? 0),
-            screenStatus: Boolean(devDict.screenSwitch ?? 0) ? 'on' : 'off'
+            screenStatus: Boolean(devDict.screenSwitch ?? 0) ? 'on' : 'off',
+            manualSpeedLevel: this.setSpeedLevel,
+            mode: this.mode,
+            speed: this.speed,
+            isAutoSentinel
         };
 
         if (this.hasFeature('air_quality')) {
@@ -212,25 +209,24 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
     }
 
     /**
-     * Check if the current device is a Vital series model
-     * @returns true if this is a LAP-V102S or LAP-V201S device
+     * Determine whether this purifier requires the powerSwitch payload and nested response handling.
      */
-    private isVitalSeries(): boolean {
-        return this.deviceType.includes('LAP-V102S') || this.deviceType.includes('LAP-V201S');
+    private requiresPowerSwitchPayload(): boolean {
+        const type = (this.deviceType || '').toUpperCase();
+        return type.startsWith('LAP-V') || type.startsWith('LAP-EL');
     }
 
     /**
-     * Override turn on method to handle Vital series special cases
+     * Override turn on to use the powerSwitch payload required by bypassV2 purifiers.
      */
     override async turnOn(): Promise<boolean> {
         logger.info(`Turning on device: ${this.deviceName}`);
         
         const [head, body] = this.buildApiDict('setSwitch');
         
-        // For Vital series, use powerSwitch per YAML spec
-        // For other models, use the parent class implementation
-        if (this.isVitalSeries()) {
-            logger.debug(`Using Vital series specific payload for ${this.deviceName}`);
+        // BypassV2 purifiers require powerSwitch toggles; others fall back to the base implementation
+        if (this.requiresPowerSwitchPayload()) {
+            logger.debug(`Using bypassV2 power payload for ${this.deviceName}`);
             body.payload.data = {
                 powerSwitch: 1,
                 switchIdx: 0
@@ -243,8 +239,8 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
                 head
             );
 
-            // Use Vital-specific response checking
-            const success = this.checkVitalResponse(response, status, 'turnOn');
+            // Use bypassV2 response checking
+            const success = this.checkV2Response(response, status, 'turnOn');
             if (success) {
                 this.deviceStatus = 'on';
                 
@@ -257,23 +253,22 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
             }
             return success;
         } else {
-            // Use parent implementation for non-Vital models
+            // Use parent implementation for non-bypassV2 models
             return super.turnOn();
         }
     }
 
     /**
-     * Override turn off method to handle Vital series special cases
+     * Override turn off to use the powerSwitch payload required by bypassV2 purifiers.
      */
     override async turnOff(): Promise<boolean> {
         logger.info(`Turning off device: ${this.deviceName}`);
         
         const [head, body] = this.buildApiDict('setSwitch');
         
-        // For Vital series, use powerSwitch per YAML spec
-        // For other models, use the parent class implementation
-        if (this.isVitalSeries()) {
-            logger.debug(`Using Vital series specific payload for ${this.deviceName}`);
+        // BypassV2 purifiers require powerSwitch toggles; others fall back to the base implementation
+        if (this.requiresPowerSwitchPayload()) {
+            logger.debug(`Using bypassV2 power payload for ${this.deviceName}`);
             body.payload.data = {
                 powerSwitch: 0,
                 switchIdx: 0
@@ -286,8 +281,8 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
                 head
             );
 
-            // Use Vital-specific response checking
-            const success = this.checkVitalResponse(response, status, 'turnOff');
+            // Use bypassV2 response checking
+            const success = this.checkV2Response(response, status, 'turnOff');
             if (success) {
                 this.deviceStatus = 'off';
                 
@@ -300,13 +295,13 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
             }
             return success;
         } else {
-            // Use parent implementation for non-Vital models
+            // Use parent implementation for non-bypassV2 models
             return super.turnOff();
         }
     }
 
     /**
-     * Override setMode method to handle Vital series special cases
+     * Override setMode to send workMode payloads for bypassV2 purifiers.
      */
     override async setMode(mode: string): Promise<boolean> {
         if (!this.modes.includes(mode as any)) {
@@ -321,10 +316,9 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
             return this.setMode('manual');
         }
 
-        // For Vital series, use special response handling
-        // For other models, use the parent implementation
-        if (this.isVitalSeries()) {
-            logger.debug(`Using Vital series specific response handling for ${this.deviceName}`);
+        // BypassV2 purifiers need the workMode payload; other models use the base implementation
+        if (this.requiresPowerSwitchPayload()) {
+            logger.debug(`Using bypassV2 mode payload for ${this.deviceName}`);
             const [head, body] = this.buildApiDict('setPurifierMode');
             body.payload.data = {
                 workMode: mode
@@ -337,7 +331,7 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
                 head
             );
 
-            const success = this.checkVitalResponse(response, status, 'setMode');
+            const success = this.checkV2Response(response, status, 'setMode');
             if (success) {
                 this.details.mode = mode;
                 this._mode = mode;
@@ -355,13 +349,13 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
                 return false;
             }
         } else {
-            // Use parent implementation for non-Vital models
+            // Use parent implementation for non-bypassV2 models
             return super.setMode(mode);
         }
     }
 
     /**
-     * Override changeFanSpeed method to handle Vital series special cases
+     * Override changeFanSpeed to use manualSpeedLevel for bypassV2 purifiers.
      */
     override async changeFanSpeed(speed: number): Promise<boolean> {
         const speeds = this.config.levels ?? [];
@@ -374,10 +368,10 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
         
         const [head, body] = this.buildApiDict('setLevel');
         
-        // Specific handling for Vital series devices
-        if (this.isVitalSeries()) {
-            logger.debug(`Using Vital series specific payload for ${this.deviceName}`);
-            // For Vital series, use levelIdx, levelType, and manualSpeedLevel per YAML spec
+        // Specific handling for bypassV2 devices
+        if (this.requiresPowerSwitchPayload()) {
+            logger.debug(`Using bypassV2 speed payload for ${this.deviceName}`);
+            // For these devices, use levelIdx, levelType, and manualSpeedLevel per YAML spec
             body.payload.data = {
                 levelIdx: 0,
                 levelType: 'wind',
@@ -391,7 +385,7 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
                 head
             );
 
-            const success = this.checkVitalResponse(response, status, 'changeFanSpeed');
+            const success = this.checkV2Response(response, status, 'changeFanSpeed');
             if (success) {
                 this.speed = speed;
                 this.details.manualSpeedLevel = speed;
@@ -409,7 +403,7 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
                 return false;
             }
         } else {
-            // For non-Vital models, use id, level, mode, and type
+            // For non-bypassV2 models, use id, level, mode, and type
             body.payload.data = {
                 id: 0,
                 level: speed,
@@ -459,16 +453,16 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
         );
 
         // Use the appropriate response checking method based on device type
-        const success = this.isVitalSeries() 
-            ? this.checkVitalResponse(response, status, 'setAutoPreference')
+        const success = this.requiresPowerSwitchPayload() 
+            ? this.checkV2Response(response, status, 'setAutoPreference')
             : this.checkResponse([response, status], 'setAutoPreference');
             
         if (success) {
             this.details.auto_preference = preference;
             this.details.auto_preference_type = preference;
             
-            // Force a details update to sync state for Vital series
-            if (this.isVitalSeries()) {
+            // Force a details update to sync state for bypassV2 purifiers
+            if (this.requiresPowerSwitchPayload()) {
                 setTimeout(() => {
                     this.getDetails().catch(e => {
                         logger.debug(`Background state refresh failed: ${e}`);
@@ -496,15 +490,15 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
         );
 
         // Use the appropriate response checking method based on device type
-        const success = this.isVitalSeries()
-            ? this.checkVitalResponse(response, status, 'setLightDetection')
+        const success = this.requiresPowerSwitchPayload()
+            ? this.checkV2Response(response, status, 'setLightDetection')
             : this.checkResponse([response, status], 'setLightDetection');
             
         if (success) {
             this.details.light_detection_switch = enabled;
             
-            // Force a details update to sync state for Vital series
-            if (this.isVitalSeries()) {
+            // Force a details update to sync state for bypassV2 purifiers
+            if (this.requiresPowerSwitchPayload()) {
                 setTimeout(() => {
                     this.getDetails().catch(e => {
                         logger.debug(`Background state refresh failed: ${e}`);
@@ -595,8 +589,8 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
         );
 
         // Use the appropriate response checking method based on device type
-        const success = this.isVitalSeries()
-            ? this.checkVitalResponse(response, status, 'setOscillation')
+        const success = this.requiresPowerSwitchPayload()
+            ? this.checkV2Response(response, status, 'setOscillation')
             : this.checkResponse([response, status], 'setOscillation');
             
         if (success) {

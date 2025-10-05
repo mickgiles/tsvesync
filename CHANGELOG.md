@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.9] - 2025-10-05
+
+### Fixed
+- **🗻 EverestAir Power Control**: Updated bypassV2 requests to use `powerSwitch` payloads so EverestAir purifiers now toggle reliably from HomeKit and CLI scripts.
+- **🎚️ Manual Speed Selection**: Align `setLevel` payloads with pyvesync, restoring manual fan speed control across EverestAir and Vital-series purifiers while keeping Core-series behavior unchanged.
+
+### Changed
+- **🤖 Auto-State Normalization**: Treat the `fanSpeedLevel` auto sentinel consistently so HomeKit surfaces the correct auto state instead of showing 100% rotation when the purifier is self-managing.
+
 ## [1.3.8] - 2025-09-19
 
 ### Fixed
