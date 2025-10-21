@@ -7,6 +7,12 @@ import { VeSync } from './vesync';
 import { Helpers } from './helpers';
 import { logger } from './logger';
 
+interface RgbValues {
+    red: number;
+    green: number;
+    blue: number;
+}
+
 interface BulbConfig {
     [key: string]: {
         module: string;
@@ -50,7 +56,7 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
     protected colorSaturation: number;
     protected colorMode: string;
     protected features: string[];
-    protected rgbValues: { red: number, green: number, blue: number };
+    protected rgbValues: RgbValues;
 
     constructor(details: Record<string, any>, manager: VeSync) {
         super(details, manager);
@@ -66,6 +72,18 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
             green: 0,
             blue: 0
         };
+    }
+
+    hasFeature(feature: string): boolean {
+        return this.features.includes(feature);
+    }
+
+    getColorModel(): string {
+        return bulbConfig[this.deviceType]?.colorModel ?? 'none';
+    }
+
+    getBrightness(): number {
+        return this.brightness;
     }
 
     /**
@@ -101,29 +119,7 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
             Helpers.reqHeaders(this.manager)
         );
 
-        const success = this.checkResponse([response, statusCode], 'getDetails');
-        if (success && response?.result) {
-            this.deviceStatus = response.result.enabled ? 'on' : 'off';
-            this.brightness = response.result.brightness || this.brightness;
-            if (this.features.includes('color_temp')) {
-                this.colorTemp = response.result.colorTemp || this.colorTemp;
-            }
-            if (this.features.includes('rgb_shift')) {
-                if (bulbConfig[this.deviceType].colorModel === 'rgb') {
-                    this.rgbValues = {
-                        red: response.result.red || this.rgbValues.red,
-                        green: response.result.green || this.rgbValues.green,
-                        blue: response.result.blue || this.rgbValues.blue
-                    };
-                } else {
-                    this.colorHue = response.result.hue || this.colorHue;
-                    this.colorSaturation = response.result.saturation || this.colorSaturation;
-                    this.colorValue = response.result.value || this.colorValue;
-                }
-            }
-            logger.debug(`[${this.deviceName}] Successfully retrieved bulb details`);
-        }
-        return success;
+        return this.processStandardBypassDetails(response, statusCode);
     }
 
     /**
@@ -239,7 +235,8 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
             return false;
         }
 
-        logger.debug(`[${this.deviceName}] Setting brightness to ${brightness}`);
+        const brightnessLevel = VeSyncBulb.clamp(Math.round(brightness), 0, 100);
+        logger.debug(`[${this.deviceName}] Setting brightness to ${brightnessLevel}`);
 
         const isV2Device = this.deviceType === 'XYD0001';
         const endpoint = isV2Device ? '/cloud/v2/deviceManaged/bypassV2' : '/cloud/v1/deviceManaged/bypass';
@@ -249,7 +246,7 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
             configModule: this.configModule,
             payload: {
                 data: {
-                    brightness: brightness,
+                    brightness: brightnessLevel,
                     colorMode: '',
                     colorTemp: '',
                     force: 0,
@@ -266,7 +263,7 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
             configModule: this.configModule,
             jsonCmd: {
                 light: {
-                    brightness: brightness
+                    brightness: brightnessLevel
                 }
             }
         };
@@ -279,8 +276,8 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
         );
 
         if (response?.code === 0) {
-            this.brightness = brightness;
-            logger.info(`[${this.deviceName}] Successfully set brightness to ${brightness}`);
+            this.brightness = brightnessLevel;
+            logger.info(`[${this.deviceName}] Successfully set brightness to ${brightnessLevel}`);
             return true;
         }
         logger.error(`[${this.deviceName}] Failed to set brightness: ${JSON.stringify(response)}`);
@@ -290,10 +287,6 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
     /**
      * Get bulb brightness
      */
-    getBrightness(): number {
-        return this.brightness;
-    }
-
     /**
      * Get color temperature in Kelvin
      */
@@ -355,7 +348,140 @@ export abstract class VeSyncBulb extends VeSyncBaseDevice {
     }
 
     /**
+     * Set color temperature wrapper to maintain compatibility with consumers
+     */
+    async setColorTemperature(colorTemp: number): Promise<boolean> {
+        return this.setColorTemp(colorTemp);
+    }
+
+    /**
+     * Set color via hue/saturation/value when supported
+     */
+    async setColor(hue: number, saturation: number, value: number = 100): Promise<boolean> {
+        if (!this.features.includes('rgb_shift')) {
+            logger.error(`[${this.deviceName}] Color control not supported`);
+            return false;
+        }
+
+        const colorModel = bulbConfig[this.deviceType]?.colorModel;
+        if (colorModel === 'rgb' && typeof (this as any).setRgb === 'function') {
+            const rgb = VeSyncBulb.hsvToRgb(hue, saturation, value);
+            return (this as any).setRgb(rgb.red, rgb.green, rgb.blue);
+        }
+
+        if (typeof (this as any).setHsv === 'function') {
+            return (this as any).setHsv(hue, saturation, value);
+        }
+
+        logger.error(`[${this.deviceName}] No compatible color handler found`);
+        return false;
+    }
+
+    /**
+     * Process standard bypass (v1) detail responses shared by multiple bulbs
+     */
+    protected processStandardBypassDetails(response: any, statusCode: number): boolean {
+        const success = this.checkResponse([response, statusCode], 'getDetails');
+        if (success && response?.result) {
+            const innerResult = response.result?.result || response.result;
+            if (innerResult) {
+                if (typeof innerResult.enabled === 'boolean') {
+                    this.deviceStatus = innerResult.enabled ? 'on' : 'off';
+                } else if (innerResult.action) {
+                    this.deviceStatus = innerResult.action === 'on' ? 'on' : 'off';
+                }
+                if (innerResult.connectionStatus) {
+                    this.connectionStatus = innerResult.connectionStatus;
+                }
+                if (this.features.includes('dimmable') && innerResult.brightness !== undefined) {
+                    this.brightness = Number(innerResult.brightness);
+                }
+                if (this.features.includes('color_temp')) {
+                    if (innerResult.colorTemp !== undefined) {
+                        this.colorTemp = Number(innerResult.colorTemp);
+                    } else if (innerResult.colorTempe !== undefined) {
+                        this.colorTemp = Number(innerResult.colorTempe);
+                    }
+                }
+                if (this.features.includes('rgb_shift')) {
+                    if (bulbConfig[this.deviceType]?.colorModel === 'rgb') {
+                        this.rgbValues = {
+                            red: Number(innerResult.red ?? this.rgbValues.red),
+                            green: Number(innerResult.green ?? this.rgbValues.green),
+                            blue: Number(innerResult.blue ?? this.rgbValues.blue)
+                        };
+                    } else {
+                        this.colorHue = Number(innerResult.hue ?? this.colorHue);
+                        this.colorSaturation = Number(innerResult.saturation ?? this.colorSaturation);
+                        this.colorValue = Number(innerResult.value ?? this.colorValue);
+                    }
+                }
+            }
+            logger.debug(`[${this.deviceName}] Successfully retrieved bulb details`);
+        }
+        return success;
+    }
+
+    /**
      * Set color temperature - Abstract method to be implemented by subclasses
      */
     abstract setColorTemp(colorTemp: number): Promise<boolean>;
-} 
+
+    protected static clamp(value: number, min: number, max: number): number {
+        return Math.min(Math.max(value, min), max);
+    }
+
+    protected static hsvToRgb(h: number, s: number, v: number): RgbValues {
+        const saturation = VeSyncBulb.clamp(s, 0, 100) / 100;
+        const value = VeSyncBulb.clamp(v, 0, 100) / 100;
+        const hue = ((h % 360) + 360) % 360 / 60;
+        const i = Math.floor(hue);
+        const f = hue - i;
+        const p = value * (1 - saturation);
+        const q = value * (1 - saturation * f);
+        const t = value * (1 - saturation * (1 - f));
+
+        let r = 0;
+        let g = 0;
+        let b = 0;
+
+        switch (i) {
+            case 0:
+                r = value;
+                g = t;
+                b = p;
+                break;
+            case 1:
+                r = q;
+                g = value;
+                b = p;
+                break;
+            case 2:
+                r = p;
+                g = value;
+                b = t;
+                break;
+            case 3:
+                r = p;
+                g = q;
+                b = value;
+                break;
+            case 4:
+                r = t;
+                g = p;
+                b = value;
+                break;
+            default:
+                r = value;
+                g = p;
+                b = q;
+                break;
+        }
+
+        return {
+            red: Math.round(r * 255),
+            green: Math.round(g * 255),
+            blue: Math.round(b * 255)
+        };
+    }
+}
