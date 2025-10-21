@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.10] - 2025-10-21
+
+### Fixed
+- **💡 ESL Bulb API Parity**: ESL100, ESL100CW, and ESL100MC devices now send the same `/SmartBulb/v1` and `/cloud/v2` payloads as pyvesync so power, brightness, and color updates succeed again.
+- **📥 State Refresh Accuracy**: Normalized bypass responses so brightness, color temperature, and RGB state reflect the latest values returned by VeSync instead of stale snapshots.
+
+### Changed
+- **🎨 Bulb Color Helpers**: Added shared HSV→RGB conversion plus `setColorTemperature`, `setColor`, and getter helpers on the base `VeSyncBulb` to simplify downstream integrations.
+- **🧭 Feature Detection**: Exposed `hasFeature` and color model metadata to match pyvesync, keeping the TypeScript surface aligned for consumers such as homebridge-tsvesync.
+
 ## [1.3.9] - 2025-10-05
 
 ### Fixed
