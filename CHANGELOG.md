@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.12] - 2025-10-22
+
+### Fixed
+- **🧿 RGB & Indicator State Parity**: ESWD16 backlight updates now mark the dimmer as on, matching pyvesync so HomeKit stops flipping back to off after faceplate colour changes.
+
+### Changed
+- **🧾 Trace ID Alignment**: Bypass requests mint the same `APP…` trace IDs as pyvesync, eliminating the intermittent 400 responses VeSync emitted when random trace formats were used.
+
 ## [1.3.11] - 2025-10-22
 
 ### Fixed

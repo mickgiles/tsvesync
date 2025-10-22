@@ -4,6 +4,9 @@ A TypeScript library for interacting with VeSync smart home devices. This librar
 
 ## 🆕 Recent Updates
 
+- **ESWD16 State Parity (v1.3.12)**: Bypass calls now reuse pyvesync-style trace IDs and mark the dimmer on after backlight tweaks, eliminating the lingering “off” state in HomeKit.
+- **ESWD16 Bypass Compatibility (v1.3.11)**: Migrated the dimmer switch to the modern bypass-v1 API so power, brightness, and indicator updates stay in sync with pyvesync.
+- **ESL Bulb API Parity (v1.3.10)**: ESL100/ESL100CW/ESL100MC now mirror pyvesync `/SmartBulb/v1` and `/cloud/v2` payloads for brightness and colour control.
 - **Enhanced Authentication**: Now supports the new VeSync authentication flow (pyvesync PR #340) with automatic fallback to legacy authentication
 - **Regional API Support**: Automatic detection and routing for US (`smartapi.vesync.com`) and EU (`smartapi.vesync.eu`) endpoints
 - **International Account Support**: Full support for accounts worldwide including Australia, New Zealand, Japan, and all European countries

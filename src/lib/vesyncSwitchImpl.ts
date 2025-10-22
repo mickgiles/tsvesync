@@ -4,9 +4,8 @@
 
 import { VeSyncSwitch } from './vesyncSwitch';
 import { VeSync } from './vesync';
-import { Helpers, APP_VERSION, PHONE_BRAND, PHONE_OS, DEFAULT_TZ, DEFAULT_REGION, MOBILE_ID } from './helpers';
+import { Helpers, APP_VERSION, PHONE_BRAND, PHONE_OS, DEFAULT_TZ, DEFAULT_REGION } from './helpers';
 import { logger } from './logger';
-import { switchConfig } from './vesyncSwitch';
 
 interface DimmerState {
     activeTime: number;
@@ -161,11 +160,12 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
      */
     async getDetails(): Promise<Boolean> {
         logger.debug(`Getting details for device: ${this.deviceName}`);
-        const [response, statusCode] = await this.callDimmerCommand('deviceDetail', {}, 'deviceDetail');
+        const [response, statusCode] = await this.callDimmerCommand('deviceDetail', {});
 
         const success = this.checkResponse([response, statusCode], 'getDetails');
-        if (success && response?.result) {
-            const result = response.result;
+        const resultWrapper = response?.result?.result ?? response?.result;
+        if (success && resultWrapper) {
+            const result = resultWrapper;
             this.stateSnapshot = {
                 activeTime: result.activeTime ?? this.stateSnapshot.activeTime,
                 connectionStatus: result.connectionStatus ?? this.stateSnapshot.connectionStatus,
@@ -239,13 +239,15 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
         logger.debug(`Setting brightness to ${brightness} for device: ${this.deviceName}`);
         const value = Math.max(0, Math.min(100, Math.round(brightness)));
         const [response] = await this.callDimmerCommand('dimmerBrightnessCtl', {
-            brightness: String(value)
-        }, 'dimmerBrightnessCtl');
+            brightness: value
+        });
 
         if (response?.code === 0) {
             this.stateSnapshot.brightness = value;
             this.stateSnapshot.deviceStatus = 'on';
             this.deviceStatus = 'on';
+            this.stateSnapshot.connectionStatus = 'online';
+            this.connectionStatus = 'online';
             logger.debug(`Successfully set brightness to ${value} for device: ${this.deviceName}`);
             return true;
         }
@@ -265,11 +267,15 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
                 green: Math.round(green),
                 blue: Math.round(blue)
             }
-        }, 'dimmerRgbValueCtl');
+        });
 
         if (response?.code === 0) {
             this.stateSnapshot.rgbValue = { red: Math.round(red), green: Math.round(green), blue: Math.round(blue) };
             this.stateSnapshot.rgbStatus = 'on';
+            this.stateSnapshot.deviceStatus = 'on';
+            this.deviceStatus = 'on';
+            this.stateSnapshot.connectionStatus = 'online';
+            this.connectionStatus = 'online';
             logger.debug(`Successfully set RGB color for device: ${this.deviceName}`);
             return true;
         }
@@ -284,10 +290,14 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
         logger.debug(`Turning off RGB color for device: ${this.deviceName}`);
         const [response] = await this.callDimmerCommand('dimmerRgbValueCtl', {
             status: 'off'
-        }, 'dimmerRgbValueCtl');
+        });
 
         if (response?.code === 0) {
             this.stateSnapshot.rgbStatus = 'off';
+            this.stateSnapshot.deviceStatus = 'on';
+            this.deviceStatus = 'on';
+            this.stateSnapshot.connectionStatus = 'online';
+            this.connectionStatus = 'online';
             logger.debug(`Successfully turned off RGB color for device: ${this.deviceName}`);
             return true;
         }
@@ -302,10 +312,14 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
         logger.debug(`Turning on RGB color for device: ${this.deviceName}`);
         const [response] = await this.callDimmerCommand('dimmerRgbValueCtl', {
             status: 'on'
-        }, 'dimmerRgbValueCtl');
+        });
 
         if (response?.code === 0) {
             this.stateSnapshot.rgbStatus = 'on';
+            this.stateSnapshot.deviceStatus = 'on';
+            this.deviceStatus = 'on';
+            this.stateSnapshot.connectionStatus = 'online';
+            this.connectionStatus = 'online';
             logger.debug(`Successfully turned on RGB color for device: ${this.deviceName}`);
             return true;
         }
@@ -349,11 +363,13 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
     private async toggleSwitch(turnOn: boolean): Promise<boolean> {
         const [response] = await this.callDimmerCommand('dimmerPowerSwitchCtl', {
             status: turnOn ? 'on' : 'off'
-        }, 'dimmerPowerSwitchCtl');
+        });
 
         if (response?.code === 0) {
             this.stateSnapshot.deviceStatus = turnOn ? 'on' : 'off';
             this.deviceStatus = this.stateSnapshot.deviceStatus;
+            this.stateSnapshot.connectionStatus = 'online';
+            this.connectionStatus = 'online';
             logger.debug(`Successfully toggled device: ${this.deviceName} to ${this.deviceStatus}`);
             return true;
         }
@@ -364,10 +380,12 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
     private async toggleIndicatorLight(turnOn: boolean): Promise<boolean> {
         const [response] = await this.callDimmerCommand('dimmerIndicatorLightCtl', {
             status: turnOn ? 'on' : 'off'
-        }, 'dimmerIndicatorLightCtl');
+        });
 
         if (response?.code === 0) {
             this.stateSnapshot.indicatorStatus = turnOn ? 'on' : 'off';
+            this.stateSnapshot.connectionStatus = 'online';
+            this.connectionStatus = 'online';
             logger.debug(`Successfully toggled indicator light for device: ${this.deviceName}`);
             return true;
         }
@@ -376,40 +394,40 @@ export class VeSyncDimmerSwitch extends VeSyncSwitch {
     }
 
     private buildDimmerRequest(command: string, data: Record<string, any> = {}): Record<string, any> {
-        const manager = this.manager as unknown as { accountId?: string | null; token?: string | null; timeZone?: string; countryCode?: string | null; };
+        const manager = this.manager as unknown as {
+            accountId?: string | null;
+            token?: string | null;
+            timeZone?: string | null;
+            countryCode?: string | null;
+        };
+
+        const traceId = Helpers.generateTraceId();
+
         return {
             acceptLanguage: 'en',
             accountID: manager.accountId ?? '',
             appVersion: APP_VERSION,
-            phoneBrand: PHONE_BRAND,
-            phoneOS: PHONE_OS,
             cid: this.cid,
             configModule: this.configModule,
             configModel: this.configModule,
             debugMode: false,
-            traceId: Date.now().toString(),
+            deviceId: this.cid,
+            method: command,
+            phoneBrand: PHONE_BRAND,
+            phoneOS: PHONE_OS,
+            traceId,
             timeZone: manager.timeZone ?? DEFAULT_TZ,
             token: manager.token ?? '',
             userCountryCode: manager.countryCode ?? DEFAULT_REGION,
             uuid: this.uuid,
-            deviceId: this.cid,
-            mobileId: MOBILE_ID,
-            method: command,
-            payload: {
-                method: command,
-                source: 'APP',
-                data: {
-                    uuid: this.uuid,
-                    ...data
-                }
-            }
+            ...data
         };
     }
 
-    private async callDimmerCommand(command: string, data: Record<string, any>, endpoint: string): Promise<[any, number]> {
+    private async callDimmerCommand(command: string, data: Record<string, any>): Promise<[any, number]> {
         const request = this.buildDimmerRequest(command, data);
         return await this.callApi(
-            `/cloud/v1/deviceManaged/${endpoint}`,
+            `/cloud/v1/deviceManaged/${command}`,
             'post',
             request,
             Helpers.reqHeaderBypass()

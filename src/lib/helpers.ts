@@ -177,6 +177,12 @@ export function generateTerminalId(): string {
     return result;
 }
 
+export function generateTraceId(): string {
+    const timestamp = Math.floor(Date.now() / 1000);
+    const randomPart = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
+    return `APP${MOBILE_ID.slice(-5, -1)}${timestamp}-${randomPart}`;
+}
+
 export interface RequestBody {
     acceptLanguage?: string;
     accountID?: string;
@@ -234,6 +240,10 @@ export interface LoginResponse {
 
 export class Helpers {
     static shouldRedact = true;
+
+    static generateTraceId(): string {
+        return generateTraceId();
+    }
 
     /**
      * Calculate MD5 hash
