@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.11] - 2025-10-22
+
+### Fixed
+- **🔌 ESWD16 Power & Brightness**: Replaced the deprecated `/dimmer/v1/*` calls with the bypass-v1 payloads (`dimmerPowerSwitchCtl`, `dimmerBrightnessCtl`) so HomeKit toggles and dimming succeed again.
+- **💡 Indicator State**: Syncs indicator and RGB status from the cloud snapshot, eliminating stale state after third-party control.
+
+### Changed
+- **🧱 Request Builder**: Centralized the dimmer request body generation to include account, region, and trace metadata so future ESWD16 endpoints stay aligned with pyvesync.
+
 ## [1.3.10] - 2025-10-21
 
 ### Fixed
