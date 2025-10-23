@@ -88,6 +88,8 @@ export class VeSyncAir131 extends VeSyncFan {
                 }
             }
 
+            const normalizedAirQuality = Helpers.normalizeAirQuality(data.airQuality);
+
             this.details = {
                 mode: data.mode || 'manual',  // Default to manual if not specified
                 speed: data.level || 0,
@@ -96,6 +98,8 @@ export class VeSyncAir131 extends VeSyncFan {
                 child_lock: data.childLock || false,
                 air_quality: data.airQuality || 'unknown',
                 air_quality_value: data.air_quality_value || 0,
+                air_quality_level: normalizedAirQuality.level >= 1 ? normalizedAirQuality.level : undefined,
+                air_quality_label: normalizedAirQuality.label,
                 active_time: data.activeTime || 0
             };
             

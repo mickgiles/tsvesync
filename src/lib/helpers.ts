@@ -245,6 +245,52 @@ export class Helpers {
         return generateTraceId();
     }
 
+    static normalizeAirQuality(value: unknown): { level: number; label: string } {
+        const stringMap: Record<string, number> = {
+            'excellent': 1,
+            'very good': 1,
+            'good': 2,
+            'moderate': 3,
+            'fair': 3,
+            'inferior': 4,
+            'poor': 4,
+            'bad': 4,
+        };
+
+        if (typeof value === 'number') {
+            const level = Number.isFinite(value) ? Math.trunc(value) : -1;
+            if (level >= 1 && level <= 4) {
+                return {
+                    level,
+                    label: level === 1
+                        ? 'excellent'
+                        : level === 2
+                            ? 'good'
+                            : level === 3
+                                ? 'moderate'
+                                : 'poor',
+                };
+            }
+        } else if (typeof value === 'string') {
+            const normalized = value.trim().toLowerCase();
+            const level = stringMap[normalized];
+            if (level) {
+                return {
+                    level,
+                    label: level === 1
+                        ? 'excellent'
+                        : level === 2
+                            ? 'good'
+                            : level === 3
+                                ? 'moderate'
+                                : 'poor',
+                };
+            }
+        }
+
+        return { level: -1, label: 'unknown' };
+    }
+
     /**
      * Calculate MD5 hash
      */

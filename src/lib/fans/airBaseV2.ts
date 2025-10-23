@@ -1,6 +1,7 @@
 import { VeSyncAirBypass } from './airBypass';
 import { VeSync } from '../vesync';
 import { logger } from '../logger';
+import { Helpers } from '../helpers';
 
 /**
  * VeSync Air Purifier with Bypass V2
@@ -189,6 +190,11 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
         if (this.hasFeature('air_quality')) {
             this.details.air_quality_value = devDict.PM25 ?? 0;
             this.details.air_quality = devDict.AQLevel ?? 0;
+            const normalizedAirQuality = Helpers.normalizeAirQuality(devDict.AQLevel);
+            if (normalizedAirQuality.level >= 1) {
+                this.details.air_quality_level = normalizedAirQuality.level;
+            }
+            this.details.air_quality_label = normalizedAirQuality.label;
         }
 
         if ('PM1' in devDict) this.details.pm1 = devDict.PM1;

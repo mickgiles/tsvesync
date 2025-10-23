@@ -87,6 +87,12 @@ export class VeSyncAirBypass extends VeSyncFan {
                     air_quality_value: result.air_quality_value || 0
                 };
 
+                const normalizedAirQuality = Helpers.normalizeAirQuality(result.air_quality);
+                if (normalizedAirQuality.level >= 1) {
+                    this.details.air_quality_level = normalizedAirQuality.level;
+                }
+                this.details.air_quality_label = normalizedAirQuality.label;
+
                 // Capture additional air quality properties if available
                 if ('PM1' in result) this.details.pm1 = result.PM1;
                 if ('PM10' in result) this.details.pm10 = result.PM10;

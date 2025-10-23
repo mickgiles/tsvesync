@@ -5,6 +5,7 @@
 import { VeSyncBaseDevice } from './vesyncBaseDevice';
 import { VeSync } from './vesync';
 import { logger } from './logger';
+import { Helpers } from './helpers';
 
 interface FanConfig {
     [key: string]: {
@@ -327,6 +328,8 @@ export abstract class VeSyncFan extends VeSyncBaseDevice {
         child_lock?: boolean;
         air_quality?: string | number;
         air_quality_value?: number;
+        air_quality_level?: number;
+        air_quality_label?: string;
         pm1?: number;
         pm10?: number;
         aq_percent?: number;
@@ -466,6 +469,23 @@ export abstract class VeSyncFan extends VeSyncBaseDevice {
      */
     get airQualityValue(): number {
         return this.details.air_quality_value ?? 0;
+    }
+
+    /**
+     * Normalized air quality metadata aligned with pyvesync levels.
+     */
+    getNormalizedAirQuality(): { level: number; label: string } {
+        if (typeof this.details.air_quality_level === 'number' && this.details.air_quality_level >= 1) {
+            const label = this.details.air_quality_label ?? Helpers.normalizeAirQuality(this.details.air_quality_level).label;
+            return { level: this.details.air_quality_level, label };
+        }
+
+        const normalized = Helpers.normalizeAirQuality(this.details.air_quality);
+        if (normalized.level >= 1) {
+            this.details.air_quality_level = normalized.level;
+            this.details.air_quality_label = normalized.label;
+        }
+        return normalized;
     }
 
     /**
