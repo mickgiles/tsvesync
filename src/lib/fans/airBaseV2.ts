@@ -10,7 +10,7 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
     protected _lightDetection: boolean = false;
     protected _lightDetectionState: boolean = false;
     protected setSpeedLevel: number | null = null;
-    protected autoPreferences: string[] = ['default', 'efficient', 'quiet'];
+    protected autoPreferences: string[];
     protected enabled: boolean = false;
     protected _mode: string = '';
     protected _speed: number = 0;
@@ -18,6 +18,7 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
 
     constructor(details: Record<string, any>, manager: VeSync) {
         super(details, manager);
+        this.autoPreferences = [...this.getConfigAutoPreferences(['default', 'efficient', 'quiet'])];
         logger.debug(`Initialized VeSyncAirBaseV2 device: ${this.deviceName}`);
     }
 
@@ -310,16 +311,33 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
      * Override setMode to send workMode payloads for bypassV2 purifiers.
      */
     override async setMode(mode: string): Promise<boolean> {
-        if (!this.modes.includes(mode as any)) {
+        const targetMode = mode.toLowerCase();
+        const supportedModes = this.modes.map(m => m.toLowerCase());
+
+        if (!supportedModes.includes(targetMode)) {
             const error = `Invalid mode: ${mode}. Must be one of: ${this.modes.join(', ')}`;
             logger.error(`${error} for device: ${this.deviceName}`);
             throw new Error(error);
         }
 
         // Special handling for Core200S stays the same for all models
-        if (this.deviceType.includes('Core200S') && mode === 'auto') {
+        if (this.deviceType.includes('Core200S') && targetMode === 'auto') {
             logger.warn(`Auto mode not supported for ${this.deviceType}, using manual mode instead`);
             return this.setMode('manual');
+        }
+
+        // Manual mode should leverage changeFanSpeed to mirror pyvesync behaviour
+        if (targetMode === 'manual') {
+            const defaultLevel = this.config.levels && this.config.levels.length > 0
+                ? this.config.levels[0]
+                : 1;
+            const desiredLevel = this.details.manualSpeedLevel ?? this.speed ?? defaultLevel;
+            const success = await this.changeFanSpeed(desiredLevel);
+            if (success) {
+                this.details.mode = 'manual';
+                this.mode = 'manual';
+            }
+            return success;
         }
 
         // BypassV2 purifiers need the workMode payload; other models use the base implementation
@@ -327,7 +345,7 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
             logger.debug(`Using bypassV2 mode payload for ${this.deviceName}`);
             const [head, body] = this.buildApiDict('setPurifierMode');
             body.payload.data = {
-                workMode: mode
+                workMode: targetMode
             };
 
             const [response, status] = await this.callApi(
@@ -339,8 +357,26 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
 
             const success = this.checkV2Response(response, status, 'setMode');
             if (success) {
-                this.details.mode = mode;
-                this._mode = mode;
+                this.details.mode = targetMode;
+                this.mode = targetMode;
+
+                // Update cached speed snapshot for special modes
+                if (targetMode === 'sleep') {
+                    this.speed = 0;
+                    this.details.speed = 0;
+                } else if (targetMode === 'turbo') {
+                    const maxSpeed = this.config.levels && this.config.levels.length > 0
+                        ? Math.max(...this.config.levels)
+                        : this.speed;
+                    if (typeof maxSpeed === 'number' && maxSpeed > 0) {
+                        this.speed = maxSpeed;
+                        this.details.speed = maxSpeed;
+                    }
+                } else if (targetMode === 'auto') {
+                    this.speed = 0;
+                    this.details.speed = 0;
+                    this.details.isAutoSentinel = true;
+                }
                 
                 // Force a details update to sync state
                 setTimeout(() => {
@@ -351,13 +387,35 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
                 
                 return true;
             } else {
-                logger.error(`Failed to set mode to ${mode} for device: ${this.deviceName}`);
+                logger.error(`Failed to set mode to ${targetMode} for device: ${this.deviceName}`);
                 return false;
             }
         } else {
             // Use parent implementation for non-bypassV2 models
             return super.setMode(mode);
         }
+    }
+
+    /**
+     * Convenience helper to enter turbo mode when supported.
+     */
+    async turboMode(): Promise<boolean> {
+        if (!this.modes.map(m => m.toLowerCase()).includes('turbo')) {
+            logger.debug(`Turbo mode not supported for device: ${this.deviceName}`);
+            return false;
+        }
+        return this.setMode('turbo');
+    }
+
+    /**
+     * Convenience helper to enter pet mode when supported.
+     */
+    async petMode(): Promise<boolean> {
+        if (!this.modes.map(m => m.toLowerCase()).includes('pet')) {
+            logger.debug(`Pet mode not supported for device: ${this.deviceName}`);
+            return false;
+        }
+        return this.setMode('pet');
     }
 
     /**
@@ -395,6 +453,10 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
             if (success) {
                 this.speed = speed;
                 this.details.manualSpeedLevel = speed;
+                this.details.speed = speed;
+                this.details.mode = 'manual';
+                this.mode = 'manual';
+                this.details.isAutoSentinel = false;
                 
                 // Force a details update to sync state
                 setTimeout(() => {
@@ -428,6 +490,10 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
             if (success) {
                 this.speed = speed;
                 this.details.manualSpeedLevel = speed;
+                this.details.speed = speed;
+                this.details.mode = 'manual';
+                this.mode = 'manual';
+                this.details.isAutoSentinel = false;
                 return true;
             } else {
                 logger.error(`Failed to change fan speed to ${speed} for device: ${this.deviceName}`);
@@ -441,7 +507,7 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
      */
     async setAutoPreference(preference: string = 'default', roomSize: number = 600): Promise<boolean> {
         if (!this.autoPreferences.includes(preference)) {
-            logger.debug(`Invalid preference: ${preference} - valid preferences are default, efficient, quiet`);
+            logger.debug(`Invalid preference: ${preference} - valid preferences are ${this.autoPreferences.join(', ')}`);
             return false;
         }
 

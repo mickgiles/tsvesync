@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2025-10-26
+
+### Added
+- **🧪 Everest Parity Harness**: Introduced `test/everest-air-parity.test.ts` plus an `npm run test:everest` shortcut so we can continuously validate Everest Air behavior against the pyvesync reference models.
+- **🚀 Convenience APIs**: `VeSyncAirBaseV2` now exposes `turboMode()` and `petMode()` helpers mirroring pyvesync’s public surface.
+
+### Changed
+- **⚙️ Mode & Preference Metadata**: Expanded `fanConfig` with explicit mode lists and auto preference arrays for Vital and Everest purifiers so downstream consumers can mirror pyvesync capabilities without hard-coding constants.
+- **🌀 BypassV2 Mode Handling**: Normalized mode requests to lowercase, routed manual requests through `changeFanSpeed`, and cached turbo/auto sentinel state exactly the way pyvesync does—keeping state in sync even when the cloud reports fanSpeedLevel `255`.
+- **📈 Everest Sensor Fields**: Ensured PM1/PM10/AQ percent readings and manual speed snapshots are persisted during mode and speed changes, closing gaps that previously caused the plugin to lose context after turbo/auto transitions.
+
+### Tests
+- **✅ Homebridge Interop**: Coordinated with the plugin suite to cover auto-sentinel mapping and turbo error handling, giving us cross-project regression coverage for the new behaviors.
+
 ## [1.3.13] - 2025-10-23
 
 ### Added

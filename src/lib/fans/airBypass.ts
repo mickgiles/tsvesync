@@ -7,7 +7,9 @@ import { logger } from '../logger';
  * VeSync Air Purifier with Bypass
  */
 export class VeSyncAirBypass extends VeSyncFan {
-    protected readonly modes = ['auto', 'manual', 'sleep'] as const;
+    protected get modes(): ReadonlyArray<string> {
+        return this.getConfigModes(['auto', 'manual', 'sleep']);
+    }
     protected readonly displayModes = ['on', 'off'] as const;
     protected readonly childLockModes = ['on', 'off'] as const;
 
@@ -216,16 +218,20 @@ export class VeSyncAirBypass extends VeSyncFan {
      * Set device mode
      */
     async setMode(mode: string): Promise<boolean> {
-        if (!this.modes.includes(mode as any)) {
+        const requested = mode.toLowerCase();
+        const supported = this.modes.map(m => m.toLowerCase());
+        const allowsCore200AutoFallback = this.deviceType.includes('Core200S') && requested === 'auto';
+
+        if (!supported.includes(requested) && !allowsCore200AutoFallback) {
             const error = `Invalid mode: ${mode}. Must be one of: ${this.modes.join(', ')}`;
             logger.error(`${error} for device: ${this.deviceName}`);
             throw new Error(error);
         }
 
-        logger.debug(`Setting mode to ${mode} for device: ${this.deviceName}`);
+        logger.debug(`Setting mode to ${requested} for device: ${this.deviceName}`);
 
         // Special handling for Core200S auto mode
-        if (this.deviceType.includes('Core200S') && mode === 'auto') {
+        if (allowsCore200AutoFallback) {
             // Core200S doesn't support auto mode, so we'll set it to manual mode
             logger.warn(`Auto mode not supported for ${this.deviceType}, using manual mode instead`);
             return this.setMode('manual');
@@ -241,7 +247,7 @@ export class VeSyncAirBypass extends VeSyncFan {
                 configModule: this.configModule,
                 payload: {
                     data: {
-                        mode
+                        mode: requested
                     },
                     method: 'setPurifierMode',
                     source: 'APP'
@@ -252,10 +258,10 @@ export class VeSyncAirBypass extends VeSyncFan {
 
         const success = this.checkResponse([response, status], 'setMode');
         if (success) {
-            this.details.mode = mode;
+            this.details.mode = requested;
             return true;
         } else {
-            logger.error(`Failed to set mode to ${mode} for device: ${this.deviceName}`);
+            logger.error(`Failed to set mode to ${requested} for device: ${this.deviceName}`);
             return false;
         }
     }
