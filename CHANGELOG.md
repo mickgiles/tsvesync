@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2025-12-09
+
+### Fixed
+- **🌡️ Core 300S/400S/600S Air Quality Sensor**: Added missing `air_quality` feature to all LAP-C301S, LAP-C302S, LAP-C401S, and LAP-C601S device configurations
+  - LAP variant device codes (e.g., LAP-C401S-WUSR) now properly report air quality sensors in HomeKit
+  - Resolves issue where Core 400S and other LAP variants did not show air quality sensor despite hardware support
+  - All LAP-C series devices with air quality hardware now correctly expose air quality characteristics
+- **🔧 Air Quality API Field Compatibility**: Added fallback support for multiple VeSync API response field formats
+  - Now supports both snake_case (`air_quality`, `air_quality_value`) and PascalCase (`AQLevel`, `PM25`) field names
+  - Handles different device firmware versions that use varying API field naming conventions
+  - Improves air quality data reliability across different Core series device variants
+
+### Added
+- **🔍 Enhanced Air Quality Debug Logging**: Comprehensive diagnostic logging for air quality data parsing
+  - Logs all available air quality API fields for troubleshooting device-specific issues
+  - Helps identify which API response fields contain air quality data for different firmware versions
+  - Additional debug logging for PM1, PM10, and AQ percentage fields when available
+- **🎯 Smart Device Type Fallback Matching**: Implemented intelligent substring matching for LAP variant device codes
+  - Automatically maps unknown LAP variant codes (e.g., "LAP-C401S-WUSR") to base model configurations
+  - Supports future regional variants without requiring code changes
+  - Includes comprehensive model number mappings for Core, Vital, LV-PUR, and Everest series
+  - Provides future-proof device configuration lookup with detailed debug logging
+
+### Changed
+- **📊 LAP Device Configuration**: Updated all LAP-C series device configs to include air_quality feature
+  - LAP-C301S-WJP, LAP-C302S-WUSB, LAP-C301S-WAAA (Core 300S variants)
+  - LAP-C401S-WJP, LAP-C401S-WUSR, LAP-C401S-WAAA (Core 400S variants)
+  - LAP-C601S-WUS, LAP-C601S-WUSR, LAP-C601S-WEU (Core 600S variants)
+
 ## [1.4.0] - 2025-10-26
 
 ### Added

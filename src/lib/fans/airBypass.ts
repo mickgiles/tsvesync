@@ -79,17 +79,33 @@ export class VeSyncAirBypass extends VeSyncFan {
                     }
                 }
 
+                // Parse air quality with fallback support for multiple API response formats
+                // Some devices (like Core 400S) may use PascalCase (AQLevel, PM25)
+                // while others use snake_case (air_quality, air_quality_value)
+                const airQualityLevel = result.air_quality || result.AQLevel || 0;
+                const airQualityValue = result.air_quality_value || result.PM25 || 0;
+
+                // Debug logging to diagnose air quality field availability
+                logger.debug(`${this.deviceName}: Air quality API response fields:`, {
+                    air_quality: result.air_quality,
+                    AQLevel: result.AQLevel,
+                    air_quality_value: result.air_quality_value,
+                    PM25: result.PM25,
+                    parsed_level: airQualityLevel,
+                    parsed_value: airQualityValue
+                });
+
                 this.details = {
                     mode: result.mode || '',
                     speed: result.level || 0,
                     filter_life: filterLife,
                     screen_status: result.display ? 'on' : 'off',
                     child_lock: result.child_lock || false,
-                    air_quality: result.air_quality || 0,
-                    air_quality_value: result.air_quality_value || 0
+                    air_quality: airQualityLevel,
+                    air_quality_value: airQualityValue
                 };
 
-                const normalizedAirQuality = Helpers.normalizeAirQuality(result.air_quality);
+                const normalizedAirQuality = Helpers.normalizeAirQuality(airQualityLevel);
                 if (normalizedAirQuality.level >= 1) {
                     this.details.air_quality_level = normalizedAirQuality.level;
                 }
@@ -99,6 +115,15 @@ export class VeSyncAirBypass extends VeSyncFan {
                 if ('PM1' in result) this.details.pm1 = result.PM1;
                 if ('PM10' in result) this.details.pm10 = result.PM10;
                 if ('AQPercent' in result) this.details.aq_percent = result.AQPercent;
+
+                // Debug log additional air quality fields for diagnostics
+                if (result.PM1 !== undefined || result.PM10 !== undefined || result.AQPercent !== undefined) {
+                    logger.debug(`${this.deviceName}: Additional air quality data:`, {
+                        PM1: result.PM1,
+                        PM10: result.PM10,
+                        AQPercent: result.AQPercent
+                    });
+                }
 
                 // Don't overwrite config as it contains features array
                 if (result.configuration) {

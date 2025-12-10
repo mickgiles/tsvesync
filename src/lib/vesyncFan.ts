@@ -65,63 +65,63 @@ export const fanConfig: FanConfig = {
     },
     'LAP-C301S-WJP': {
         module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
+        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
         levels: [1, 2, 3, 4],
         modes: ['sleep', 'manual', 'auto'],
         autoPreferences: ['default', 'efficient', 'quiet']
     },
     'LAP-C302S-WUSB': {
         module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
+        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
         levels: [1, 2, 3, 4],
         modes: ['sleep', 'manual', 'auto'],
         autoPreferences: ['default', 'efficient', 'quiet']
     },
     'LAP-C301S-WAAA': {
         module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
+        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
         levels: [1, 2, 3, 4],
         modes: ['sleep', 'manual', 'auto'],
         autoPreferences: ['default', 'efficient', 'quiet']
     },
     'LAP-C401S-WJP': {
         module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
+        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
         levels: [1, 2, 3, 4],
         modes: ['sleep', 'manual', 'auto'],
         autoPreferences: ['default', 'efficient', 'quiet']
     },
     'LAP-C401S-WUSR': {
         module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
+        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
         levels: [1, 2, 3, 4],
         modes: ['sleep', 'manual', 'auto'],
         autoPreferences: ['default', 'efficient', 'quiet']
     },
     'LAP-C401S-WAAA': {
         module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
+        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
         levels: [1, 2, 3, 4],
         modes: ['sleep', 'manual', 'auto'],
         autoPreferences: ['default', 'efficient', 'quiet']
     },
     'LAP-C601S-WUS': {
         module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
+        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
         levels: [1, 2, 3, 4],
         modes: ['sleep', 'manual', 'auto'],
         autoPreferences: ['default', 'efficient', 'quiet']
     },
     'LAP-C601S-WUSR': {
         module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
+        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
         levels: [1, 2, 3, 4],
         modes: ['sleep', 'manual', 'auto'],
         autoPreferences: ['default', 'efficient', 'quiet']
     },
     'LAP-C601S-WEU': {
         module: 'VeSyncAirBypass',
-        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
+        features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
         levels: [1, 2, 3, 4],
         modes: ['sleep', 'manual', 'auto'],
         autoPreferences: ['default', 'efficient', 'quiet']
@@ -410,7 +410,16 @@ export abstract class VeSyncFan extends VeSyncBaseDevice {
     constructor(details: Record<string, any>, manager: VeSync) {
         super(details, manager);
         this.details = details;
-        const entry = fanConfig[this.deviceType];
+
+        // Try exact match first
+        let entry: FanConfigEntry | undefined = fanConfig[this.deviceType];
+
+        // If no exact match, try substring matching for LAP variants
+        // This handles cases where device reports as "LAP-C401S-WUSR" but we only have "Core400S" config
+        if (!entry) {
+            entry = this.findConfigBySubstring(this.deviceType);
+        }
+
         if (entry) {
             this.config = {
                 ...entry,
@@ -428,6 +437,45 @@ export abstract class VeSyncFan extends VeSyncBaseDevice {
                 autoPreferences: []
             };
         }
+    }
+
+    /**
+     * Find config entry by substring matching for variant device types
+     * Maps LAP variants to their base model configs (e.g., LAP-C401S-WUSR → Core400S)
+     */
+    private findConfigBySubstring(deviceType: string): FanConfigEntry | undefined {
+        // Define model number mappings
+        const modelMappings: Array<{ patterns: string[]; configKey: string }> = [
+            // Core series air purifiers
+            { patterns: ['Core300S', '301S', '302S'], configKey: 'Core300S' },
+            { patterns: ['Core400S', '401S'], configKey: 'Core400S' },
+            { patterns: ['Core600S', '601S', '602S'], configKey: 'Core600S' },
+            { patterns: ['Core200S', '201S', '202S'], configKey: 'Core200S' },
+
+            // Vital series
+            { patterns: ['V102S'], configKey: 'LAP-V102S-AASR' },
+            { patterns: ['V201S'], configKey: 'LAP-V201S-AASR' },
+
+            // LV-PUR series
+            { patterns: ['LV-PUR131S', 'LV-RH131S'], configKey: 'LV-PUR131S' },
+
+            // Everest series
+            { patterns: ['LAP-EL551S'], configKey: 'LAP-EL551S-AUS' },
+        ];
+
+        // Check each mapping
+        for (const mapping of modelMappings) {
+            // If device type contains any of the patterns, use the config key
+            if (mapping.patterns.some(pattern => deviceType.includes(pattern))) {
+                const config = fanConfig[mapping.configKey];
+                if (config) {
+                    logger.debug(`${deviceType}: Using fallback config from ${mapping.configKey} via substring match`);
+                    return config;
+                }
+            }
+        }
+
+        return undefined;
     }
 
     /**
