@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.3] - 2025-12-21
+
+### Fixed
+- **🌍 Cross-Region Session + Device Discovery Reliability**: Improved parity with pyvesync so persisted sessions and device discovery stay on the correct VeSync endpoint.
+  - Normalizes hydrated sessions to derive the API base URL from stored region/country code (pyvesync-style), while preserving explicit API URL overrides
+  - Retries device list once on cross-region responses using the server-provided region when available
+- **🔑 Token Invalidation Recovery**: Treats `-11001000` (invalid/expired token) as a token error and performs a one-time re-login + device list retry (pyvesync-style).
+
+### Changed
+- **📝 Parity Notes + Diagnostics**: Expanded comments and docs around pyvesync auth/device discovery behavior to reduce confusion when reviewing payload differences (e.g., Step 2 omits `appID/sourceAppID`).
+
+## [1.4.2] - 2025-12-09
+
+### Changed
+- Version sync with homebridge-tsvesync (no functional changes).
+
 ## [1.4.1] - 2025-12-09
 
 ### Fixed

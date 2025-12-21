@@ -208,40 +208,21 @@ await manager.login();
 
 #### Supported Country Codes
 
-The library supports all country codes. Common ones include:
+The library supports all ISO 3166-1 alpha-2 country codes (e.g. `US`, `DE`, `AU`).
 
-**Americas:**
-- `US` - United States (default)
-- `CA` - Canada
-- `MX` - Mexico
+##### pyvesync parity notes (regions + device list)
 
-**Europe:** (uses EU endpoint)
-- `GB` - United Kingdom
-- `DE` - Germany
-- `FR` - France
-- `IT` - Italy
-- `ES` - Spain
-- `NL` - Netherlands
-- `SE` - Sweden
-- `NO` - Norway
-- `DK` - Denmark
-- `FI` - Finland
-- `PL` - Poland
-- And all other European countries
+VeSync uses two API base URLs:
+- US: `https://smartapi.vesync.com`
+- EU: `https://smartapi.vesync.eu`
 
-**Asia-Pacific:** (uses US endpoint)
-- `AU` - Australia
-- `NZ` - New Zealand
-- `JP` - Japan
-- `SG` - Singapore
-- `CN` - China
-- `KR` - South Korea
+This library intentionally mirrors **pyvesync** behavior for the initial region selection:
+- `US` region: `US`, `CA`, `MX`, `JP`
+- `EU` region: everything else
 
-**Important Notes:**
-- If you get an authentication error about "country code mismatch" or "cross-region error", you need to set your country code
-- The country code should match the country where your VeSync account was created
-- European countries automatically use the EU endpoint (`smartapi.vesync.eu`)
-- All other countries use the US endpoint (`smartapi.vesync.com`)
+Some accounts may still “live” in the opposite region for historical/app reasons; in that case the new auth flow returns a cross‑region response and we automatically retry Step 2 using the server-provided `currentRegion`/`countryCode` + `bizToken` (pyvesync-style).
+
+Device discovery parity note: the device list call uses `/cloud/v1/deviceManaged/devices` with bypass headers only; `token` and `accountID` are supplied in the request body (matching pyvesync’s request model).
 
 ### Working with Devices
 

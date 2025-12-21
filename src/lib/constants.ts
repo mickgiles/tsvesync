@@ -15,6 +15,12 @@ export const CROSS_REGION_ERROR_CODES = [
     -11261022,  // access region conflict error
 ];
 
+// Token/auth invalidation error codes
+// pyvesync parity: `-11001000` maps to TOKEN_EXPIRED (invalid token)
+export const TOKEN_ERROR_CODES = [
+    -11001000,  // token expired/invalid
+];
+
 // Other error codes
 export const APP_VERSION_ERROR_CODES = [
     -11012022,  // app version is too low
@@ -32,4 +38,11 @@ export function isCredentialError(code: number): boolean {
  */
 export function isCrossRegionError(code: number): boolean {
     return CROSS_REGION_ERROR_CODES.includes(code);
+}
+
+/**
+ * Check if an error code indicates the token is invalid/expired.
+ */
+export function isTokenError(code: number): boolean {
+    return TOKEN_ERROR_CODES.includes(code);
 }

@@ -109,6 +109,9 @@ async function testAuthWithCountryCode(
             // Step 2: Login with authorization code
             const { authorizeCode, bizToken } = step1Data.result;
             
+            // Note: This diagnostic historically sends a "superset" Step 2 payload (including appID/sourceAppID).
+            // pyvesync's known-working Step 2 model does NOT include appID/sourceAppID; our library mirrors that.
+            // See `src/lib/helpers.ts` -> `Helpers.reqBodyAuthStep2` for the canonical parity shape.
             const step2Body = {
                 authorizeCode: authorizeCode,
                 bizToken: bizToken,

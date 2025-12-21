@@ -6,7 +6,7 @@ import axios from 'axios';
 import crypto from 'crypto';
 import { VeSync } from './vesync';
 import { logger } from './logger';
-import { isCredentialError, isCrossRegionError, CROSS_REGION_ERROR_CODES } from './constants';
+import { isCredentialError, isCrossRegionError } from './constants';
 
 // API configuration - Support regional endpoints
 let _apiBaseUrl = 'https://smartapi.vesync.com';
@@ -31,21 +31,28 @@ export function setCurrentRegion(region: string): void {
     }
 }
 
+// pyvesync parity:
+// VeSync only exposes two API base URLs (US + EU). pyvesync intentionally uses a
+// *deny-list* mapping here:
+//   - `US` region: US/CA/MX/JP
+//   - `EU` region: everything else
+//
+// This is counter-intuitive if you read it as "EU countries", but it's really
+// "the EU *endpoint*". In practice, many accounts outside Europe (e.g. AU/NZ/SG)
+// can be hosted on either endpoint depending on how/when the account was created.
+//
+// The correct/robust behavior comes from the Step 2 cross-region flow: when the
+// region guess is wrong, the API returns `currentRegion`/`countryCode` plus a
+// `bizToken`, and we retry Step 2 using the server-provided values (pyvesync-style).
+export const NON_EU_COUNTRY_CODES = ['US', 'CA', 'MX', 'JP'];
+
 // Determine region from country code
-export function getRegionFromCountryCode(countryCode: string): string {
-    const euCountries = [
-        'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR',
-        'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL',
-        'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'GB', 'IS', 'LI',
-        'NO', 'CH'
-    ];
-    
-    if (euCountries.includes(countryCode)) {
-        return 'EU';
+export function getRegionFromCountryCode(countryCode: string): 'US' | 'EU' {
+    const normalized = countryCode.trim().toUpperCase();
+    if (NON_EU_COUNTRY_CODES.includes(normalized)) {
+        return 'US';
     }
-    
-    // Default to US for other countries
-    return 'US';
+    return 'EU';
 }
 
 
@@ -97,27 +104,8 @@ export function getUSEndpointCountryCodes(): string[] {
  * Get the appropriate API endpoint based on country code
  */
 export function getEndpointForCountryCode(countryCode: string): 'US' | 'EU' {
-    // European country codes that should use the EU endpoint
-    const euCountryCodes = [
-        // Western Europe
-        'GB', 'DE', 'FR', 'IT', 'ES', 'NL', 'BE', 'AT', 'CH', 'IE', 'PT', 'LU',
-        // Nordic countries
-        'SE', 'NO', 'DK', 'FI', 'IS',
-        // Eastern Europe
-        'PL', 'CZ', 'HU', 'RO', 'BG', 'HR', 'SI', 'SK', 'LT', 'LV', 'EE',
-        // Southern Europe
-        'GR', 'CY', 'MT',
-        // Other European
-        'AL', 'BA', 'RS', 'ME', 'MK', 'MD', 'UA', 'BY'
-    ];
-    
-    // Check if country code is in EU list
-    if (euCountryCodes.includes(countryCode)) {
-        return 'EU';
-    }
-    
-    // Everything else uses US endpoint (including AU, NZ, JP, CA, MX, etc.)
-    return 'US';
+    // Alias for clarity: this is the region-to-endpoint mapping used by pyvesync.
+    return getRegionFromCountryCode(countryCode);
 }
 
 /**
@@ -169,18 +157,22 @@ export function generateAppId(): string {
 
 // Generate unique terminal ID for authentication
 export function generateTerminalId(): string {
-    const chars = 'abcdef0123456789';
-    let result = '';
-    for (let i = 0; i < 16; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
+    // pyvesync parity: terminalId is a UUID-like identifier prefixed with "2".
+    return `2${crypto.randomUUID().replace(/-/g, '')}`;
 }
 
 export function generateTraceId(): string {
     const timestamp = Math.floor(Date.now() / 1000);
     const randomPart = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
     return `APP${MOBILE_ID.slice(-5, -1)}${timestamp}-${randomPart}`;
+}
+
+let _authTraceCallNumber = 0;
+function generateAuthTraceId(terminalId: string): string {
+    _authTraceCallNumber += 1;
+    const suffix = terminalId.slice(-5, -1);
+    const timestamp = Math.floor(Date.now() / 1000);
+    return `APP${suffix}${timestamp}-${String(_authTraceCallNumber).padStart(5, '0')}`;
 }
 
 export interface RequestBody {
@@ -378,18 +370,12 @@ export class Helpers {
     /**
      * Build request body for initial authentication step
      */
-    static reqBodyAuthStep1(manager: VeSync, appId: string, terminalId: string, region: string = 'US'): Record<string, any> {
-        // Detect user's home region and country code
-        const userRegion = detectUserRegion(manager.username);
-        const userCountryCode = getCountryCodeFromRegion(region === 'EU' ? 'EU' : userRegion, manager.username);
-        
-        logger.debug('Authentication Step 1 - Region detection:', {
-            email: manager.username,
-            detectedRegion: userRegion,
-            requestRegion: region,
-            userCountryCode: userCountryCode
-        });
-        
+    static reqBodyAuthStep1(manager: VeSync, appId: string, terminalId: string, userCountryCode: string): Record<string, any> {
+        // pyvesync parity:
+        // - Mirrors `pyvesync.models.vesync_models.RequestGetTokenModel`
+        // - `userCountryCode` defaults to `DEFAULT_REGION` ("US") unless the caller overrides it
+        // - `timeZone` defaults to `DEFAULT_TZ` ("America/New_York") during auth; the API later updates the
+        //   effective timezone used for device operations.
         return {
             'email': manager.username,
             'method': 'authByPWDOrOTM',
@@ -397,30 +383,43 @@ export class Helpers {
             'acceptLanguage': 'en',
             'accountID': '',
             'authProtocolType': 'generic',
-            'clientInfo': CLIENT_INFO,
+            'clientInfo': PHONE_BRAND,
             'clientType': 'vesyncApp',
             'clientVersion': CLIENT_VERSION,
             'debugMode': false,
             'osInfo': PHONE_OS,
             'terminalId': terminalId,
-            'timeZone': manager.timeZone || DEFAULT_TZ,
+            'timeZone': DEFAULT_TZ,
             'token': '',
-            'userCountryCode': userCountryCode,
+            'userCountryCode': userCountryCode.trim().toUpperCase(),
             'appID': appId,
             'sourceAppID': appId,
-            'traceId': `APP${appId}${Math.floor(Date.now() / 1000)}`
+            'traceId': generateAuthTraceId(terminalId)
         };
     }
 
     /**
      * Build request body for second authentication step (login with authorize code)
      */
-    static reqBodyAuthStep2(authorizeCode: string, bizToken: string | null, appId: string, terminalId: string, userCountryCode?: string, regionChange?: string): Record<string, any> {
+    static reqBodyAuthStep2(authorizeCode: string, bizToken: string | null, _appId: string, terminalId: string, userCountryCode?: string, regionChange?: string): Record<string, any> {
+        // pyvesync parity:
+        // - Mirrors `pyvesync.models.vesync_models.RequestLoginTokenModel`
+        // - `timeZone` remains `DEFAULT_TZ` during auth (device timezone is handled elsewhere)
+        // - Step 2 intentionally does NOT include `appID` / `sourceAppID`. Those are only sent in Step 1
+        //   (`RequestGetTokenModel`). pyvesync's Step 2 request model has no appID fields.
+        //   If you see older diagnostics including appID/sourceAppID in Step 2, treat it as a superset payload
+        //   rather than a requirement — our goal here is to match the known-working pyvesync request shape.
+        // - IMPORTANT: `bizToken` here is the *region-change token* returned by VeSync on Step 2 CROSS_REGION
+        //   errors. It is not part of the normal Step 1 -> Step 2 flow. pyvesync does not send a Step 1
+        //   bizToken in the initial Step 2 request (Step 1 result is just `{ accountID, authorizeCode }`);
+        //   it only includes `bizToken` + `regionChange='lastRegion'`
+        //   when retrying Step 2 after a cross-region response. See `pyvesync/auth.py:_exchange_authorization_code`.
         const body: Record<string, any> = {
             'method': 'loginByAuthorizeCode4Vesync',
             'authorizeCode': authorizeCode,
             'acceptLanguage': 'en',
-            'clientInfo': CLIENT_INFO,
+            'accountID': '',
+            'clientInfo': PHONE_BRAND,
             'clientType': 'vesyncApp',
             'clientVersion': CLIENT_VERSION,
             'debugMode': false,
@@ -428,8 +427,9 @@ export class Helpers {
             'osInfo': PHONE_OS,
             'terminalId': terminalId,
             'timeZone': DEFAULT_TZ,
-            'userCountryCode': userCountryCode || 'US',
-            'traceId': `APP${appId}${Math.floor(Date.now() / 1000)}`
+            'token': '',
+            'userCountryCode': (userCountryCode || DEFAULT_REGION).trim().toUpperCase(),
+            'traceId': generateAuthTraceId(terminalId)
         };
 
         // Only include bizToken if it's not null
@@ -524,14 +524,20 @@ export class Helpers {
         headers: Record<string, string> = {},
         manager: VeSync
     ): Promise<[any, number]> {
+        let url = '';
         try {
+            // Prefer manager-scoped base URL (pyvesync resolves per-manager from current region).
+            // Keep the module-level base URL as a fallback for older callers.
+            let baseUrl = manager.apiBaseUrl || _apiBaseUrl;
+
             // Ensure API base URL is properly set
-            if (!_apiBaseUrl || _apiBaseUrl === 'undefined') {
-                logger.error('API base URL is not properly configured. Setting to default US endpoint...');
-                setApiBaseUrl('https://smartapi.vesync.com');
+            if (!baseUrl || baseUrl === 'undefined') {
+                logger.error('API base URL is not properly configured. Falling back to US endpoint...');
+                baseUrl = 'https://smartapi.vesync.com';
+                manager.apiBaseUrl = baseUrl;
             }
-            
-            const url = _apiBaseUrl + endpoint;
+
+            url = baseUrl + endpoint;
             logger.debug(`Making API call to: ${url}`);
             
             const response = await axios({
@@ -571,7 +577,7 @@ export class Helpers {
                     status: error.response.status,
                     code: responseData?.code,
                     message: responseData?.msg,
-                    url: _apiBaseUrl + endpoint
+                    url
                 });
                 
                 return [responseData, error.response.status];
@@ -580,7 +586,7 @@ export class Helpers {
             logger.error('API call failed:', {
                 code: error.code,
                 message: error.message,
-                url: _apiBaseUrl + endpoint
+                url: url || (manager.apiBaseUrl || _apiBaseUrl || '') + endpoint
             });
             return [null, 0];
         }
@@ -660,20 +666,29 @@ export class Helpers {
         try {
             // Generate terminal ID to be used in both steps
             const terminalId = generateTerminalId();
+            // pyvesync parity:
+            // - `userCountryCode` defaults to `DEFAULT_REGION` ("US"), even if we first try the EU base URL.
+            // - If the account truly belongs to another region, the Step 2 response includes the correct
+            //   `countryCode`/`currentRegion` and a `bizToken` to retry Step 2 (handled below).
+            // Avoid "guessing" a country code from `region` or email heuristics here; it diverges from pyvesync.
+            const userCountryCode = (countryCodeOverride || DEFAULT_REGION).trim().toUpperCase();
             
             // Step 1: Get authorization code
-            const step1Body = this.reqBodyAuthStep1(manager, appId, terminalId, region);
+            const step1Body = this.reqBodyAuthStep1(manager, appId, terminalId, userCountryCode);
             const step1Headers = this.reqHeaderAuth();
             
             // Set the correct regional endpoint
-            const originalUrl = getApiBaseUrl();
-            if (region in REGION_ENDPOINTS) {
-                setApiBaseUrl(REGION_ENDPOINTS[region as keyof typeof REGION_ENDPOINTS]);
+            const originalUrl = manager.apiBaseUrl || getApiBaseUrl();
+            const knownBaseUrls = new Set(Object.values(REGION_ENDPOINTS));
+            const hasCustomBaseUrlOverride = !!manager.apiUrlOverride || !knownBaseUrls.has(originalUrl);
+            if (!hasCustomBaseUrlOverride && region in REGION_ENDPOINTS) {
+                const nextUrl = REGION_ENDPOINTS[region as keyof typeof REGION_ENDPOINTS];
+                manager.apiBaseUrl = nextUrl;
             }
 
             logger.debug('Step 1: Getting authorization code...', {
                 region,
-                endpoint: getApiBaseUrl(),
+                endpoint: manager.apiBaseUrl || getApiBaseUrl(),
                 body: { ...step1Body, password: '[REDACTED]' }
             });
 
@@ -687,7 +702,7 @@ export class Helpers {
 
             if (!authResponse || authStatus !== 200) {
                 logger.error('Step 1 failed:', authResponse);
-                setApiBaseUrl(originalUrl); // Restore original URL
+                manager.apiBaseUrl = originalUrl;
                 return [false, null, null, null];
             }
 
@@ -697,26 +712,30 @@ export class Helpers {
                 // Check if it's a credential error (no point retrying)
                 if (isCredentialError(authResponse.code)) {
                     logger.error('Credential error detected - invalid username or password');
-                    setApiBaseUrl(originalUrl); // Restore original URL
+                    manager.apiBaseUrl = originalUrl;
                     return [false, null, null, 'credential_error'];
                 }
                 
                 // Handle cross-region error (multiple error codes possible)
                 if (isCrossRegionError(authResponse.code)) {
                     logger.debug('Cross-region error detected:', authResponse.code, 'will try different region');
-                    setApiBaseUrl(originalUrl); // Restore original URL
+                    manager.apiBaseUrl = originalUrl;
                     return [false, null, null, 'cross_region'];
                 }
                 
-                setApiBaseUrl(originalUrl); // Restore original URL
+                manager.apiBaseUrl = originalUrl;
                 return [false, null, null, null];
             }
 
-            const { authorizeCode, bizToken } = authResponse.result || {};
+            // pyvesync parity note:
+            // - Step 1 "authByPWDOrOTM" returns a result shaped like RespGetTokenResultModel:
+            //   `{ accountID, authorizeCode }`. There is no Step 1 bizToken to forward.
+            //   See `pyvesync/models/vesync_models.py:RespGetTokenResultModel`.
+            const { authorizeCode } = authResponse.result || {};
             
             if (!authorizeCode) {
                 logger.error('Missing authorization code in step 1 response:', authResponse.result);
-                setApiBaseUrl(originalUrl); // Restore original URL
+                manager.apiBaseUrl = originalUrl;
                 return [false, null, null, null];
             }
 
@@ -725,8 +744,17 @@ export class Helpers {
             // Step 2: Login with authorization code
             // Use the override if provided, otherwise default to 'US'
             // Users should specify their actual country code in the configuration
-            const countryCodeForStep2 = countryCodeOverride || 'US';
-            const step2Body = this.reqBodyAuthStep2(authorizeCode, bizToken, appId, terminalId, countryCodeForStep2);
+            const countryCodeForStep2 = userCountryCode;
+            // pyvesync parity note:
+            // - Step 1 returns `authorizeCode` (and an `accountID`) but does not require/provide a bizToken for
+            //   the initial Step 2 request.
+            // - Step 2 initial request omits `bizToken`.
+            // - Only if Step 2 returns a CROSS_REGION error does VeSync provide `result.bizToken`, which is then
+            //   echoed back as `bizToken` along with `regionChange='lastRegion'` for a Step 2 retry.
+            //   See `pyvesync/auth.py:_exchange_authorization_code` for the canonical behavior.
+            // - Step 2 also intentionally omits appID/sourceAppID (pyvesync parity); we still pass `appId` through
+            //   to keep the function signature stable/historical.
+            const step2Body = this.reqBodyAuthStep2(authorizeCode, null, appId, terminalId, countryCodeForStep2);
             
             logger.debug('Step 2: Logging in with authorization code...');
 
@@ -747,42 +775,84 @@ export class Helpers {
 
             if (!loginResponse || loginStatus !== 200) {
                 logger.error('Step 2 failed:', loginResponse);
-                setApiBaseUrl(originalUrl); // Restore original URL on failure
+                manager.apiBaseUrl = originalUrl;
                 return [false, null, null, null];
             }
 
             if (loginResponse.code !== 0) {
                 logger.debug('Step 2 error, code:', loginResponse.code, 'checking if cross-region...');
-                // Handle cross-region error - for EU accounts, we need to switch regions entirely
-                if (CROSS_REGION_ERROR_CODES.includes(loginResponse.code)) {
-                    // Log helpful message about country code mismatch
-                    logger.warn('═══════════════════════════════════════════════════════════════');
-                    logger.warn('COUNTRY CODE MISMATCH DETECTED');
-                    logger.warn(`Your account expects a different country code than '${countryCodeForStep2}'`);
-                    logger.warn('This usually means:');
-                    logger.warn('  1. You need to set the correct country code in your config');
-                    logger.warn('  2. Your account was created in a different country/region');
-                    logger.warn('');
-                    logger.warn('To fix this:');
-                    logger.warn('  - In Homebridge UI: Select your correct country from the dropdown');
-                    logger.warn('  - In config.json: Add "countryCode": "YOUR_COUNTRY_CODE"');
-                    logger.warn('');
-                    logger.warn('Common country codes: US, CA, GB, DE, FR, AU, NZ, JP');
-                    logger.warn('═══════════════════════════════════════════════════════════════');
-                    
-                    logger.debug('Cross-region error detected in Step 2 - will try different endpoint');
-                    // For cross-region errors, we need to retry the entire flow with a different region
-                    // The authorization code from Step 1 is tied to the endpoint it was obtained from
-                    setApiBaseUrl(originalUrl); // Restore original URL
+
+                // Align with pyvesync: on cross-region errors, retry Step 2 using the server-provided
+                // country/region and bizToken + regionChange.
+                if (isCrossRegionError(loginResponse.code)) {
+                    const serverCountryCode: string | undefined = loginResponse.result?.countryCode;
+                    const serverRegion: string | undefined = loginResponse.result?.currentRegion;
+                    const regionChangeToken: string | undefined = loginResponse.result?.bizToken;
+
+                    logger.debug('Cross-region error detected in Step 2; attempting pyvesync-style retry', {
+                        requestedRegion: region,
+                        requestedCountryCode: countryCodeForStep2,
+                        serverCountryCode,
+                        serverRegion,
+                        hasRegionChangeToken: !!regionChangeToken,
+                    });
+
+                    // If VeSync tells us which region to use, switch to it for subsequent requests.
+                    if (!hasCustomBaseUrlOverride && serverRegion && serverRegion in REGION_ENDPOINTS) {
+                        manager.region = serverRegion;
+                        logger.debug(`Updated region to ${serverRegion} for Step 2 retry`);
+                    }
+
+                    // If VeSync gives us a region-change token, retry Step 2 without redoing Step 1.
+                    if (regionChangeToken) {
+                        const retryCountryCode = serverCountryCode || countryCodeForStep2;
+                        const retryBody = this.reqBodyAuthStep2(
+                            authorizeCode,
+                            regionChangeToken,
+                            appId,
+                            terminalId,
+                            retryCountryCode,
+                            'lastRegion'
+                        );
+
+                        const [retryResponse, retryStatus] = await this.callApi(
+                            '/user/api/accountManage/v1/loginByAuthorizeCode4Vesync',
+                            'post',
+                            retryBody,
+                            step1Headers,
+                            manager
+                        );
+
+                        if (retryResponse && retryStatus === 200 && retryResponse.code === 0) {
+                            const { token, accountID, countryCode } = retryResponse.result || {};
+                            if (token && accountID) {
+                                logger.debug('Step 2 retry successful, got token and accountID');
+                                return [true, token, accountID, countryCode || retryCountryCode];
+                            }
+                            logger.error('Missing required fields in Step 2 retry response:', retryResponse.result);
+                            manager.apiBaseUrl = originalUrl;
+                            return [false, null, null, null];
+                        }
+
+                        logger.error('Step 2 retry failed:', {
+                            status: retryStatus,
+                            code: retryResponse?.code,
+                            msg: retryResponse?.msg,
+                        });
+
+                        manager.apiBaseUrl = originalUrl;
+                        return [false, null, null, 'cross_region_retry'];
+                    }
+
+                    logger.error('Cross-region error returned no region-change token; cannot retry Step 2');
+                    manager.apiBaseUrl = originalUrl;
                     return [false, null, null, 'cross_region_retry'];
                 }
-                
+
                 logger.error('Step 2 error code:', loginResponse.code, 'message:', loginResponse.msg);
-                setApiBaseUrl(originalUrl); // Restore original URL on error
+                manager.apiBaseUrl = originalUrl;
                 return [false, null, null, null];
             }
-
-            setApiBaseUrl(originalUrl); // Restore original URL on success
 
             const { token, accountID, countryCode } = loginResponse.result || {};
             
@@ -808,7 +878,7 @@ export class Helpers {
             const body = this.reqBody(manager, 'login');
             
             logger.debug('Legacy login attempt...', {
-                endpoint: getApiBaseUrl(),
+                endpoint: manager.apiBaseUrl || getApiBaseUrl(),
                 body: { ...body, password: '[REDACTED]' }
             });
 

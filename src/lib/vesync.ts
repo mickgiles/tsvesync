@@ -2,7 +2,7 @@
  * VeSync API Device Library
  */
 
-import { Helpers, API_RATE_LIMIT, DEFAULT_TZ, setApiBaseUrl, getApiBaseUrl, generateAppId, getRegionFromCountryCode, setCurrentRegion, getCurrentRegion, REGION_ENDPOINTS, getCountryCodeFromRegion, getEndpointForCountryCode } from './helpers';
+import { Helpers, API_RATE_LIMIT, DEFAULT_TZ, generateAppId, getRegionFromCountryCode, REGION_ENDPOINTS, getEndpointForCountryCode } from './helpers';
 import { Session, SessionStore, decodeJwtTimestamps } from './session';
 import { VeSyncBaseDevice } from './vesyncBaseDevice';
 import { fanModules } from './vesyncFanImpl';
@@ -10,8 +10,22 @@ import { outletModules } from './vesyncOutletImpl';
 import { switchModules } from './vesyncSwitchImpl';
 import { bulbModules } from './vesyncBulbImpl';
 import { logger, setLogger, Logger } from './logger';
+import { isCrossRegionError, isTokenError } from './constants';
 
 const DEFAULT_ENERGY_UPDATE_INTERVAL = 21600;
+
+function normalizeApiBaseUrl(apiBaseUrl: string): string {
+    return apiBaseUrl.trim().replace(/\/+$/, '');
+}
+
+const KNOWN_API_BASE_URLS = new Set(Object.values(REGION_ENDPOINTS).map(normalizeApiBaseUrl));
+
+function inferRegionFromApiBaseUrl(apiBaseUrl: string): 'US' | 'EU' | null {
+    const normalized = normalizeApiBaseUrl(apiBaseUrl).toLowerCase();
+    if (normalized.includes('vesync.eu')) return 'EU';
+    if (normalized.includes('vesync.com')) return 'US';
+    return null;
+}
 
 /**
  * Device exclusion configuration
@@ -163,6 +177,7 @@ export class VeSync {
     private _appId: string;
     private _region: string;
     private _countryCodeOverride: string | null;
+    private _apiUrlOverride: string | null;
     private _sessionStore?: SessionStore;
     private _onTokenChange?: (session: Session) => void;
     private _loginPromise: Promise<boolean> | null = null;
@@ -239,6 +254,7 @@ export class VeSync {
             this._region = 'US';
             this._countryCodeOverride = null;
         }
+        this._apiUrlOverride = apiUrl || null;
 
         this._energyUpdateInterval = DEFAULT_ENERGY_UPDATE_INTERVAL;
         this._energyCheck = true;
@@ -284,7 +300,7 @@ export class VeSync {
 
         // Set custom API URL if provided, otherwise use region-based endpoint
         if (apiUrl) {
-            setApiBaseUrl(apiUrl);
+            this.apiBaseUrl = apiUrl;
         } else {
             // If country code is provided, use it to determine the endpoint
             if (this._countryCodeOverride) {
@@ -294,16 +310,8 @@ export class VeSync {
             }
             
             // Set endpoint based on region
-            const regionEndpoints: Record<string, string> = {
-                'US': 'https://smartapi.vesync.com',
-                'EU': 'https://smartapi.vesync.eu',
-                'CA': 'https://smartapi.vesync.com',
-                'MX': 'https://smartapi.vesync.com',
-                'JP': 'https://smartapi.vesync.com'
-            };
-            const endpoint = regionEndpoints[this._region] || 'https://smartapi.vesync.com';
-            setApiBaseUrl(endpoint);
-            setCurrentRegion(this._region);
+            const endpoint = REGION_ENDPOINTS[this._region as keyof typeof REGION_ENDPOINTS] || REGION_ENDPOINTS.US;
+            this.apiBaseUrl = endpoint;
         }
 
         // Set custom logger if provided
@@ -319,17 +327,59 @@ export class VeSync {
      */
     hydrateSession(session: Session): void {
         try {
-            if (session.apiBaseUrl) {
-                setApiBaseUrl(session.apiBaseUrl);
-                this.apiBaseUrl = session.apiBaseUrl;
+            if (!session?.token || !session?.accountId) {
+                throw new Error('Session missing token/accountId');
             }
-            if (session.region) {
-                this._region = session.region;
-                setCurrentRegion(session.region);
-            }
+
+            // Always hydrate core credentials first.
             this.token = session.token;
             this.accountId = session.accountId;
-            this.countryCode = session.countryCode || null;
+            this.countryCode = session.countryCode ?? null;
+            this.authFlowUsed = session.authFlowUsed;
+
+            // pyvesync parity:
+            // pyvesync persists `current_region` and derives the API base URL per-request from that region.
+            // It does NOT treat a stored base URL as authoritative. For backwards compatibility with older
+            // sessions, we normalize the fields here:
+            // - Prefer stored `region` when present
+            // - Otherwise derive region from stored `countryCode` (same mapping as pyvesync)
+            // - Otherwise infer region from stored apiBaseUrl (best-effort)
+            const sessionBaseUrl = session.apiBaseUrl ? normalizeApiBaseUrl(session.apiBaseUrl) : null;
+            const sessionBaseUrlIsKnown = !!sessionBaseUrl && KNOWN_API_BASE_URLS.has(sessionBaseUrl);
+
+            // If the session contains a custom base URL (not a known regional URL) and the caller did not
+            // explicitly set an API override, treat it as an override so region switching doesn't clobber it.
+            if (!this._apiUrlOverride && sessionBaseUrl && !sessionBaseUrlIsKnown) {
+                this._apiUrlOverride = sessionBaseUrl;
+            }
+
+            // Apply base URL override if present (pyvesync API_BASE_URL-style override).
+            if (this._apiUrlOverride) {
+                this.apiBaseUrl = this._apiUrlOverride;
+            }
+
+            let hydratedRegion: string | null = null;
+            if (typeof session.region === 'string' && session.region in REGION_ENDPOINTS) {
+                hydratedRegion = session.region;
+            } else if (typeof session.countryCode === 'string' && session.countryCode.trim()) {
+                hydratedRegion = getRegionFromCountryCode(session.countryCode);
+            } else if (sessionBaseUrl) {
+                hydratedRegion = inferRegionFromApiBaseUrl(sessionBaseUrl);
+            }
+
+            if (hydratedRegion && hydratedRegion in REGION_ENDPOINTS) {
+                this._region = hydratedRegion;
+            }
+
+            // Derive the API base URL from region unless explicitly overridden.
+            if (!this._apiUrlOverride) {
+                const endpoint = REGION_ENDPOINTS[this._region as keyof typeof REGION_ENDPOINTS] || REGION_ENDPOINTS.US;
+                this.apiBaseUrl = endpoint;
+            } else if (!this.apiBaseUrl && sessionBaseUrl) {
+                // Fallback: keep the persisted base URL if we have no other source.
+                this.apiBaseUrl = sessionBaseUrl;
+            }
+
             this.enabled = true;
         } catch (e) {
             logger.warn('Failed to hydrate session; will require fresh login');
@@ -406,12 +456,21 @@ export class VeSync {
     }
 
     /**
+     * Return the configured API URL override, if any.
+     */
+    get apiUrlOverride(): string | null {
+        return this._apiUrlOverride;
+    }
+
+    /**
      * Set region and update API endpoint
      */
     set region(region: string) {
         if (region in REGION_ENDPOINTS) {
             this._region = region;
-            setCurrentRegion(region);
+            if (!this._apiUrlOverride) {
+                this.apiBaseUrl = REGION_ENDPOINTS[region as keyof typeof REGION_ENDPOINTS];
+            }
         }
     }
 
@@ -546,21 +605,113 @@ export class VeSync {
         let success = false;
 
         try {
-            const [response] = await Helpers.callApi(
-                '/cloud/v2/deviceManaged/devices',
-                'post',
-                Helpers.reqBody(this, 'devicelist'),
-                Helpers.reqHeaders(this),
-                this
-            );
+            const fetchDeviceList = async (): Promise<[any, number]> => {
+                return await Helpers.callApi(
+                    '/cloud/v1/deviceManaged/devices',
+                    'post',
+                    Helpers.reqBody(this, 'devicelist'),
+                    Helpers.reqHeaderBypass(),
+                    this
+                );
+            };
+
+            const originalRegion = this._region;
+            let didRetryToken = false;
+            let didRetryCrossRegion = false;
+
+            let response: any;
+            let status: number;
+
+            [response, status] = await fetchDeviceList();
+
+            // Handle VeSync API codes similarly to pyvesync:
+            // - TOKEN_ERROR triggers a reauth + retry
+            // - CROSS_REGION triggers a region correction + retry
+            //
+            // pyvesync reference:
+            // - Token error retry: `pyvesync/vesync.py:async_call_api` (ErrorTypes.TOKEN_ERROR)
+            // - Region correction: `pyvesync/auth.py:_exchange_authorization_code` (ErrorTypes.CROSS_REGION)
+            while (true) {
+                if (!response || status !== 200) {
+                    break;
+                }
+
+                const code = response?.code;
+                if (typeof code === 'number' && code !== 0) {
+                    if (!didRetryToken && isTokenError(code)) {
+                        didRetryToken = true;
+                        logger.warn('Device list request returned token error; re-authenticating and retrying (pyvesync parity)', {
+                            code,
+                            msg: response?.msg,
+                            region: this._region,
+                            endpoint: this.apiBaseUrl
+                        });
+                        const reloginOk = await this.login();
+                        if (!reloginOk) {
+                            this.enabled = false;
+                            return false;
+                        }
+                        [response, status] = await fetchDeviceList();
+                        continue;
+                    }
+
+                    if (!didRetryCrossRegion && isCrossRegionError(code) && !this.apiUrlOverride) {
+                        didRetryCrossRegion = true;
+
+                        const serverRegion: string | undefined = response?.result?.currentRegion;
+                        const normalizedServerRegion = typeof serverRegion === 'string' ? serverRegion.trim().toUpperCase() : null;
+                        const nextRegion =
+                            normalizedServerRegion && normalizedServerRegion in REGION_ENDPOINTS
+                                ? normalizedServerRegion
+                                : (this._region === 'US' ? 'EU' : 'US');
+
+                        logger.warn('Device list request returned cross-region error; retrying against corrected endpoint (pyvesync-style)', {
+                            code,
+                            msg: response?.msg,
+                            region: this._region,
+                            endpoint: this.apiBaseUrl,
+                            serverRegion: normalizedServerRegion,
+                            nextRegion
+                        });
+
+                        this.region = nextRegion;
+                        [response, status] = await fetchDeviceList();
+
+                        // If this was a best-effort alternate-region guess (no serverRegion provided) and it
+                        // didn't help, revert so we don't leave the manager stuck on the wrong endpoint.
+                        if (!normalizedServerRegion && (!response || response.code !== 0)) {
+                            this.region = originalRegion;
+                        }
+                        continue;
+                    }
+                }
+                break;
+            }
 
             if (!response) {
                 logger.error('No response received from VeSync API');
                 return false;
             }
 
-            if (response.error) {
-                logger.error('API error:', response.msg || 'Unknown error');
+            if (status !== 200) {
+                logger.error('Device list request failed with non-200 status:', {
+                    status,
+                    code: response?.code,
+                    msg: response?.msg,
+                    region: this._region,
+                    endpoint: this.apiBaseUrl
+                });
+                return false;
+            }
+
+            if (typeof response.code === 'number' && response.code !== 0) {
+                logger.error('Device list request returned error code:', {
+                    status,
+                    code: response.code,
+                    msg: response?.msg,
+                    region: this._region,
+                    endpoint: this.apiBaseUrl
+                });
                 return false;
             }
 
@@ -642,8 +793,17 @@ export class VeSync {
                 try {
                     logger.debug(`Authentication attempt ${attempt + 1} of ${retryAttempts}`);
 
-                    // Try new authentication flow first with detected region
-                    let [success, token, accountId, countryCode] = await Helpers.authNewFlow(this, this._appId, this._region, this._countryCodeOverride || undefined);
+                    // Try new authentication flow first with detected region.
+                    // NOTE: authNewFlow may temporarily change `this.region` during pyvesync-style
+                    // cross-region Step 2 retry. Capture the attempted region so our fallback logic
+                    // (try opposite endpoint) doesn't get confused by that internal mutation.
+                    const attemptedRegion = this._region;
+                    let [success, token, accountId, countryCode] = await Helpers.authNewFlow(
+                        this,
+                        this._appId,
+                        attemptedRegion,
+                        this._countryCodeOverride || undefined
+                    );
                     
                     // Track if new flow succeeded
                     if (success) {
@@ -659,11 +819,12 @@ export class VeSync {
                         
                         // Check if we need to try a different region
                         if (countryCode === 'cross_region' || countryCode === 'cross_region_retry') {
-                            // Mark current region as tried
-                            triedRegions.add(this._region);
+                            // Mark attempted region as tried (do not rely on `this._region`, which may have been
+                            // mutated by authNewFlow during pyvesync-style cross-region handling).
+                            triedRegions.add(attemptedRegion);
                             
                             logger.debug('Cross-region error detected, trying opposite region...');
-                            const alternateRegion = this._region === 'US' ? 'EU' : 'US';
+                            const alternateRegion = attemptedRegion === 'US' ? 'EU' : 'US';
                             
                             // Check if we've already tried this region to prevent infinite loops
                             if (triedRegions.has(alternateRegion)) {
@@ -692,20 +853,9 @@ export class VeSync {
                                 return false;
                             }
                             
-                            logger.debug(`Switching from ${this._region} to ${alternateRegion} region`);
-                            
-                            this._region = alternateRegion;
-                            setCurrentRegion(alternateRegion);
-                            
-                            // Update the API endpoint for the new region
-                            const regionEndpoints: Record<string, string> = {
-                                'US': 'https://smartapi.vesync.com',
-                                'EU': 'https://smartapi.vesync.eu'
-                            };
-                            if (alternateRegion in regionEndpoints) {
-                                setApiBaseUrl(regionEndpoints[alternateRegion]);
-                                logger.debug(`API endpoint set to ${regionEndpoints[alternateRegion]}`);
-                            }
+                            logger.debug(`Switching from ${attemptedRegion} to ${alternateRegion} region`);
+                            this.region = alternateRegion;
+                            logger.debug(`API endpoint set to ${this.apiBaseUrl}`);
                             
                             // Retry with the alternate region
                             [success, token, accountId, countryCode] = await Helpers.authNewFlow(this, this._appId, alternateRegion, this._countryCodeOverride || undefined);
@@ -741,7 +891,7 @@ export class VeSync {
                         this.accountId = accountId;
                         this.countryCode = countryCode;
                         this.enabled = true;
-                        this.apiBaseUrl = getApiBaseUrl();  // Track the API endpoint being used
+                        this.apiBaseUrl = this.apiBaseUrl || 'https://smartapi.vesync.com';  // Track the API endpoint being used
 
                         // Persist session details for reuse across restarts
                         this.emitTokenChange();
@@ -765,7 +915,7 @@ export class VeSync {
                             authFlow: this.authFlowUsed,
                             region: this._region,
                             countryCode: countryCode,
-                            endpoint: getApiBaseUrl()
+                            endpoint: this.apiBaseUrl
                         });
                         return true;
                     }
