@@ -19,6 +19,7 @@ export const CROSS_REGION_ERROR_CODES = [
 // pyvesync parity: `-11001000` maps to TOKEN_EXPIRED (invalid token)
 export const TOKEN_ERROR_CODES = [
     -11001000,  // token expired/invalid
+    -11001022,  // token has expired (observed from device list responses)
 ];
 
 // Other error codes

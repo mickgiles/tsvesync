@@ -6,7 +6,7 @@ import axios from 'axios';
 import crypto from 'crypto';
 import { VeSync } from './vesync';
 import { logger } from './logger';
-import { isCredentialError, isCrossRegionError } from './constants';
+import { isCredentialError, isCrossRegionError, isTokenError } from './constants';
 
 // API configuration - Support regional endpoints
 let _apiBaseUrl = 'https://smartapi.vesync.com';
@@ -89,6 +89,14 @@ export const AUTH_ERROR_CODES = {
     ILLEGAL_ARGUMENT: -11000022,
     CROSS_REGION: -11260022,
     CROSS_REGION_ALT: -11261022
+};
+
+function isTokenExpiredMessage(msg: unknown): boolean {
+    return typeof msg === 'string' && /token\s*(?:has\s*)?expired/i.test(msg);
+}
+
+type CallApiOptions = {
+    didRetryAuth?: boolean;
 };
 
 /**
@@ -522,7 +530,8 @@ export class Helpers {
         method: string,
         data: any = null,
         headers: Record<string, string> = {},
-        manager: VeSync
+        manager: VeSync,
+        options: CallApiOptions = {}
     ): Promise<[any, number]> {
         let url = '';
         try {
@@ -548,6 +557,27 @@ export class Helpers {
                 timeout: API_TIMEOUT
             });
 
+            // Some VeSync API calls return HTTP 200 with an error `code` in the body.
+            // Treat token-expiration responses as recoverable: re-auth once and retry.
+            const didRetryAuth = options.didRetryAuth === true;
+            const responseCode = response.data?.code;
+            const responseMsg = response.data?.msg;
+            if (
+                !didRetryAuth &&
+                response.status === 200 &&
+                (
+                    (typeof responseCode === 'number' && isTokenError(responseCode)) ||
+                    isTokenExpiredMessage(responseMsg)
+                )
+            ) {
+                logger.debug('Token expired, attempting to re-login...');
+
+                if (await manager.login()) {
+                    logger.debug('Re-login successful, retrying original request...');
+                    return await this.callApi(endpoint, method, data, headers, manager, { ...options, didRetryAuth: true });
+                }
+            }
+
             return [response.data, response.status];
         } catch (error: any) {
             if (error.response) {
@@ -556,19 +586,21 @@ export class Helpers {
                 // Check for token expiration or auth invalidation
                 const httpStatus = error.response.status;
                 const msg: string | undefined = responseData?.msg;
-                if (
+                const didRetryAuth = options.didRetryAuth === true;
+                if (!didRetryAuth && (
                     httpStatus === 401 ||
                     httpStatus === 419 ||
                     responseData?.code === 4001004 ||
-                    (typeof msg === 'string' && /token\s*expired/i.test(msg))
-                ) {
+                    (typeof responseData?.code === 'number' && isTokenError(responseData.code)) ||
+                    isTokenExpiredMessage(msg)
+                )) {
                     logger.debug('Token expired, attempting to re-login...');
                     
                     // Re-login
                     if (await manager.login()) {
                         // Retry the original request
                         logger.debug('Re-login successful, retrying original request...');
-                        return await this.callApi(endpoint, method, data, headers, manager);
+                        return await this.callApi(endpoint, method, data, headers, manager, { ...options, didRetryAuth: true });
                     }
                 }
                 
