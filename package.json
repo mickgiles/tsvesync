@@ -1,6 +1,6 @@
 {
   "name": "tsvesync",
-  "version": "1.4.7",
+  "version": "1.4.8",
   "description": "A TypeScript library for interacting with VeSync smart home devices",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
