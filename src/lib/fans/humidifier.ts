@@ -11,16 +11,22 @@ export class VeSyncHumidifier extends VeSyncFan {
     protected readonly mistLevels: number[];
     protected readonly displayModes = ['on', 'off'] as const;
     protected readonly humidityRange = { min: 30, max: 80 };
+    protected bypassWriteMethod: 'post' | 'put' = 'post';
 
     constructor(details: Record<string, any>, manager: VeSync) {
         super(details, manager);
-        // Set mist levels based on model
+        // Set mist levels and write method based on model
         switch (this.deviceType) {
             case 'Dual200S':
             case 'LUH-D301S-WUSR':
             case 'LUH-D301S-WJP':
             case 'LUH-D301S-WEU':
                 this.mistLevels = [1, 2];
+                // Dual200S requires HTTP PUT for setHumidityMode and setTargetHumidity.
+                // POST returns code: 0 but the device silently ignores the command.
+                // Diverges from pyvesync (POST). Verified on physical Dual200S (US, Mar 2026).
+                // See: https://github.com/mickgiles/tsvesync/issues/1
+                this.bypassWriteMethod = 'put';
                 break;
             default:
                 // All other models support levels 1-9
@@ -186,7 +192,7 @@ export class VeSyncHumidifier extends VeSyncFan {
         logger.debug(`Setting mode to ${mode} for device: ${this.deviceName}`);
         const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
-            'post',
+            this.bypassWriteMethod,
             {
                 ...Helpers.reqBody(this.manager, 'bypassV2'),
                 cid: this.cid,
@@ -230,7 +236,7 @@ export class VeSyncHumidifier extends VeSyncFan {
         logger.debug(`Setting target humidity to ${humidity}% for device: ${this.deviceName}`);
         const [response, status] = await this.callApi(
             '/cloud/v2/deviceManaged/bypassV2',
-            'post',
+            this.bypassWriteMethod,
             {
                 ...Helpers.reqBody(this.manager, 'bypassV2'),
                 cid: this.cid,
