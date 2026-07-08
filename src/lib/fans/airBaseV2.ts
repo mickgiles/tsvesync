@@ -223,6 +223,10 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
         return type.startsWith('LAP-V') || type.startsWith('LAP-EL');
     }
 
+    override shouldPollDetailsWhenOffline(): boolean {
+        return this.requiresPowerSwitchPayload();
+    }
+
     /**
      * Override turn on to use the powerSwitch payload required by bypassV2 purifiers.
      */

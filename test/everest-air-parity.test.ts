@@ -3,18 +3,20 @@ import assert from 'node:assert/strict';
 import { fanConfig } from '../src/lib/vesyncFan';
 import { VeSyncAirBaseV2 } from '../src/lib/fans/airBaseV2';
 import { VeSync } from '../src/lib/vesync';
+import { VeSyncBaseDevice } from '../src/lib/vesyncBaseDevice';
 
 class TestEverestAir extends VeSyncAirBaseV2 {
     public readonly requests: Array<{ method: string; payload: Record<string, any> }> = [];
+    public detailRequests = 0;
 
-    constructor() {
+    constructor(deviceType = 'LAP-EL551S-AUS', connectionStatus = 'online') {
         super({
             cid: 'test-cid',
             deviceName: 'Everest Test Unit',
             deviceStatus: 'off',
-            deviceType: 'LAP-EL551S-AUS',
+            deviceType,
             configModule: 'module',
-            connectionStatus: 'online'
+            connectionStatus
         }, {} as VeSync);
 
         // Seed manual speed metadata to mirror typical device state
@@ -52,6 +54,8 @@ class TestEverestAir extends VeSyncAirBaseV2 {
 
     override async getDetails(): Promise<Boolean> {
         // Bypass network lookups for unit tests
+        this.detailRequests += 1;
+        this.connectionStatus = 'online';
         return true;
     }
 
@@ -61,6 +65,44 @@ class TestEverestAir extends VeSyncAirBaseV2 {
 
     public getAutoPreferenceOptions(): string[] {
         return [...this.autoPreferences];
+    }
+}
+
+class TestOfflineDevice extends VeSyncBaseDevice {
+    public detailRequests = 0;
+
+    constructor() {
+        super({
+            cid: 'offline-test-cid',
+            deviceName: 'Offline Test Device',
+            deviceStatus: 'off',
+            deviceType: 'ESW15-USA',
+            connectionStatus: 'offline'
+        }, {} as VeSync);
+    }
+
+    async getDetails(): Promise<Boolean> {
+        this.detailRequests += 1;
+        return true;
+    }
+}
+
+class TestVeSync extends VeSync {
+    constructor(private readonly testDevices: VeSyncBaseDevice[]) {
+        super('test-user', 'test-password');
+        this.enabled = true;
+        this.updateInterval = 0;
+    }
+
+    override async getDevices(): Promise<boolean> {
+        (this as any)._devList = {
+            fans: this.testDevices,
+            outlets: [],
+            switches: [],
+            bulbs: []
+        };
+        this.devices = this.testDevices;
+        return true;
     }
 }
 
@@ -158,6 +200,20 @@ async function run(): Promise<void> {
     assert.equal(device.pm1, 12, 'PM1 should be captured');
     assert.equal(device.pm10, 22, 'PM10 should be captured');
     assert.equal(device.aqPercent, 56, 'AQ percentage should be captured');
+
+    const offlineEverest = new TestEverestAir('LAP-EL551S-AUS', 'offline');
+    const offlineGenericDevice = new TestOfflineDevice();
+    await new TestVeSync([offlineEverest, offlineGenericDevice]).update();
+    assert.equal(
+        offlineEverest.detailRequests,
+        1,
+        'Vital/Everest purifiers should poll details even when the device list says offline'
+    );
+    assert.equal(
+        offlineGenericDevice.detailRequests,
+        0,
+        'Generic offline devices should still skip detail polling'
+    );
 
     console.log('✅ Everest Air parity checks passed');
 }
