@@ -1028,11 +1028,15 @@ export class VeSync {
             for (const deviceList of Object.values(this._devList)) {
                 for (const device of deviceList) {
                     try {
-                        if (!this.shouldExcludeDevice(device)) {
-                            await device.getDetails();
-                        } else {
+                        if (this.shouldExcludeDevice(device)) {
                             logger.debug(`Skipping details update for excluded device: ${device.deviceName}`);
+                            continue;
                         }
+                        if (String(device.connectionStatus || '').toLowerCase() === 'offline') {
+                            logger.debug(`Skipping details update for offline device: ${device.deviceName}`);
+                            continue;
+                        }
+                        await device.getDetails();
                     } catch (error) {
                         logger.error(`Error updating ${device.deviceName}:`, error);
                     }
