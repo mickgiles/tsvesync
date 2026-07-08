@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.11] - 2026-07-08
+
+### Fixed
+- **Vital/Everest Offline Detail Polling**: Allows LAP-V and LAP-EL bypassV2 purifiers to poll details even when the device list reports them offline, because their detail endpoint can recover current state more reliably than the list connection status while generic offline devices still skip avoidable detail calls.
+
+### Tests
+- **Offline Polling Opt-In Coverage**: Extends the Everest parity harness to verify Vital/Everest purifiers refresh details while generic offline devices remain skipped.
+
 ## [1.4.10] - 2026-07-07
 
 ### Fixed
