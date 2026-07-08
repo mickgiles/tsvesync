@@ -108,6 +108,15 @@ export abstract class VeSyncBaseDevice {
     abstract getDetails(): Promise<Boolean>;
 
     /**
+     * Some device families have a detail endpoint that is more reliable than
+     * the device-list connection status. Those devices can opt into detail
+     * polling even when the list reports them offline.
+     */
+    shouldPollDetailsWhenOffline(): boolean {
+        return false;
+    }
+
+    /**
      * Update device details
      */
     async update(): Promise<Boolean> {

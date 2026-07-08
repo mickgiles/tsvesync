@@ -1032,7 +1032,10 @@ export class VeSync {
                             logger.debug(`Skipping details update for excluded device: ${device.deviceName}`);
                             continue;
                         }
-                        if (String(device.connectionStatus || '').toLowerCase() === 'offline') {
+                        if (
+                            String(device.connectionStatus || '').toLowerCase() === 'offline' &&
+                            !device.shouldPollDetailsWhenOffline()
+                        ) {
                             logger.debug(`Skipping details update for offline device: ${device.deviceName}`);
                             continue;
                         }
