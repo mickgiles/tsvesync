@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-07-18
+
+### Changed
+- **Homebridge Release Version Sync**: Aligns the library version with homebridge-tsvesync 1.5.0 for the new Vital purifier Pet Mode switch; the existing `pet_mode` capability and `petMode()` API are unchanged.
+
 ## [1.4.11] - 2026-07-08
 
 ### Fixed
