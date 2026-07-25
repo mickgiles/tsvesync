@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-07-25
+
+### Fixed
+- **🔑 Token Refresh Retry Uses The New Token**: Requests retried after a re-login now rebuild their auth fields from the manager. Auth material is snapshotted into the request body and headers when they are built, so a retry previously re-sent the *rejected* token and failed with the very same token error that triggered the retry — making the recovery path a no-op. Only keys already present with a non-empty value are replaced, leaving auth-flow payloads that deliberately send empty `token`/`accountID` untouched.
+- **🔒 Auth-Flow Requests No Longer Self-Deadlock**: Requests that are part of the authentication flow now skip the re-login retry via a new `skipAuthRetry` option. `login()` de-duplicates on an in-flight promise, so triggering a re-login from inside the auth flow made that promise await itself and never settle — a silent hang rather than an error.
+- **📱 Stable Terminal Identity Across Logins**: The terminal id is generated once per installation, persisted with the session, and reused on every login instead of being regenerated. VeSync binds issued tokens to it via a `terminalId` JWT claim, so a fresh id made each login look like a brand-new device and triggered VeSync's "new login to your account" notifications.
+- **⏱️ Expired Tokens Refreshed Before Use**: `update()` now checks the token's `exp` claim up front and re-authenticates when it has already passed, instead of spending a device-list request to be told the token expired. The check is deliberately conservative — a token that cannot be decoded, or that carries no `exp`, is left for the API to accept or reject.
+
+### Changed
+- **Clearer Session Recovery Logging**: Token-error retries log at debug while in progress and report the outcome afterward — `info` when re-authentication recovered automatically, `warn` when the request still failed. Failed re-authentication now logs an actionable error naming the credentials and country code as the things to check.
+
+### Added
+- **`restoreClientIdentity()`**: Lets a caller adopt the terminal/app id from a persisted session whose credentials it is discarding, so a fresh login still presents the same client to VeSync.
+- **`isTokenExpired(skewSeconds)`**: Exposes the `exp`-claim check, with a default 60-second skew.
+
+### Tests
+- **Token Refresh Retry Coverage**: Adds `test/token-refresh-retry.test.ts` (`npm run test:token-refresh`) covering retry-with-refreshed-token, auth-flow retry suppression, terminal id stability across logins and hydration, and the expired-token pre-check.
+
 ## [1.5.0] - 2026-07-18
 
 ### Changed
