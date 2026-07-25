@@ -5,6 +5,14 @@ export interface Session {
   region: string;
   apiBaseUrl: string;
   authFlowUsed?: 'legacy' | 'new';
+  /**
+   * Identifies this installation to VeSync. Issued tokens are bound to it (the JWT payload carries a
+   * `terminalId` claim), so it must stay stable across logins and restarts — a fresh id makes every login
+   * look like a brand-new device to VeSync.
+   */
+  terminalId?: string;
+  /** Client app id, kept alongside `terminalId` so the client identity is stable too. */
+  appId?: string;
   issuedAt?: number | null; // epoch seconds
   expiresAt?: number | null; // epoch seconds
   lastValidatedAt?: number | null; // epoch ms
