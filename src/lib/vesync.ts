@@ -2,7 +2,7 @@
  * VeSync API Device Library
  */
 
-import { Helpers, API_RATE_LIMIT, DEFAULT_TZ, generateAppId, getRegionFromCountryCode, REGION_ENDPOINTS, getEndpointForCountryCode } from './helpers';
+import { Helpers, API_RATE_LIMIT, DEFAULT_TZ, generateAppId, generateTerminalId, getRegionFromCountryCode, REGION_ENDPOINTS, getEndpointForCountryCode } from './helpers';
 import { Session, SessionStore, decodeJwtTimestamps } from './session';
 import { VeSyncBaseDevice } from './vesyncBaseDevice';
 import { fanModules } from './vesyncFanImpl';
@@ -175,6 +175,7 @@ export class VeSync {
     private _inProcess: boolean;
     private _excludeConfig: ExcludeConfig | null;
     private _appId: string;
+    private _terminalId: string;
     private _region: string;
     private _countryCodeOverride: string | null;
     private _apiUrlOverride: string | null;
@@ -261,6 +262,9 @@ export class VeSync {
         this._lastUpdateTs = null;
         this._inProcess = false;
         this._appId = generateAppId();
+        // Stable per-installation identity. Overwritten by `hydrateSession` when a previous session is
+        // restored, so logins keep presenting the same terminal to VeSync.
+        this._terminalId = generateTerminalId();
 
         this.username = username;
         this.password = password;
@@ -323,6 +327,21 @@ export class VeSync {
     }
 
     /**
+     * Adopt a previously persisted client identity without restoring credentials.
+     *
+     * Callers that decide not to reuse a stored token (because it has expired, say) should still keep the
+     * terminal/app id from that session, so the fresh login presents the same client to VeSync.
+     */
+    restoreClientIdentity(identity: { terminalId?: string | null; appId?: string | null }): void {
+        if (typeof identity?.terminalId === 'string' && identity.terminalId) {
+            this._terminalId = identity.terminalId;
+        }
+        if (typeof identity?.appId === 'string' && identity.appId) {
+            this._appId = identity.appId;
+        }
+    }
+
+    /**
      * Hydrate manager from a previously persisted session
      */
     hydrateSession(session: Session): void {
@@ -336,6 +355,14 @@ export class VeSync {
             this.accountId = session.accountId;
             this.countryCode = session.countryCode ?? null;
             this.authFlowUsed = session.authFlowUsed;
+
+            // Keep the persisted client identity so re-logins present the same terminal to VeSync.
+            if (typeof session.terminalId === 'string' && session.terminalId) {
+                this._terminalId = session.terminalId;
+            }
+            if (typeof session.appId === 'string' && session.appId) {
+                this._appId = session.appId;
+            }
 
             // pyvesync parity:
             // pyvesync persists `current_region` and derives the API base URL per-request from that region.
@@ -396,6 +423,8 @@ export class VeSync {
             region: this._region,
             apiBaseUrl: this.apiBaseUrl,
             authFlowUsed: this.authFlowUsed,
+            terminalId: this._terminalId,
+            appId: this._appId,
             issuedAt: timestamps?.iat ?? null,
             expiresAt: timestamps?.exp ?? null,
             lastValidatedAt: Date.now(),
@@ -446,6 +475,14 @@ export class VeSync {
      */
     get appId(): string {
         return this._appId;
+    }
+
+    /**
+     * Terminal id presented to VeSync during authentication. Issued tokens carry it as a JWT claim, so it
+     * is persisted with the session and reused across logins and restarts.
+     */
+    get terminalId(): string {
+        return this._terminalId;
     }
 
     /**
@@ -605,6 +642,17 @@ export class VeSync {
         let success = false;
 
         try {
+            // A token whose `exp` has already passed can only come back as a token error, so refresh it
+            // up front instead of spending a request to be told so.
+            if (this.isTokenExpired()) {
+                logger.debug('Stored VeSync token is past its expiry; authenticating before requesting the device list');
+                if (!await this.login()) {
+                    logger.error('VeSync token had expired and re-authentication failed. Check the configured username/password (and country code if your account is not in the US).');
+                    this.enabled = false;
+                    return false;
+                }
+            }
+
             const fetchDeviceList = async (): Promise<[any, number]> => {
                 return await Helpers.callApi(
                     '/cloud/v1/deviceManaged/devices',
@@ -640,7 +688,9 @@ export class VeSync {
                 if (typeof code === 'number' && code !== 0) {
                     if (!didRetryToken && isTokenError(code)) {
                         didRetryToken = true;
-                        logger.warn('Device list request returned token error; re-authenticating and retrying (pyvesync parity)', {
+                        // Recoverable: re-authenticate and retry. Logged at debug because the retry below
+                        // normally succeeds; the outcome is reported after the loop.
+                        logger.debug('Device list request returned a token error; re-authenticating and retrying', {
                             code,
                             msg: response?.msg,
                             region: this._region,
@@ -648,6 +698,7 @@ export class VeSync {
                         });
                         const reloginOk = await this.login();
                         if (!reloginOk) {
+                            logger.error('VeSync rejected the stored session and re-authentication failed. Check the configured username/password (and country code if your account is not in the US).');
                             this.enabled = false;
                             return false;
                         }
@@ -686,6 +737,19 @@ export class VeSync {
                     }
                 }
                 break;
+            }
+
+            if (didRetryToken) {
+                if (response && status === 200 && response.code === 0) {
+                    logger.info('VeSync session had expired; re-authenticated and recovered automatically.');
+                } else {
+                    logger.warn('VeSync session had expired and the request still failed after re-authenticating.', {
+                        code: response?.code,
+                        msg: response?.msg,
+                        region: this._region,
+                        endpoint: this.apiBaseUrl
+                    });
+                }
             }
 
             if (!response) {
@@ -948,6 +1012,19 @@ export class VeSync {
         } finally {
             this._loginPromise = null;
         }
+    }
+
+    /**
+     * True when the current token carries an `exp` claim that has already passed.
+     *
+     * Deliberately conservative: a token that cannot be decoded, or that has no `exp`, is treated as
+     * usable and left to the API to accept or reject.
+     */
+    isTokenExpired(skewSeconds: number = 60): boolean {
+        if (!this.token) return false;
+        const exp = decodeJwtTimestamps(this.token)?.exp;
+        if (!exp) return false;
+        return exp * 1000 <= Date.now() + skewSeconds * 1000;
     }
 
     /**

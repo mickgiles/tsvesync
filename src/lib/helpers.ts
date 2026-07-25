@@ -97,7 +97,58 @@ function isTokenExpiredMessage(msg: unknown): boolean {
 
 type CallApiOptions = {
     didRetryAuth?: boolean;
+    /**
+     * Set on requests that are themselves part of the authentication flow.
+     *
+     * Those must never trigger the re-login retry in `callApi`: `VeSync.login()` de-duplicates on an
+     * in-flight promise, so calling it from inside the auth flow makes that promise await itself and it
+     * never settles (a silent hang rather than an error).
+     */
+    skipAuthRetry?: boolean;
 };
+
+/**
+ * Auth material is snapshotted into the request body (`reqBodyAuth`) and headers (`reqHeaders`) at the
+ * moment they are built. A request retried after a re-login therefore still carries the *old* token, so it
+ * fails with the very same token error that triggered the retry. Refresh those fields from the manager
+ * before retrying.
+ *
+ * Only keys that are already present with a non-empty string value are replaced. That leaves auth-flow
+ * payloads — which deliberately send `token: ''` / `accountID: ''` — untouched.
+ */
+function refreshAuthMaterial(
+    data: any,
+    headers: Record<string, string>,
+    manager: VeSync
+): [any, Record<string, string>] {
+    const token = manager.token;
+    const accountId = manager.accountId;
+    if (!token || !accountId) {
+        return [data, headers];
+    }
+
+    const replace = (target: Record<string, any>, key: string, value: string): void => {
+        if (typeof target[key] === 'string' && target[key].length > 0) {
+            target[key] = value;
+        }
+    };
+
+    let nextData = data;
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+        nextData = { ...data };
+        replace(nextData, 'token', token);
+        replace(nextData, 'accountID', accountId);
+        replace(nextData, 'accountId', accountId);
+    }
+
+    const nextHeaders = { ...headers };
+    replace(nextHeaders, 'tk', token);
+    replace(nextHeaders, 'token', token);
+    replace(nextHeaders, 'accountId', accountId);
+    replace(nextHeaders, 'accountID', accountId);
+
+    return [nextData, nextHeaders];
+}
 
 /**
  * Get list of country codes that use the US endpoint
@@ -564,18 +615,26 @@ export class Helpers {
             const responseMsg = response.data?.msg;
             if (
                 !didRetryAuth &&
+                !options.skipAuthRetry &&
                 response.status === 200 &&
                 (
                     (typeof responseCode === 'number' && isTokenError(responseCode)) ||
                     isTokenExpiredMessage(responseMsg)
                 )
             ) {
-                logger.debug('Token expired, attempting to re-login...');
+                logger.debug('VeSync rejected the session token; re-authenticating before retrying', {
+                    endpoint,
+                    code: responseCode
+                });
 
                 if (await manager.login()) {
-                    logger.debug('Re-login successful, retrying original request...');
-                    return await this.callApi(endpoint, method, data, headers, manager, { ...options, didRetryAuth: true });
+                    // Rebuild the auth fields; the original body/headers still hold the rejected token.
+                    const [retryData, retryHeaders] = refreshAuthMaterial(data, headers, manager);
+                    logger.debug('Re-authentication succeeded, retrying request with the refreshed token');
+                    return await this.callApi(endpoint, method, retryData, retryHeaders, manager, { ...options, didRetryAuth: true });
                 }
+
+                logger.debug('Re-authentication failed; returning the original token error to the caller');
             }
 
             return [response.data, response.status];
@@ -587,21 +646,29 @@ export class Helpers {
                 const httpStatus = error.response.status;
                 const msg: string | undefined = responseData?.msg;
                 const didRetryAuth = options.didRetryAuth === true;
-                if (!didRetryAuth && (
+                if (!didRetryAuth && !options.skipAuthRetry && (
                     httpStatus === 401 ||
                     httpStatus === 419 ||
                     responseData?.code === 4001004 ||
                     (typeof responseData?.code === 'number' && isTokenError(responseData.code)) ||
                     isTokenExpiredMessage(msg)
                 )) {
-                    logger.debug('Token expired, attempting to re-login...');
-                    
+                    logger.debug('VeSync rejected the session token; re-authenticating before retrying', {
+                        endpoint,
+                        status: httpStatus,
+                        code: responseData?.code
+                    });
+
                     // Re-login
                     if (await manager.login()) {
-                        // Retry the original request
-                        logger.debug('Re-login successful, retrying original request...');
-                        return await this.callApi(endpoint, method, data, headers, manager, { ...options, didRetryAuth: true });
+                        // Retry the original request with refreshed auth fields; the original body/headers
+                        // still hold the rejected token.
+                        const [retryData, retryHeaders] = refreshAuthMaterial(data, headers, manager);
+                        logger.debug('Re-authentication succeeded, retrying request with the refreshed token');
+                        return await this.callApi(endpoint, method, retryData, retryHeaders, manager, { ...options, didRetryAuth: true });
                     }
+
+                    logger.debug('Re-authentication failed; returning the original token error to the caller');
                 }
                 
                 // Log specific error details for debugging
@@ -697,7 +764,9 @@ export class Helpers {
     static async authNewFlow(manager: VeSync, appId: string, region: string = 'US', countryCodeOverride?: string): Promise<[boolean, string | null, string | null, string | null]> {
         try {
             // Generate terminal ID to be used in both steps
-            const terminalId = generateTerminalId();
+            // Reuse the manager's stable terminal id. VeSync binds issued tokens to it (the JWT carries a
+            // `terminalId` claim), and a fresh id on every login makes each login look like a new device.
+            const terminalId = manager.terminalId || generateTerminalId();
             // pyvesync parity:
             // - `userCountryCode` defaults to `DEFAULT_REGION` ("US"), even if we first try the EU base URL.
             // - If the account truly belongs to another region, the Step 2 response includes the correct
@@ -729,7 +798,8 @@ export class Helpers {
                 'post',
                 step1Body,
                 step1Headers,
-                manager
+                manager,
+                { skipAuthRetry: true }
             );
 
             if (!authResponse || authStatus !== 200) {
@@ -795,7 +865,8 @@ export class Helpers {
                 'post',
                 step2Body,
                 step1Headers,
-                manager
+                manager,
+                { skipAuthRetry: true }
             );
 
             logger.debug('Step 2 response:', { 
@@ -852,7 +923,8 @@ export class Helpers {
                             'post',
                             retryBody,
                             step1Headers,
-                            manager
+                            manager,
+                            { skipAuthRetry: true }
                         );
 
                         if (retryResponse && retryStatus === 200 && retryResponse.code === 0) {
@@ -919,7 +991,8 @@ export class Helpers {
                 'post',
                 body,
                 {},
-                manager
+                manager,
+                { skipAuthRetry: true }
             );
 
             if (!response || status !== 200) {

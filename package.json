@@ -10,7 +10,8 @@
     "test:everest": "ts-node test/everest-air-parity.test.ts",
     "prepare": "npm run build",
     "version": "git add -A src",
-    "postversion": "git push && git push --tags"
+    "postversion": "git push && git push --tags",
+    "test:token-refresh": "ts-node test/token-refresh-retry.test.ts"
   },
   "keywords": [
     "vesync",
