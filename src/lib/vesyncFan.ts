@@ -25,13 +25,13 @@ export const fanConfig: FanConfig = {
     'Core200S': {
         module: 'VeSyncAirBypass',
         features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speed', 'sleep_mode', 'filter_life'],
-        levels: [1, 2, 3, 4],  // 4 levels including sleep mode, matching reference plugin
+        levels: [1, 2, 3],  // Low/Med/High; sleep is a mode, not a level
         modes: ['sleep', 'manual']
     },
     'Core300S': {
         module: 'VeSyncAirBypass',
         features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
-        levels: [1, 2, 3, 4],
+        levels: [1, 2, 3],
         modes: ['sleep', 'manual', 'auto'],
         autoPreferences: ['default', 'efficient', 'quiet']
     },
@@ -66,21 +66,21 @@ export const fanConfig: FanConfig = {
     'LAP-C301S-WJP': {
         module: 'VeSyncAirBypass',
         features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
-        levels: [1, 2, 3, 4],
+        levels: [1, 2, 3],
         modes: ['sleep', 'manual', 'auto'],
         autoPreferences: ['default', 'efficient', 'quiet']
     },
     'LAP-C302S-WUSB': {
         module: 'VeSyncAirBypass',
         features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
-        levels: [1, 2, 3, 4],
+        levels: [1, 2, 3],
         modes: ['sleep', 'manual', 'auto'],
         autoPreferences: ['default', 'efficient', 'quiet']
     },
     'LAP-C301S-WAAA': {
         module: 'VeSyncAirBypass',
         features: ['display', 'child_lock', 'night_light', 'air_quality', 'timer', 'fan_speed', 'auto_mode', 'sleep_mode', 'filter_life'],
-        levels: [1, 2, 3, 4],
+        levels: [1, 2, 3],
         modes: ['sleep', 'manual', 'auto'],
         autoPreferences: ['default', 'efficient', 'quiet']
     },
