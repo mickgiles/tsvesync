@@ -233,7 +233,14 @@ export class VeSyncAirBypass extends VeSyncFan {
         );
 
         const success = this.checkResponse([response, status], 'changeFanSpeed');
-        if (!success) {
+        if (success) {
+            // Reflect the change locally so callers don't read a stale speed
+            // until the next getDetails(). setLevel also puts the device into
+            // manual mode and turns it on, mirroring pyvesync's set_fan_speed.
+            this.details.speed = speed;
+            this.details.mode = 'manual';
+            this.deviceStatus = 'on';
+        } else {
             logger.error(`Failed to change fan speed to ${speed} for device: ${this.deviceName}`);
         }
         return success;
