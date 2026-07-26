@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.2] - 2026-07-26
+
+### Fixed
+- **🌀 Core 200S/300S Fan Levels Corrected To Three**: `Core200S`, `Core300S`, `LAP-C201S-AUSR`, `LAP-C202S-WUSR`, `LAP-C301S-WJP`, `LAP-C302S-WUSB`, and `LAP-C301S-WAAA` declared `levels: [1, 2, 3, 4]`, but the hardware is Low/Med/High with sleep as a *mode* rather than a fourth level. `changeFanSpeed(4)` reported success while the device settled at 3, so callers mapping a UI control across the level range produced two identical top positions. Now matches `pyvesync`, which declares `fan_levels=list(range(1, 4))` for these models. The Core 400S/600S and LAP-C401S/C601S families keep four levels, which is correct for them.
+- **⚡ Commanded Fan Speed Reflected Immediately**: `VeSyncAirBypass.changeFanSpeed()` now writes the accepted speed through to `details.speed`, sets `details.mode` to `manual`, and marks the device `on` — mirroring `pyvesync`'s `set_fan_speed`, which sets `fan_level`, `fan_set_level`, `mode`, and `device_status` after a successful `setLevel`. The `bypassV2` path already did this; the `airBypass` path did not, so callers read a stale speed until the next `getDetails()` and any UI slider snapped back to the previously reported value. State is only updated when the API call succeeds.
+
+### Changed
+- **📦 Editor Backup Files Excluded From The Published Package**: The `files` allowlist now excludes `*.bak`, `*.orig`, and `*.rej` anywhere in the tree. `src/**/*` had been shipping a stale `src/lib/fans/airBypass.ts.bak` — git-ignored, so never in the repository, but present in every published tarball since it was created and by now well over a year out of date. Excluding the patterns rather than just deleting the file stops any future backup or merge artifact from reaching npm.
+
 ## [1.5.1] - 2026-07-25
 
 ### Fixed
