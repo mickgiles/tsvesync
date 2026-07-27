@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1] - 2026-07-27
+
+### Changed
+- **Version Sync With homebridge-tsvesync 1.6.1**: Aligns the library version with the plugin's HomeKit name-sanitization fix ([homebridge-tsvesync #46](https://github.com/mickgiles/homebridge-tsvesync/issues/46)). That fix is entirely in the plugin layer — there are no functional library changes in this release, and the plugin's `tsvesync` dependency is repinned to 1.6.1 to keep the paired versions identical.
+
 ## [1.6.0] - 2026-07-27
 
 ### Fixed
