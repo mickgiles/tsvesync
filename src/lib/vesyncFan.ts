@@ -242,22 +242,26 @@ export const fanConfig: FanConfig = {
     // LTF Series
     'LTF-F422S-KEU': {
         module: 'VeSyncTowerFan',
-        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speeds', 'tower_modes'],
+        // No child_lock: the LTF-F422S API neither reports nor accepts it (pyvesync parity)
+        features: ['display', 'night_light', 'timer', 'fan_speeds', 'tower_modes'],
         levels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     },
     'LTF-F422S-WUSR': {
         module: 'VeSyncTowerFan',
-        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speeds', 'tower_modes'],
+        // No child_lock: the LTF-F422S API neither reports nor accepts it (pyvesync parity)
+        features: ['display', 'night_light', 'timer', 'fan_speeds', 'tower_modes'],
         levels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     },
     'LTF-F422_WJP': {
         module: 'VeSyncTowerFan',
-        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speeds', 'tower_modes'],
+        // No child_lock: the LTF-F422S API neither reports nor accepts it (pyvesync parity)
+        features: ['display', 'night_light', 'timer', 'fan_speeds', 'tower_modes'],
         levels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     },
     'LTF-F422S-WUS': {
         module: 'VeSyncTowerFan',
-        features: ['display', 'child_lock', 'night_light', 'timer', 'fan_speeds', 'tower_modes'],
+        // No child_lock: the LTF-F422S API neither reports nor accepts it (pyvesync parity)
+        features: ['display', 'night_light', 'timer', 'fan_speeds', 'tower_modes'],
         levels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     },
     

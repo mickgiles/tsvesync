@@ -98,7 +98,7 @@ async function printAirPurifierStatus(device: VeSyncAirBaseV2) {
     console.log('Mode:', device.mode);
     console.log('Fan Speed:', device.speed);
     console.log('Display:', device.screenStatus);
-    console.log('Child Lock:', details.childLock ? 'Enabled' : 'Disabled');
+    console.log('Child Lock:', details.child_lock ? 'Enabled' : 'Disabled');
     
     // Air quality if available
     if (details.airQuality !== undefined) {
@@ -399,7 +399,7 @@ async function captureDeviceState(device: VeSyncAirBaseV2): Promise<DeviceState>
         mode: device.mode,
         speed: device.speed,
         display: device.screenStatus === 'on',
-        childLock: details.childLock,
+        childLock: details.child_lock,
         timer: device.timer,
         filterLife: details.filterLife,
         airQuality: details.airQuality
@@ -478,14 +478,14 @@ async function restoreDeviceState(device: VeSyncAirBaseV2, state: DeviceState) {
 
         // Child Lock - only if supported in current mode
         if (device.isFeatureSupportedInCurrentMode('child_lock') && state.childLock !== undefined) {
-            const currentChildLock = (device as any).details?.childLock || false;
+            const currentChildLock = (device as any).details?.child_lock || false;
             if (currentChildLock !== state.childLock) {
                 await verifyChange(
                     device,
                     'Cleanup',
                     'Restore Child Lock State',
                     () => (device as any).setChildLock(state.childLock),
-                    () => (device as any).details?.childLock || false,
+                    () => (device as any).details?.child_lock || false,
                     state.childLock
                 );
             }
@@ -730,7 +730,7 @@ async function runTest() {
                 'Child Lock Control',
                 'Enable Child Lock',
                 () => (purifier as any).setChildLock(true),
-                () => (purifier as any).details?.childLock || false,
+                () => (purifier as any).details?.child_lock || false,
                 true
             );
             
@@ -739,7 +739,7 @@ async function runTest() {
                 'Child Lock Control',
                 'Disable Child Lock',
                 () => (purifier as any).setChildLock(false),
-                () => (purifier as any).details?.childLock || false,
+                () => (purifier as any).details?.child_lock || false,
                 false
             );
         } else {

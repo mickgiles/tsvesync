@@ -1,6 +1,6 @@
 {
   "name": "tsvesync",
-  "version": "1.5.2",
+  "version": "1.6.0",
   "description": "A TypeScript library for interacting with VeSync smart home devices",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -8,6 +8,7 @@
     "build": "tsc",
     "clean": "rm -rf dist",
     "test:everest": "ts-node test/everest-air-parity.test.ts",
+    "test:child-lock": "ts-node test/child-lock-parity.test.ts",
     "prepare": "npm run build",
     "version": "git add -A src",
     "postversion": "git push && git push --tags",

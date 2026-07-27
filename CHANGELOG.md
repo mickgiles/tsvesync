@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-07-27
+
+### Fixed
+- **🔒 Core-Series Child Lock Payload Corrected**: `VeSyncAirBypass.setChildLock()` sent `{state: <bool>}`, which the VeSync cloud does not recognize for this method; it now sends `{child_lock: <bool>}`, matching `pyvesync` and the VeSync app. Verified live against Core 200S and Core 300S hardware: the new payload round-trips through the cloud, the old one was silently ignored.
+- **🔒 Vital/Everest Child Lock Uses The Correct Switch Payload**: `VeSyncAirBaseV2` inherited the Core-series setter and its payload, but the Vital 100S/200S and Everest Air report child lock as `childLockSwitch: 0|1` and expect the same key on writes (as `pyvesync` sends). A dedicated override now sends `{childLockSwitch: 0|1}`, uses the family's tolerant `checkV2Response` handling, and soft-fails on the feature-not-supported code `11000000` like the Core path.
+- **👁️ Immediate Read-Back After Setting Child Lock**: Successful `setChildLock()` calls wrote `details.childLock` (camelCase) while the `childLock` getter reads `details.child_lock`, so the getter kept returning the stale value until the next poll and UI toggles snapped back. Both the Core and 131 setters now update the key the getter actually reads.
+- **🔤 LV-PUR131S Child Lock String Parsing**: The 131 API reports `childLock` as `'on'`/`'off'` strings; `'off'` is truthy, so the device always read as locked. The parser now maps `'on'` (or boolean `true`) to locked and everything else to unlocked. Note child lock for LV-PUR131S is a tsvesync extension — `pyvesync` has no implementation for this model.
+
+### Changed
+- **🌀 LTF-F422S Tower Fans No Longer Advertise `child_lock`**: The tower-fan API neither reports nor accepts child lock (`pyvesync` parity: its LTF details model has no such field), yet the feature lists claimed it — `hasFeature('child_lock')` returned `true` and `setChildLock()` sent a payload the device ignores while reporting success. The feature is removed, so `setChildLock()` on an LTF now throws `Child lock not supported` instead of faking success.
+
+### Tests
+- **Child Lock Parity Coverage**: Adds `test/child-lock-parity.test.ts` (`npm run test:child-lock`) pinning the per-family request contracts against `pyvesync`, immediate getter read-back, the `11000000` soft-fail and hard-error paths, 131 string/boolean parsing, the LTF refusal, and that no background details refresh is scheduled.
+
 ## [1.5.2] - 2026-07-26
 
 ### Fixed

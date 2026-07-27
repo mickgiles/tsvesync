@@ -312,6 +312,58 @@ export class VeSyncAirBaseV2 extends VeSyncAirBypass {
     }
 
     /**
+     * Override setChildLock to send the childLockSwitch payload required by
+     * bypassV2 purifiers (Vital 100S/200S, Everest Air). These devices report
+     * child lock as childLockSwitch 0|1 and reject the legacy child_lock
+     * boolean payload used by the Core series (matches pyvesync, which sends
+     * {'childLockSwitch': int} for this family).
+     */
+    override async setChildLock(enabled: boolean): Promise<boolean> {
+        if (!this.requiresPowerSwitchPayload()) {
+            // Use parent implementation for non-bypassV2 models
+            return super.setChildLock(enabled);
+        }
+
+        if (!this.hasFeature('child_lock')) {
+            const error = 'Child lock not supported';
+            logger.error(`${error} for device: ${this.deviceName}`);
+            throw new Error(error);
+        }
+
+        logger.debug(`Setting child lock to ${enabled ? 'on' : 'off'} for device: ${this.deviceName}`);
+
+        const [head, body] = this.buildApiDict('setChildLock');
+        body.payload.data = {
+            childLockSwitch: enabled ? 1 : 0
+        };
+
+        const [response, status] = await this.callApi(
+            '/cloud/v2/deviceManaged/bypassV2',
+            'post',
+            body,
+            head
+        );
+
+        const success = this.checkV2Response(response, status, 'setChildLock');
+
+        // Code 11000000 marks the feature unsupported even when the envelope
+        // succeeds, so it must override the lenient inner-code handling
+        if (response?.code === 11000000 || (response?.result?.code === 11000000)) {
+            logger.warn(`Child lock control not supported via API for device: ${this.deviceName}`);
+            return false;
+        }
+
+        if (success) {
+            // No deferred details refresh here: pyvesync and the Core path
+            // both rely on the optimistic update plus the next regular poll
+            this.details.child_lock = enabled;
+        } else {
+            logger.error(`Failed to set child lock to ${enabled ? 'on' : 'off'} for device: ${this.deviceName}`);
+        }
+        return success;
+    }
+
+    /**
      * Override setMode to send workMode payloads for bypassV2 purifiers.
      */
     override async setMode(mode: string): Promise<boolean> {
