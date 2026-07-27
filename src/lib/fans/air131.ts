@@ -95,7 +95,8 @@ export class VeSyncAir131 extends VeSyncFan {
                 speed: data.level || 0,
                 filter_life: filterLife,
                 screen_status: data.screenStatus || 'off',
-                child_lock: data.childLock || false,
+                // The 131 API reports childLock as the string 'on'/'off'
+                child_lock: data.childLock === 'on' || data.childLock === true,
                 air_quality: data.airQuality || 'unknown',
                 air_quality_value: data.air_quality_value || 0,
                 air_quality_level: normalizedAirQuality.level >= 1 ? normalizedAirQuality.level : undefined,
@@ -413,7 +414,7 @@ export class VeSyncAir131 extends VeSyncFan {
 
         const success = this.checkResponse([response, status], 'setChildLock');
         if (success) {
-            this.details.childLock = enabled;
+            this.details.child_lock = enabled;
             return true;
         } else {
             // Check for error code 11000000 (feature not supported)

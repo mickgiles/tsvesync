@@ -136,7 +136,7 @@ async function printDeviceStatus(device: any) {
             console.log('  Fan Speed:', device.details?.speed || 'Not available');
             console.log('  Filter Life:', device.details?.filterLife ? `${device.details.filterLife}%` : 'Not available');
             console.log('  Screen Status:', device.details?.screenStatus !== undefined ? device.details.screenStatus : 'Not available');
-            console.log('  Child Lock:', device.details?.childLock !== undefined ? device.details.childLock : 'Not available');
+            console.log('  Child Lock:', device.details?.child_lock !== undefined ? device.details.child_lock : 'Not available');
             if (device.deviceType === 'Core300S') {
                 console.log('  Air Quality:', device.details?.airQuality !== undefined ? device.details.airQuality : 'Not available');
             }

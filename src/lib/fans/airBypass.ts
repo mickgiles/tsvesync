@@ -376,7 +376,7 @@ export class VeSyncAirBypass extends VeSyncFan {
                 configModule: this.configModule,
                 payload: {
                     data: {
-                        state: enabled
+                        child_lock: enabled
                     },
                     method: 'setChildLock',
                     source: 'APP'
@@ -394,7 +394,7 @@ export class VeSyncAirBypass extends VeSyncFan {
         }
         
         if (success) {
-            this.details.childLock = enabled;
+            this.details.child_lock = enabled;
             return true;
         } else {
             logger.error(`Failed to set child lock to ${enabled ? 'on' : 'off'} for device: ${this.deviceName}`);
