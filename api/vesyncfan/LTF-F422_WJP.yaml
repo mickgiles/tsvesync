@@ -1,165 +1,209 @@
-change_fan_speed:
-  headers:
-    Content-Type: application/json; charset=UTF-8
-    User-Agent: okhttp/3.12.1
+# Tower fan request contracts, aligned with pyvesync devices/vesyncfan.py.
+# Authentication headers and metadata are supplied by Helpers at runtime.
+update:
+  method: post
+  url: /cloud/v2/deviceManaged/bypassV2
   json_object:
-    acceptLanguage: en
-    accountID: sample_id
-    appVersion: 2.8.6
-    cid: LTF-F422_WJP-CID
-    configModel: ConfigModule
-    configModule: ConfigModule
-    debugMode: false
-    deviceId: LTF-F422_WJP-CID
-    deviceRegion: US
     method: bypassV2
+    cid: LTF-F422_WJP-CID
+    configModule: ConfigModule
     payload:
+      method: getTowerFanStatus
+      source: APP
+      data: {}
+turn_on:
+  method: post
+  url: /cloud/v2/deviceManaged/bypassV2
+  json_object:
+    method: bypassV2
+    cid: LTF-F422_WJP-CID
+    configModule: ConfigModule
+    payload:
+      method: setSwitch
+      source: APP
+      data:
+        powerSwitch: 1
+        switchIdx: 0
+turn_off:
+  method: post
+  url: /cloud/v2/deviceManaged/bypassV2
+  json_object:
+    method: bypassV2
+    cid: LTF-F422_WJP-CID
+    configModule: ConfigModule
+    payload:
+      method: setSwitch
+      source: APP
+      data:
+        powerSwitch: 0
+        switchIdx: 0
+change_fan_speed:
+  method: post
+  url: /cloud/v2/deviceManaged/bypassV2
+  json_object:
+    method: bypassV2
+    cid: LTF-F422_WJP-CID
+    configModule: ConfigModule
+    payload:
+      method: setLevel
+      source: APP
       data:
         levelIdx: 0
         levelType: wind
         manualSpeedLevel: 3
-      method: setLevel
-      source: APP
-    phoneBrand: SM N9005
-    phoneOS: Android
-    timeZone: America/New_York
-    token: sample_tk
-    traceId: TRACE_ID
+manual_mode:
   method: post
   url: /cloud/v2/deviceManaged/bypassV2
-manual_mode:
-  headers:
-    Content-Type: application/json; charset=UTF-8
-    User-Agent: okhttp/3.12.1
   json_object:
-    acceptLanguage: en
-    accountID: sample_id
-    appVersion: 2.8.6
-    cid: LTF-F422_WJP-CID
-    configModel: ConfigModule
-    configModule: ConfigModule
-    debugMode: false
-    deviceId: LTF-F422_WJP-CID
-    deviceRegion: US
     method: bypassV2
+    cid: LTF-F422_WJP-CID
+    configModule: ConfigModule
     payload:
+      method: setTowerFanMode
+      source: APP
       data:
         workMode: normal
-      method: setTowerFanMode
-      source: APP
-    phoneBrand: SM N9005
-    phoneOS: Android
-    timeZone: America/New_York
-    token: sample_tk
-    traceId: TRACE_ID
+auto_mode:
   method: post
   url: /cloud/v2/deviceManaged/bypassV2
-sleep_mode:
-  headers:
-    Content-Type: application/json; charset=UTF-8
-    User-Agent: okhttp/3.12.1
   json_object:
-    acceptLanguage: en
-    accountID: sample_id
-    appVersion: 2.8.6
-    cid: LTF-F422_WJP-CID
-    configModel: ConfigModule
-    configModule: ConfigModule
-    debugMode: false
-    deviceId: LTF-F422_WJP-CID
-    deviceRegion: US
     method: bypassV2
+    cid: LTF-F422_WJP-CID
+    configModule: ConfigModule
     payload:
+      method: setTowerFanMode
+      source: APP
+      data:
+        workMode: auto
+sleep_mode:
+  method: post
+  url: /cloud/v2/deviceManaged/bypassV2
+  json_object:
+    method: bypassV2
+    cid: LTF-F422_WJP-CID
+    configModule: ConfigModule
+    payload:
+      method: setTowerFanMode
+      source: APP
       data:
         workMode: advancedSleep
+turbo_mode:
+  method: post
+  url: /cloud/v2/deviceManaged/bypassV2
+  json_object:
+    method: bypassV2
+    cid: LTF-F422_WJP-CID
+    configModule: ConfigModule
+    payload:
       method: setTowerFanMode
       source: APP
-    phoneBrand: SM N9005
-    phoneOS: Android
-    timeZone: America/New_York
-    token: sample_tk
-    traceId: TRACE_ID
-  method: post
-  url: /cloud/v2/deviceManaged/bypassV2
-turn_off:
-  headers:
-    Content-Type: application/json; charset=UTF-8
-    User-Agent: okhttp/3.12.1
-  json_object:
-    acceptLanguage: en
-    accountID: sample_id
-    appVersion: 2.8.6
-    cid: LTF-F422_WJP-CID
-    configModel: ConfigModule
-    configModule: ConfigModule
-    debugMode: false
-    deviceId: LTF-F422_WJP-CID
-    deviceRegion: US
-    method: bypassV2
-    payload:
       data:
-        powerSwitch: 0
-        switchIdx: 0
-      method: setSwitch
-      source: APP
-    phoneBrand: SM N9005
-    phoneOS: Android
-    timeZone: America/New_York
-    token: sample_tk
-    traceId: TRACE_ID
+        workMode: turbo
+oscillation_on:
   method: post
   url: /cloud/v2/deviceManaged/bypassV2
-turn_on:
-  headers:
-    Content-Type: application/json; charset=UTF-8
-    User-Agent: okhttp/3.12.1
   json_object:
-    acceptLanguage: en
-    accountID: sample_id
-    appVersion: 2.8.6
-    cid: LTF-F422_WJP-CID
-    configModel: ConfigModule
-    configModule: ConfigModule
-    debugMode: false
-    deviceId: LTF-F422_WJP-CID
-    deviceRegion: US
     method: bypassV2
+    cid: LTF-F422_WJP-CID
+    configModule: ConfigModule
     payload:
+      method: setOscillationSwitch
+      source: APP
       data:
-        powerSwitch: 1
-        switchIdx: 0
-      method: setSwitch
-      source: APP
-    phoneBrand: SM N9005
-    phoneOS: Android
-    timeZone: America/New_York
-    token: sample_tk
-    traceId: TRACE_ID
+        oscillationSwitch: 1
+oscillation_off:
   method: post
   url: /cloud/v2/deviceManaged/bypassV2
-update:
-  headers:
-    Content-Type: application/json; charset=UTF-8
-    User-Agent: okhttp/3.12.1
   json_object:
-    acceptLanguage: en
-    accountID: sample_id
-    appVersion: 2.8.6
-    cid: LTF-F422_WJP-CID
-    configModel: ConfigModule
-    configModule: ConfigModule
-    debugMode: false
-    deviceId: LTF-F422_WJP-CID
-    deviceRegion: US
     method: bypassV2
+    cid: LTF-F422_WJP-CID
+    configModule: ConfigModule
     payload:
+      method: setOscillationSwitch
+      source: APP
+      data:
+        oscillationSwitch: 0
+display_on:
+  method: post
+  url: /cloud/v2/deviceManaged/bypassV2
+  json_object:
+    method: bypassV2
+    cid: LTF-F422_WJP-CID
+    configModule: ConfigModule
+    payload:
+      method: setDisplay
+      source: APP
+      data:
+        screenSwitch: 1
+display_off:
+  method: post
+  url: /cloud/v2/deviceManaged/bypassV2
+  json_object:
+    method: bypassV2
+    cid: LTF-F422_WJP-CID
+    configModule: ConfigModule
+    payload:
+      method: setDisplay
+      source: APP
+      data:
+        screenSwitch: 0
+mute_on:
+  method: post
+  url: /cloud/v2/deviceManaged/bypassV2
+  json_object:
+    method: bypassV2
+    cid: LTF-F422_WJP-CID
+    configModule: ConfigModule
+    payload:
+      method: setMuteSwitch
+      source: APP
+      data:
+        muteSwitch: 1
+mute_off:
+  method: post
+  url: /cloud/v2/deviceManaged/bypassV2
+  json_object:
+    method: bypassV2
+    cid: LTF-F422_WJP-CID
+    configModule: ConfigModule
+    payload:
+      method: setMuteSwitch
+      source: APP
+      data:
+        muteSwitch: 0
+set_timer:
+  method: post
+  url: /cloud/v2/deviceManaged/bypassV2
+  json_object:
+    method: bypassV2
+    cid: LTF-F422_WJP-CID
+    configModule: ConfigModule
+    payload:
+      method: setTimer
+      source: APP
+      data:
+        action: 'off'
+        total: 3600
+get_timer:
+  method: post
+  url: /cloud/v2/deviceManaged/bypassV2
+  json_object:
+    method: bypassV2
+    cid: LTF-F422_WJP-CID
+    configModule: ConfigModule
+    payload:
+      method: getTimer
+      source: APP
       data: {}
-      method: getTowerFanStatus
-      source: APP
-    phoneBrand: SM N9005
-    phoneOS: Android
-    timeZone: America/New_York
-    token: sample_tk
-    traceId: TRACE_ID
+clear_timer:
   method: post
   url: /cloud/v2/deviceManaged/bypassV2
+  json_object:
+    method: bypassV2
+    cid: LTF-F422_WJP-CID
+    configModule: ConfigModule
+    payload:
+      method: clearTimer
+      source: APP
+      data:
+        id: 1

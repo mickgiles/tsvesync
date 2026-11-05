@@ -243,25 +243,35 @@ export const fanConfig: FanConfig = {
     'LTF-F422S-KEU': {
         module: 'VeSyncTowerFan',
         // No child_lock: the LTF-F422S API neither reports nor accepts it (pyvesync parity)
-        features: ['display', 'night_light', 'timer', 'fan_speeds', 'tower_modes'],
+        features: ['display', 'timer', 'fan_speeds', 'tower_modes', 'oscillation', 'temperature', 'mute'],
+        modes: ['normal', 'auto', 'sleep', 'turbo'],
         levels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     },
     'LTF-F422S-WUSR': {
         module: 'VeSyncTowerFan',
         // No child_lock: the LTF-F422S API neither reports nor accepts it (pyvesync parity)
-        features: ['display', 'night_light', 'timer', 'fan_speeds', 'tower_modes'],
+        features: ['display', 'timer', 'fan_speeds', 'tower_modes', 'oscillation', 'temperature', 'mute'],
+        modes: ['normal', 'auto', 'sleep', 'turbo'],
+        levels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    },
+    'LTF-F422S-WJP': {
+        module: 'VeSyncTowerFan',
+        features: ['display', 'timer', 'fan_speeds', 'tower_modes', 'oscillation', 'temperature', 'mute'],
+        modes: ['normal', 'auto', 'sleep', 'turbo'],
         levels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     },
     'LTF-F422_WJP': {
         module: 'VeSyncTowerFan',
         // No child_lock: the LTF-F422S API neither reports nor accepts it (pyvesync parity)
-        features: ['display', 'night_light', 'timer', 'fan_speeds', 'tower_modes'],
+        features: ['display', 'timer', 'fan_speeds', 'tower_modes', 'oscillation', 'temperature', 'mute'],
+        modes: ['normal', 'auto', 'sleep', 'turbo'],
         levels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     },
     'LTF-F422S-WUS': {
         module: 'VeSyncTowerFan',
         // No child_lock: the LTF-F422S API neither reports nor accepts it (pyvesync parity)
-        features: ['display', 'night_light', 'timer', 'fan_speeds', 'tower_modes'],
+        features: ['display', 'timer', 'fan_speeds', 'tower_modes', 'oscillation', 'temperature', 'mute'],
+        modes: ['normal', 'auto', 'sleep', 'turbo'],
         levels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     },
     

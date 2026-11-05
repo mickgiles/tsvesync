@@ -69,6 +69,7 @@ export const fanModules: Record<string, new (details: Record<string, any>, manag
     // LTF Series
     'LTF-F422S-KEU': VeSyncTowerFan,
     'LTF-F422S-WUSR': VeSyncTowerFan,
+    'LTF-F422S-WJP': VeSyncTowerFan,
     'LTF-F422_WJP': VeSyncTowerFan,
     'LTF-F422S-WUS': VeSyncTowerFan,
     

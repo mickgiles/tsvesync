@@ -142,7 +142,11 @@ A TypeScript library for interacting with VeSync smart home devices. This librar
 
 ### Smart Tower Fan
 - LTF-F422S Series
-  - Features: Fan speed control
+  - Features: Power, all 12 speeds, oscillation, binary display, mute, countdown timer, and temperature
+  - Models: LTF-F422S-KEU, LTF-F422S-WUS, LTF-F422S-WUSR, LTF-F422S-WJP (legacy LTF-F422_WJP alias retained)
+  - `temperature` retains the raw Fahrenheit-times-ten API value; `temperatureCelsius` provides Celsius, or `undefined` before a valid reading
+  - `displayEnabled` and `oscillationEnabled` report configured switches; `displayState` and `oscillationState` report physical status
+  - `setTimer(hours)` uses hours (up to 12), scheduling off while on or on while off; `timerRemaining` reports seconds and `clearTimer()` recovers the timer ID when necessary
   - Modes: Normal, Auto, Advanced Sleep, Turbo
   - Fan speeds: 1-12
 
@@ -296,3 +300,7 @@ MIT
 ## Acknowledgments
 
 This project is inspired by the PyVeSync Python library and aims to provide similar functionality for TypeScript/JavaScript developers.
+
+### Tower fan API reference and validation
+
+The LTF-F422S command contracts follow [pyvesync's tower-fan implementation](https://github.com/webdjoe/pyvesync/blob/0b657bd03e5cb8a1d393fc97aa874fe9069f8ab9/src/pyvesync/devices/vesyncfan.py). Temperature conversion follows [fanctl's device implementation](https://github.com/ardacelep/fanctl/blob/main/fanctl/backend/vesync.py), which identifies this field as Fahrenheit times ten. Run `npm run test:tower-fan` for offline request and state checks. These checks do not establish physical operation on every fan firmware; issue #5 contributors should confirm on their hardware.

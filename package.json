@@ -1,6 +1,6 @@
 {
   "name": "tsvesync",
-  "version": "1.6.1",
+  "version": "1.7.0",
   "description": "A TypeScript library for interacting with VeSync smart home devices",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -12,7 +12,8 @@
     "prepare": "npm run build",
     "version": "git add -A src",
     "postversion": "git push && git push --tags",
-    "test:token-refresh": "ts-node test/token-refresh-retry.test.ts"
+    "test:token-refresh": "ts-node test/token-refresh-retry.test.ts",
+    "test:tower-fan": "ts-node test/tower-fan-parity.test.ts"
   },
   "keywords": [
     "vesync",
