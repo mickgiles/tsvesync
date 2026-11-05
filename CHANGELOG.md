@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-11-05
+
+### Fixed
+- **LTF-F422S Tower Fan Controls** ([homebridge-tsvesync #5](https://github.com/mickgiles/homebridge-tsvesync/issues/5)): Use `setOscillationSwitch` with `oscillationSwitch`, `setDisplay` with `screenSwitch`, and the tower-specific `setTimer`/`getTimer`/`clearTimer` commands. Reject nested device errors before changing local state. Preserve timer IDs when cancelling, including timers recovered after restart.
+- **Tower Fan Modes And Readback**: Support Normal, Auto, Turbo, and Sleep (`advancedSleep` on the wire), validate all 12 speeds, update accepted state immediately, and report mode, display, oscillation, mute, online status, and timer countdown from polling.
+- **Japanese Tower Fan Model**: Recognize `LTF-F422S-WJP` while retaining the legacy `LTF-F422_WJP` alias. Remove the unsupported night-light capability.
+
+### Added
+- **Tower Fan Sensors And Metadata**: Add `temperatureCelsius` (the wire value is Fahrenheit times ten), configured display/oscillation getters, mute control, supported-mode metadata, and the public `VeSyncTowerFan` export. The existing raw `temperature` getter remains compatible.
+- **Offline Tower Fan Regression Checks**: `npm run test:tower-fan` verifies all five model identifiers against explicit wire contracts and YAML fixtures, including both switch directions, modes, every speed, temperature conversion, timer recovery, and failure-state preservation.
+
 ## [1.6.1] - 2026-07-27
 
 ### Changed

@@ -7,6 +7,9 @@ export { VeSyncOutlet7A, VeSyncOutlet10A, VeSyncOutlet15A, VeSyncOutdoorPlug } f
 export { VeSyncBulb } from './lib/vesyncBulb';
 export { VeSyncWallSwitch, VeSyncDimmerSwitch } from './lib/vesyncSwitchImpl';
 
+// Tower fan API
+export { VeSyncTowerFan } from './lib/fans/towerFan';
+
 // Export base device class
 export { VeSyncBaseDevice } from './lib/vesyncBaseDevice';
 

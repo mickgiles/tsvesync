@@ -2,310 +2,183 @@ import { VeSyncAirBaseV2 } from './airBaseV2';
 import { VeSync } from '../vesync';
 import { logger } from '../logger';
 
-/**
- * VeSync Tower Fan Implementation
- */
+/** LTF-F422S tower fans use different commands from bypassV2 purifiers. */
 export class VeSyncTowerFan extends VeSyncAirBaseV2 {
-    protected readonly towerModes = ['normal', 'advancedSleep', 'off'] as const;
+    protected readonly towerModes = ['normal', 'auto', 'advancedSleep', 'turbo', 'off'] as const;
+    private timerId?: number;
+    private timerDeadline?: number;
 
     constructor(details: Record<string, any>, manager: VeSync) {
         super(details, manager);
-        logger.debug(`Initialized VeSyncTowerFan device: ${this.deviceName}`);
     }
 
-    /**
-     * Get device details
-     */
-    async getDetails(): Promise<Boolean> {
-        logger.debug(`Getting details for device: ${this.deviceName}`);
-        const [head, body] = this.buildApiDict('getTowerFanStatus');
-
-        const [response, status] = await this.callApi(
-            '/cloud/v2/deviceManaged/bypassV2',
-            'post',
-            body,
-            head
-        );
-
-        if (!this.checkResponse([response, status], 'getDetails') || !response?.result) {
-            logger.debug('Error getting tower fan details');
-            this.connectionStatus = 'offline';
+    /** A successful cloud envelope can still contain a rejected device command. */
+    protected override checkResponse(response: [any, number], method: string): boolean {
+        if (!super.checkResponse(response, method)) return false;
+        const result = response[0]?.result;
+        if (!result || result.code !== 0) {
+            this.logError(method, `Device error code ${result?.code ?? 'missing'}: ${result?.msg ?? 'Invalid device response'}`);
             return false;
         }
-
-        const innerResponse = response.result;
-        if (innerResponse.code !== 0 || !innerResponse.result) {
-            logger.debug('Error in inner response from tower fan');
-            this.connectionStatus = 'offline';
-            return false;
-        }
-
-        const deviceData = innerResponse.result;
-        this.deviceStatus = deviceData.powerSwitch === 1 ? 'on' : 'off';
-        this.details = {
-            powerSwitch: deviceData.powerSwitch,
-            workMode: deviceData.workMode,
-            manualSpeedLevel: deviceData.manualSpeedLevel,
-            fanSpeedLevel: deviceData.fanSpeedLevel,
-            screenState: deviceData.screenState,
-            screenSwitch: deviceData.screenSwitch,
-            oscillationState: deviceData.oscillationState,
-            oscillationSwitch: deviceData.oscillationSwitch,
-            timerRemain: deviceData.timerRemain,
-            temperature: deviceData.temperature || 0,
-            humidity: deviceData.humidity || 0,
-            thermalComfort: deviceData.thermalComfort,
-            sleepPreference: deviceData.sleepPreference || {},
-            scheduleCount: deviceData.scheduleCount,
-            displayingType: deviceData.displayingType,
-            errorCode: deviceData.errorCode
-        };
-
-        logger.debug(`Successfully got details for device: ${this.deviceName}`);
         return true;
     }
 
-    /**
-     * Toggle device power
-     */
+    private async request(method: string, data: Record<string, any> = {}): Promise<Record<string, any> | null> {
+        const [head, body] = this.buildApiDict(method);
+        body.payload.data = data;
+        const response = await this.callApi('/cloud/v2/deviceManaged/bypassV2', 'post', body, head);
+        if (!this.checkResponse(response, method)) return null;
+        this.connectionStatus = 'online';
+        return response[0].result.result ?? {};
+    }
+
+    async getDetails(): Promise<boolean> {
+        const data = await this.request('getTowerFanStatus');
+        if (!data || (data.powerSwitch !== 0 && data.powerSwitch !== 1)) {
+            this.connectionStatus = 'offline';
+            return false;
+        }
+        this.deviceStatus = data.powerSwitch === 1 ? 'on' : 'off';
+        this.details = { ...data };
+        this.mode = data.workMode ?? 'normal';
+        // A status poll cannot identify the timer. It may have been replaced in
+        // the app, so never carry an older command's id into cancellation.
+        this.timerId = undefined;
+        this.updateTimerState(data.timerRemain ?? 0, this.deviceStatus === 'on' ? 'off' : 'on');
+        return true;
+    }
+
     async toggleSwitch(toggle: boolean): Promise<boolean> {
-        if (typeof toggle !== 'boolean') {
-            logger.debug('Invalid toggle value for tower fan switch');
-            return false;
-        }
-
-        const [head, body] = this.buildApiDict('setSwitch');
-        body.payload.data = {
-            powerSwitch: toggle ? 1 : 0,
-            switchIdx: 0
-        };
-
-        const [response, status] = await this.callApi(
-            '/cloud/v2/deviceManaged/bypassV2',
-            'post',
-            body,
-            head
-        );
-
-        const success = this.checkResponse([response, status], 'toggleSwitch');
-        if (success) {
-            this.deviceStatus = toggle ? 'on' : 'off';
-        } else {
-            logger.debug('Error toggling tower fan power');
-        }
-        return success;
+        if (typeof toggle !== 'boolean') return false;
+        if (!await this.request('setSwitch', { powerSwitch: Number(toggle), switchIdx: 0 })) return false;
+        this.deviceStatus = toggle ? 'on' : 'off';
+        this.details.powerSwitch = Number(toggle);
+        return true;
     }
 
-    /**
-     * Turn device on
-     */
-    async turnOn(): Promise<boolean> {
-        logger.debug(`Turning on device: ${this.deviceName}`);
-        return this.toggleSwitch(true);
-    }
+    async turnOn(): Promise<boolean> { return this.toggleSwitch(true); }
+    async turnOff(): Promise<boolean> { return this.toggleSwitch(false); }
 
-    /**
-     * Turn device off
-     */
-    async turnOff(): Promise<boolean> {
-        logger.debug(`Turning off device: ${this.deviceName}`);
-        return this.toggleSwitch(false);
-    }
-
-    /**
-     * Set tower fan mode
-     */
     async mode_toggle(mode: string): Promise<boolean> {
-        if (!this.towerModes.includes(mode as any)) {
-            logger.debug(`Invalid mode: ${mode}. Must be one of: ${this.towerModes.join(', ')}`);
-            return false;
-        }
-
-        if (mode === 'off') {
-            return this.turnOff();
-        }
-
-        const [head, body] = this.buildApiDict('setTowerFanMode');
-        body.deviceId = this.cid;
-        body.payload.data = {
-            workMode: mode
-        };
-
-        const [response, status] = await this.callApi(
-            '/cloud/v2/deviceManaged/bypassV2',
-            'post',
-            body,
-            head
-        );
-
-        const success = this.checkResponse([response, status], 'mode_toggle');
-        if (success) {
-            this.details.workMode = mode;
-        } else {
-            logger.error(`Failed to set ${mode} mode for device: ${this.deviceName}`);
-        }
-        return success;
+        const apiMode = mode === 'sleep' ? 'advancedSleep' : mode === 'manual' ? 'normal' : mode;
+        if (!this.towerModes.includes(apiMode as typeof this.towerModes[number])) return false;
+        if (apiMode === 'off') return this.turnOff();
+        if (!await this.request('setTowerFanMode', { workMode: apiMode })) return false;
+        this.mode = apiMode;
+        return true;
     }
 
-    /**
-     * Change fan speed
-     */
+    async setMode(mode: string): Promise<boolean> { return this.mode_toggle(mode); }
+    async normal_mode(): Promise<boolean> { return this.setMode('normal'); }
+    async manual_mode(): Promise<boolean> { return this.normal_mode(); }
+    async advanced_sleep_mode(): Promise<boolean> { return this.setMode('sleep'); }
+    async sleep_mode(): Promise<boolean> { return this.advanced_sleep_mode(); }
+
     async changeFanSpeed(speed: number): Promise<boolean> {
-        // const speeds = this.config.levels ?? [];
-        // if (!speeds.includes(speed)) {
-        //     logger.debug(`Invalid speed: ${speed}. Must be one of: ${speeds.join(', ')}`);
-        //     return false;
-        // }
+        if (!Number.isInteger(speed) || !(this.config.levels ?? []).includes(speed)) return false;
+        if (!await this.request('setLevel', { levelIdx: 0, levelType: 'wind', manualSpeedLevel: speed })) return false;
+        this.details.manualSpeedLevel = speed;
+        return true;
+    }
 
-        const [head, body] = this.buildApiDict('setLevel');
-        body.payload.data = {
-            levelIdx: 0,
-            levelType: 'wind',
-            manualSpeedLevel: speed
-        };
+    async setOscillation(toggle: boolean): Promise<boolean> {
+        if (typeof toggle !== 'boolean') return false;
+        if (!await this.request('setOscillationSwitch', { oscillationSwitch: Number(toggle) })) return false;
+        this.details.oscillationSwitch = Number(toggle);
+        this.details.oscillationState = Number(toggle);
+        return true;
+    }
 
-        const [response, status] = await this.callApi(
-            '/cloud/v2/deviceManaged/bypassV2',
-            'post',
-            body,
-            head
-        );
+    async setOscillationOn(): Promise<boolean> { return this.setOscillation(true); }
+    async setOscillationOff(): Promise<boolean> { return this.setOscillation(false); }
 
-        const success = this.checkResponse([response, status], 'changeFanSpeed');
-        if (success) {
-            this.details.manualSpeedLevel = speed;
-        } else {
-            logger.debug('Error setting fan speed');
+    async setDisplay(enabled: boolean): Promise<boolean> {
+        if (typeof enabled !== 'boolean') return false;
+        if (!await this.request('setDisplay', { screenSwitch: Number(enabled) })) return false;
+        this.details.screenSwitch = Number(enabled);
+        this.details.screenState = Number(enabled);
+        return true;
+    }
+
+    async setMute(enabled: boolean): Promise<boolean> {
+        if (typeof enabled !== 'boolean') return false;
+        if (!await this.request('setMuteSwitch', { muteSwitch: Number(enabled) })) return false;
+        this.details.muteSwitch = Number(enabled);
+        this.details.muteState = Number(enabled);
+        return true;
+    }
+
+    /** Public timer duration remains hours, like the other tsvesync devices. */
+    async setTimer(hours: number, action: string = this.deviceStatus === 'on' ? 'off' : 'on'): Promise<boolean> {
+        const seconds = Math.round(hours * 3600);
+        if (!Number.isFinite(hours) || hours <= 0 || hours > 12 || seconds < 1 || !['on', 'off'].includes(action)) return false;
+        const result = await this.request('setTimer', { action, total: seconds });
+        if (!result || !Number.isInteger(result.id)) return false;
+        this.timerId = result.id;
+        this.updateTimerState(seconds, action);
+        return true;
+    }
+
+    async getTimer(): Promise<boolean> {
+        const result = await this.request('getTimer');
+        if (!result || !('timers' in result) || (result.timers !== null && !Array.isArray(result.timers))) return false;
+        if (result.timers === null || result.timers.length === 0) {
+            this.updateTimerState(0, 'off');
+            return true;
         }
-        return success;
+        const timer = result.timers[0];
+        if (!Number.isInteger(timer.id) || !Number.isFinite(timer.remain) || timer.remain < 0 || !['on', 'off'].includes(timer.action)) return false;
+        this.timerId = timer.id;
+        this.updateTimerState(timer.remain, timer.action);
+        return true;
     }
 
-    /**
-     * Set normal mode
-     */
-    async normal_mode(): Promise<boolean> {
-        logger.debug(`Setting normal mode for device: ${this.deviceName}`);
-        return this.mode_toggle('normal');
+    async clearTimer(): Promise<boolean> {
+        // Status responses include the remaining duration but not the timer id.
+        if (this.timerRemaining > 0 && this.timerId === undefined && !await this.getTimer()) return false;
+        if (this.timerId === undefined) return this.timerRemaining === 0;
+        if (!await this.request('clearTimer', { id: this.timerId })) return false;
+        this.updateTimerState(0, 'off');
+        return true;
     }
 
-    /**
-     * Set manual mode - adapter to set mode to normal
-     */
-    async manual_mode(): Promise<boolean> {
-        logger.debug(`Setting manual mode for device: ${this.deviceName}`);
-        return this.normal_mode();
+    private updateTimerState(seconds: number, action: string): void {
+        const remaining = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
+        this.details.timerRemain = remaining;
+        this._timer = remaining > 0 ? { duration: remaining, action } : null;
+        this.timerDeadline = remaining > 0 ? Date.now() + remaining * 1000 : undefined;
+        if (remaining === 0) this.timerId = undefined;
     }
 
-    /**
-     * Set advanced sleep mode
-     */
-    async advanced_sleep_mode(): Promise<boolean> {
-        logger.debug(`Setting advanced sleep mode for device: ${this.deviceName}`);
-        return this.mode_toggle('advancedSleep');
+    get timerRemaining(): number {
+        return this.timerDeadline === undefined ? 0 : Math.max(0, Math.ceil((this.timerDeadline - Date.now()) / 1000));
     }
 
-    /**
-     * Set sleep mode - adapter for advanced sleep mode
-     */
-    async sleep_mode(): Promise<boolean> {
-        logger.debug(`Setting sleep mode for device: ${this.deviceName}`);
-        return this.advanced_sleep_mode();
+    get mode(): string { return this.details.workMode === 'advancedSleep' ? 'sleep' : this.details.workMode ?? 'normal'; }
+    set mode(value: string) {
+        this.details.workMode = value === 'sleep' ? 'advancedSleep' : value === 'manual' ? 'normal' : value;
+        this.details.mode = this.mode;
     }
-
-    /**
-     * Override setMode to handle tower fan specific modes
-     */
-    async setMode(mode: string): Promise<boolean> {
-        return this.mode_toggle(mode);
+    get speed(): number { return this.details.manualSpeedLevel ?? this.details.fanSpeedLevel ?? 0; }
+    set speed(value: number) { this.details.manualSpeedLevel = value; }
+    get displayState(): boolean { return this.details.screenState === 1; }
+    get displayEnabled(): boolean { return this.details.screenSwitch === 1; }
+    get screenStatus(): 'on' | 'off' { return this.displayEnabled ? 'on' : 'off'; }
+    get oscillationState(): boolean { return this.details.oscillationState === 1; }
+    get oscillationEnabled(): boolean { return this.details.oscillationSwitch === 1; }
+    get muteState(): boolean { return this.details.muteState === 1; }
+    /** Raw API temperature is Fahrenheit times ten, retained for compatibility. */
+    get temperature(): number { return this.details.temperature ?? 0; }
+    get temperatureCelsius(): number | undefined {
+        const raw = this.details.temperature;
+        return typeof raw === 'number' && Number.isFinite(raw) ? (raw / 10 - 32) * 5 / 9 : undefined;
     }
+    get humidity(): number { return this.details.humidity ?? 0; }
+    get thermalComfort(): number { return this.details.thermalComfort ?? 0; }
+    get sleepPreference(): Record<string, any> { return this.details.sleepPreference ?? {}; }
+    get scheduleCount(): number { return this.details.scheduleCount ?? 0; }
+    get errorCode(): number { return this.details.errorCode ?? 0; }
 
-    /**
-     * Get current speed
-     */
-    get speed(): number {
-        return this.details.manualSpeedLevel || 0;
-    }
-
-    /**
-     * Get display status
-     */
-    get displayState(): boolean {
-        return Boolean(this.details.screenState);
-    }
-
-    /**
-     * Get oscillation status
-     */
-    get oscillationState(): boolean {
-        return Boolean(this.details.oscillationState);
-    }
-
-    /**
-     * Get mute status
-     */
-    get muteState(): boolean {
-        return Boolean(this.details.muteState);
-    }
-
-    /**
-     * Get temperature (in tenths of a degree)
-     */
-    get temperature(): number {
-        return this.details.temperature || 0;
-    }
-
-    /**
-     * Get humidity percentage
-     */
-    get humidity(): number {
-        return this.details.humidity || 0;
-    }
-
-    /**
-     * Get thermal comfort level
-     */
-    get thermalComfort(): number {
-        return this.details.thermalComfort || 0;
-    }
-
-    /**
-     * Get sleep preferences
-     */
-    get sleepPreference(): Record<string, any> {
-        return this.details.sleepPreference || {};
-    }
-
-    /**
-     * Get schedule count
-     */
-    get scheduleCount(): number {
-        return this.details.scheduleCount || 0;
-    }
-
-    /**
-     * Get error code
-     */
-    get errorCode(): number {
-        return this.details.errorCode || 0;
-    }
-
-    /**
-     * Turn oscillation on
-     */
-    async setOscillationOn(): Promise<boolean> {
-        return this.setOscillation(true);
-    }
-
-    /**
-     * Turn oscillation off
-     */
-    async setOscillationOff(): Promise<boolean> {
-        return this.setOscillation(false);
-    }
-
-    /**
-     * Display device info
-     */
     override display(): void {
         super.display();
         const info = [
@@ -319,7 +192,7 @@ export class VeSyncTowerFan extends VeSyncAirBaseV2 {
             ['Mute: ', this.muteState],
             ['Mute Switch: ', this.details.muteSwitch],
             ['Timer: ', this.timer],
-            ['Temperature: ', this.temperature / 10, '°C'],
+            ['Temperature: ', this.temperatureCelsius ?? 'unknown', '°C'],
             ['Humidity: ', this.humidity, '%'],
             ['Thermal Comfort: ', this.thermalComfort],
             ['Sleep Preference: ', JSON.stringify(this.sleepPreference)],
