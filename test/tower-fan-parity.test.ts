@@ -33,6 +33,7 @@ async function run(): Promise<void> {
     for (const model of models) {
         const fan = new Fan(model);
         const spec = yaml.load(fs.readFileSync(path.join(__dirname, '../api/vesyncfan', `${model}.yaml`), 'utf8')) as Record<string, any>;
+        assert.equal(fan.temperatureDiagnostics.statusReceived, false, 'a newly discovered fan has not received status data');
         check(fanModules[model] === VeSyncTowerFan);
         for (const feature of ['oscillation', 'display', 'timer', 'temperature', 'mute']) check(fan.hasFeature(feature));
         check(!fan.hasFeature('child_lock') && !fan.hasFeature('night_light'));
@@ -91,6 +92,19 @@ async function run(): Promise<void> {
         assert.equal(fan.oscillationEnabled, true);
         check(Math.abs(fan.temperatureCelsius! - 25.5555555556) < 0.00001);
         assert.equal(fan.temperature, 780, 'keep raw-temperature compatibility');
+        for (const temperature of ['780', ' +780 ', '320']) {
+            fan.reply({ ...details, temperature });
+            check(await fan.getDetails());
+            assert.equal(fan.temperatureCelsius, (Number(temperature) / 10 - 32) * 5 / 9,
+                'match latest pyvesync TowerFanResult integer-string parsing');
+        }
+        for (const temperature of [null, undefined, '', ' ', '780.5', '780extra', '0x30c', NaN, Infinity, true]) {
+            fan.reply({ ...details, temperature });
+            check(await fan.getDetails());
+            assert.equal(fan.temperatureCelsius, undefined, 'invalid temperatures must not become fake readings');
+        }
+        fan.reply(details);
+        check(await fan.getDetails());
         assert.equal(fan.muteState, true);
         assert.equal(fan.connectionStatus, 'online');
         check(fan.timerRemaining > 58 && fan.timerRemaining <= 60);
@@ -161,6 +175,14 @@ async function run(): Promise<void> {
         fan.reply({ powerSwitch: 0, workMode: 'auto', timerRemain: 0 });
         check(await fan.getDetails());
         assert.equal(fan.temperatureCelsius, undefined, 'missing temperature is not a fake zero');
+        assert.deepEqual(fan.temperatureDiagnostics, {
+            statusReceived: true, fieldPresent: false, rawType: 'undefined', numericValue: undefined,
+        });
+        fan.reply({ powerSwitch: 0, temperature: { token: 'do-not-log-this' }, token: 'do-not-log-this' });
+        check(await fan.getDetails());
+        assert.deepEqual(fan.temperatureDiagnostics, {
+            statusReceived: true, fieldPresent: true, rawType: 'object', numericValue: undefined,
+        }, 'diagnostics expose neither arbitrary response fields nor invalid raw values');
         assert.equal(fan.timer, null);
         fan.reply({});
         check(!await fan.getDetails());

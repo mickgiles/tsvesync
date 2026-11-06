@@ -2,6 +2,14 @@ import { VeSyncAirBaseV2 } from './airBaseV2';
 import { VeSync } from '../vesync';
 import { logger } from '../logger';
 
+/** Safe sensor diagnostics; never includes the response body or device identifiers. */
+export interface TowerFanTemperatureDiagnostics {
+    statusReceived: boolean;
+    fieldPresent: boolean;
+    rawType: string;
+    numericValue?: number;
+}
+
 /** LTF-F422S tower fans use different commands from bypassV2 purifiers. */
 export class VeSyncTowerFan extends VeSyncAirBaseV2 {
     protected readonly towerModes = ['normal', 'auto', 'advancedSleep', 'turbo', 'off'] as const;
@@ -169,9 +177,24 @@ export class VeSyncTowerFan extends VeSyncAirBaseV2 {
     get muteState(): boolean { return this.details.muteState === 1; }
     /** Raw API temperature is Fahrenheit times ten, retained for compatibility. */
     get temperature(): number { return this.details.temperature ?? 0; }
-    get temperatureCelsius(): number | undefined {
+    private get numericTemperature(): number | undefined {
         const raw = this.details.temperature;
-        return typeof raw === 'number' && Number.isFinite(raw) ? (raw / 10 - 32) * 5 / 9 : undefined;
+        // pyvesync's TowerFanResult accepts integer strings through its typed model.
+        const value = typeof raw === 'string' && /^[+-]?\d+$/.test(raw.trim()) ? Number(raw) : raw;
+        return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+    }
+    get temperatureCelsius(): number | undefined {
+        const value = this.numericTemperature;
+        return value === undefined ? undefined : (value / 10 - 32) * 5 / 9;
+    }
+    get temperatureDiagnostics(): TowerFanTemperatureDiagnostics {
+        const raw = this.details.temperature;
+        return {
+            statusReceived: this.details.powerSwitch === 0 || this.details.powerSwitch === 1,
+            fieldPresent: Object.prototype.hasOwnProperty.call(this.details, 'temperature'),
+            rawType: raw === null ? 'null' : Array.isArray(raw) ? 'array' : typeof raw,
+            numericValue: this.numericTemperature,
+        };
     }
     get humidity(): number { return this.details.humidity ?? 0; }
     get thermalComfort(): number { return this.details.thermalComfort ?? 0; }
