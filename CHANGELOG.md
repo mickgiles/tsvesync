@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.2] - 2026-11-06
+
+### Fixed
+- **Tower Fan Temperature Parsing** ([homebridge-tsvesync #52](https://github.com/mickgiles/homebridge-tsvesync/issues/52)): Accept integer-formatted temperature strings, matching the latest pyvesync `TowerFanResult` deserialization. Keep missing and invalid readings unavailable instead of converting them to a false zero.
+
+### Added
+- **Safe Temperature Diagnostics**: Expose status-response presence, temperature-field presence, value type, and a finite numeric value for targeted Homebridge logging, without exposing full responses or device/account identifiers.
+
 ## [1.7.1] - 2026-11-06
 
 ### Fixed

@@ -9,6 +9,7 @@ export { VeSyncWallSwitch, VeSyncDimmerSwitch } from './lib/vesyncSwitchImpl';
 
 // Tower fan API
 export { VeSyncTowerFan } from './lib/fans/towerFan';
+export type { TowerFanTemperatureDiagnostics } from './lib/fans/towerFan';
 
 // Export base device class
 export { VeSyncBaseDevice } from './lib/vesyncBaseDevice';
