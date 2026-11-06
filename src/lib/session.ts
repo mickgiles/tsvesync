@@ -11,7 +11,7 @@ export interface Session {
    * look like a brand-new device to VeSync.
    */
   terminalId?: string;
-  /** Client app id, kept alongside `terminalId` so the client identity is stable too. */
+  /** Official client app ID. Historical random values are ignored when restoring a session. */
   appId?: string;
   issuedAt?: number | null; // epoch seconds
   expiresAt?: number | null; // epoch seconds

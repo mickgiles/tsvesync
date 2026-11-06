@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.1] - 2026-11-06
+
+### Fixed
+- **VeSync Login App ID** ([homebridge-tsvesync #50](https://github.com/mickgiles/homebridge-tsvesync/issues/50)): Use VeSync's official `eldodkfj` app ID for `appID` and `sourceAppID` instead of a random value. Unsupported app IDs can fail the authorization-code exchange with `-11265129` ("login temporary auth code expired"), followed by a misleading "app version is too low" error from the legacy fallback.
+- **Saved Session Migration**: Ignore historical random app IDs when restoring sessions or reusing the identity from expired credentials. Preserve the installation's terminal ID, and save the official app ID with refreshed sessions.
+
+### Tests
+- **Authentication App ID Coverage**: Require the official app ID in the offline cloud fixture and cover fresh login, recovery from a rejected saved token, and expired-session identity migration.
+
 ## [1.7.0] - 2026-11-05
 
 ### Fixed

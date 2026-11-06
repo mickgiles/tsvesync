@@ -174,7 +174,7 @@ export class VeSync {
     private _lastUpdateTs: number | null;
     private _inProcess: boolean;
     private _excludeConfig: ExcludeConfig | null;
-    private _appId: string;
+    private readonly _appId: string;
     private _terminalId: string;
     private _region: string;
     private _countryCodeOverride: string | null;
@@ -330,14 +330,12 @@ export class VeSync {
      * Adopt a previously persisted client identity without restoring credentials.
      *
      * Callers that decide not to reuse a stored token (because it has expired, say) should still keep the
-     * terminal/app id from that session, so the fresh login presents the same client to VeSync.
+     * terminal id from that session, so the fresh login presents the same device to VeSync.
+     * Historical random app IDs are ignored; the application identity must remain VeSync's official ID.
      */
     restoreClientIdentity(identity: { terminalId?: string | null; appId?: string | null }): void {
         if (typeof identity?.terminalId === 'string' && identity.terminalId) {
             this._terminalId = identity.terminalId;
-        }
-        if (typeof identity?.appId === 'string' && identity.appId) {
-            this._appId = identity.appId;
         }
     }
 
@@ -356,13 +354,8 @@ export class VeSync {
             this.countryCode = session.countryCode ?? null;
             this.authFlowUsed = session.authFlowUsed;
 
-            // Keep the persisted client identity so re-logins present the same terminal to VeSync.
-            if (typeof session.terminalId === 'string' && session.terminalId) {
-                this._terminalId = session.terminalId;
-            }
-            if (typeof session.appId === 'string' && session.appId) {
-                this._appId = session.appId;
-            }
+            // Preserve the device identity without restoring a historical random app ID.
+            this.restoreClientIdentity(session);
 
             // pyvesync parity:
             // pyvesync persists `current_region` and derives the API base URL per-request from that region.
