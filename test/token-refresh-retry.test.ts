@@ -10,6 +10,7 @@
  *  C. The terminal id from a persisted session is reused, so re-logins present the same client.
  *  D. A token error returned by an *auth* endpoint cannot make login() await itself forever.
  *  E. Auth material carried in headers is refreshed on retry too, and auth payloads are left alone.
+ *  F. New and restored clients use VeSync's official app ID (homebridge-tsvesync#50).
  *
  * Run with: npm run test:token-refresh
  */
@@ -19,7 +20,7 @@ import http from 'node:http';
 import { AddressInfo } from 'node:net';
 
 import { VeSync } from '../src/lib/vesync';
-import { Helpers } from '../src/lib/helpers';
+import { Helpers, generateAppId } from '../src/lib/helpers';
 import { Session, SessionStore } from '../src/lib/session';
 import { Logger } from '../src/lib/logger';
 
@@ -81,6 +82,7 @@ class FakeVeSyncCloud {
     readonly requests: RecordedRequest[] = [];
     private server!: http.Server;
     private issuedTokens = 0;
+    private authorizationAppIdAllowed = false;
     validToken: string | null = null;
     /** Endpoints that should answer with a token error regardless of the token supplied. */
     forceTokenErrorOn = new Set<string>();
@@ -124,9 +126,14 @@ class FakeVeSyncCloud {
 
         switch (endpoint) {
             case '/globalPlatform/api/accountAuth/v1/authByPWDOrOTM':
+                this.authorizationAppIdAllowed = body.appID === 'eldodkfj' && body.sourceAppID === 'eldodkfj';
                 return { code: 0, msg: 'request success', result: { accountID: ACCOUNT_ID, authorizeCode: 'authorize-code-1' } };
 
             case '/user/api/accountManage/v1/loginByAuthorizeCode4Vesync': {
+                // VeSync issues a code in step 1 but rejects its exchange for an unsupported app ID.
+                if (!this.authorizationAppIdAllowed) {
+                    return { code: -11265129, msg: 'login temporary auth code expired' };
+                }
                 this.issuedTokens += 1;
                 // Mirror the real API: the issued token is bound to the terminal id that asked for it.
                 this.terminalIdForNextToken = String(body.terminalId || 'missing-terminal-id');
@@ -230,6 +237,7 @@ async function testRetryUsesRefreshedToken(): Promise<void> {
     await withHarness({
         session: {
             token: makeJwt({ expiresInSeconds: 12 * 24 * 60 * 60, terminalId: 'terminal-abc', label: 'server-invalidated' }),
+            appId: 'OldValid',
         },
     }, async ({ cloud, manager, logger }) => {
         const ok = await manager.getDevices();
@@ -296,7 +304,7 @@ async function testTerminalIdIsStable(): Promise<void> {
         },
     }, async ({ cloud, manager, store }) => {
         assert.equal(manager.terminalId, persistedTerminalId, 'the persisted terminal id should be adopted');
-        assert.equal(manager.appId, 'AppId1234', 'the persisted app id should be adopted');
+        assert.equal(manager.appId, 'eldodkfj', 'the old random app id must not be restored');
 
         assert.equal(await manager.getDevices(), true);
 
@@ -312,13 +320,42 @@ async function testTerminalIdIsStable(): Promise<void> {
         assert.ok(store.last, 'a refreshed session should be persisted');
         assert.equal(store.last!.terminalId, persistedTerminalId,
             'the persisted session must keep the terminal id so the next restart reuses it');
-        assert.equal(store.last!.appId, 'AppId1234', 'the persisted session must keep the app id');
+        assert.equal(store.last!.appId, 'eldodkfj', 'the persisted session must use the official app id');
 
         // A second login must not drift onto a new identity either.
         assert.equal(await manager.login(1, 10), true);
         for (const call of cloud.requestsTo(AUTH_STEP2)) {
             assert.equal(call.body.terminalId, persistedTerminalId, 'later logins must reuse the same terminal id');
         }
+    });
+}
+
+async function testOfficialAppIdOnFreshLogin(): Promise<void> {
+    await withHarness({}, async ({ cloud, manager, store }) => {
+        assert.equal(manager.appId, 'eldodkfj', 'fresh clients must use the official app id');
+        assert.equal(generateAppId(), 'eldodkfj', 'the compatibility helper must return the official app id');
+        assert.equal(await manager.login(1, 10), true);
+        const calls = cloud.requestsTo(AUTH_STEP1);
+        assert.equal(calls.length, 1);
+        assert.equal(calls[0].body.appID, 'eldodkfj');
+        assert.equal(calls[0].body.sourceAppID, 'eldodkfj');
+        assert.equal(cloud.requestsTo('/cloud/v1/user/login').length, 0, 'the legacy fallback must not be needed');
+        assert.equal(store.last?.appId, 'eldodkfj', 'new sessions must persist the official app id');
+    });
+}
+
+async function testExpiredSessionIdentityMigration(): Promise<void> {
+    await withHarness({}, async ({ cloud, manager, store }) => {
+        const terminalId = '2persisted-terminal-from-expired-session';
+        manager.restoreClientIdentity({ terminalId, appId: 'OldApp42' });
+        assert.equal(manager.appId, 'eldodkfj', 'discarding expired credentials must not restore a random app id');
+        assert.equal(manager.terminalId, terminalId);
+        assert.equal(await manager.login(1, 10), true);
+        assert.equal(cloud.requestsTo(AUTH_STEP1)[0].body.appID, 'eldodkfj');
+        assert.equal(cloud.requestsTo(AUTH_STEP1)[0].body.sourceAppID, 'eldodkfj');
+        assert.equal(cloud.requestsTo(AUTH_STEP2)[0].body.terminalId, terminalId);
+        assert.equal(store.last?.appId, 'eldodkfj');
+        assert.equal(store.last?.terminalId, terminalId);
     });
 }
 
@@ -394,6 +431,8 @@ async function main(): Promise<void> {
         ['terminal id is stable across logins', testTerminalIdIsStable],
         ['auth-endpoint token error does not deadlock login()', testAuthEndpointTokenErrorDoesNotHang],
         ['header auth material is refreshed on retry', testHeaderAuthIsRefreshed],
+        ['fresh login uses the official app id', testOfficialAppIdOnFreshLogin],
+        ['expired-session identity migrates to the official app id', testExpiredSessionIdentityMigration],
     ];
 
     let failures = 0;

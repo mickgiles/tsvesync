@@ -60,6 +60,10 @@ export const API_RATE_LIMIT = 30;
 export const API_TIMEOUT = 15000;
 
 export const APP_VERSION = '5.7.16'; // Updated to newer version
+// VeSync restricts login to its official application identity; random IDs can
+// receive an authorization code that step 2 rejects as expired.
+// https://github.com/webdjoe/pyvesync/issues/466
+export const APP_ID = 'eldodkfj';
 export const PHONE_BRAND = 'SM N9005';
 export const PHONE_OS = 'Android';
 export const CLIENT_INFO = 'SM N9005';
@@ -204,14 +208,9 @@ export function getCountryCodeFromRegion(region: string, email?: string): string
     return 'US'; // Default for non-EU
 }
 
-// Generate unique APP_ID for each session
+// Keep the historical helper available, but VeSync app IDs are fixed, not per-installation IDs.
 export function generateAppId(): string {
-    const chars = 'ABCDEFGHIJKLMNOPqRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let result = '';
-    for (let i = 0; i < 8; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
+    return APP_ID;
 }
 
 // Generate unique terminal ID for authentication
